@@ -140,6 +140,29 @@ export function MarketOpsPanel({
     setBusyFor(app.id, false)
   }
 
+  async function syncVendorReliabilityFallback(
+    kind: 'late_load_in' | 'early_exit',
+    app: OpsApplication
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `/api/coordinator/events/${encodeURIComponent(eventId)}/vendor-reliability`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind,
+            applicationId: app.id,
+            vendorId: app.vendor_id,
+          }),
+        }
+      )
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   async function updateLoadInStatus(app: OpsApplication, status: LoadInStatus) {
     const next = app.load_in_status === status ? null : status
     patchApp(app.id, { load_in_status: next })
@@ -194,13 +217,11 @@ export function MarketOpsPanel({
         return
       }
       if (reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', app.vendor_id)
+        const reliabilityOk = await syncVendorReliabilityFallback('late_load_in', app)
+        if (!reliabilityOk) {
+          toast.error('Load-in saved but vendor reliability score did not update')
+        }
       }
-    }
-    setBusyFor(app.id, false)
-  }
-
-  async function toggleRaffle(app: OpsApplication) {
     setBusyFor(app.id + '-raffle', true)
     const next = !app.raffle_donation_received
     patchApp(app.id, { raffle_donation_received: next })
@@ -280,7 +301,10 @@ export function MarketOpsPanel({
         return
       }
       if (reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', app.vendor_id)
+        const reliabilityOk = await syncVendorReliabilityFallback('early_exit', app)
+        if (!reliabilityOk) {
+          toast.error('Early exit saved but vendor reliability score did not update')
+        }
       }
     }
 

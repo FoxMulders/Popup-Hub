@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (ops reliability fix, PR open)
+- **Goal:** Deep review of recent commits for high-severity correctness bugs.
+- **Finding:** Coordinator market-day `load_in_status` / `early_exit` ops-sync mutations reported success but **never persisted vendor `reliability_score`** — `profiles` RLS blocks coordinator writes; route returned `true` anyway.
+- **Fix (branch `cursor/critical-bug-investigation-d904`, commit `1f1b888`):** Server-side strike increments via admin client in `ops-sync`; new `vendor-reliability` API for client fallback; `floor_plan_doc_patch` no longer acked as applied.
+- **Verify:** `npx tsx lib/coordinator/vendor-reliability-ops.test.ts` PASS.
+- **Next:** Merge PR; smoke coordinator ops grid late load-in + early exit → vendor score drops in DB after refresh.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
