@@ -4,8 +4,8 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
+import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
-import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import { buttonVariants } from '@/components/ui/button'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
@@ -47,6 +47,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     approvedPool,
     eventCategoryNames,
   } = useMarketManagement()
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const { setPlacedCount, registerSaveHandlers } = useHubGridHeader()
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
   const [saveDraftLoading, setSaveDraftLoading] = useState(false)
@@ -112,13 +113,6 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       toast.message('Room deleted')
     },
     [layoutRooms, layoutActiveRoomId, selectedEventId, setLayoutRooms]
-  )
-
-  const handleSelectRoom = useCallback(
-    (roomId: string) => {
-      setLayoutRooms(layoutRooms, roomId)
-    },
-    [layoutRooms, setLayoutRooms]
   )
 
   const handleSelectionChange = useCallback(
@@ -251,6 +245,16 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
             Create market
           </Link>
         </div>
+      </div>
+    )
+  }
+
+  if (showDesktopRequired) {
+    return (
+      <div className="flex h-full min-h-0 flex-1 items-center justify-center p-6 text-center">
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          Booth layout needs a tablet or desktop. Continue designing on a larger screen.
+        </p>
       </div>
     )
   }
