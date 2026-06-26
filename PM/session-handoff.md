@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Critical bug investigation (2026-06-26)
+- **Branch:** `cursor/critical-bug-investigation-9231` · commit `562a060`
+- **Trigger:** master push `a031607` (version bump; substantive ops-offline code in `d20b79e`)
+- **Bug:** `commitCoordinatorMutation` reported `synced` when *any* queue item applied and `queued` on online flush failures; Market Day UI treated `queued` as offline-only and skipped Supabase fallback — check-in/payment/load-in could show success without persisting.
+- **Fix:** Per-mutation `applied` + `offlineQueued` result; callers fall back to direct Supabase when online but ops-sync did not apply the mutation. Test: `npx tsx lib/pwa/coordinator-ops-offline.test.ts`
+- **Next:** Merge PR; smoke coordinator check-in with flaky network (online + failed ops-sync → should still persist via fallback).
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
