@@ -20,7 +20,9 @@
   - **`.github/workflows/deploy.yml`:** New **Prepare App Store Connect API key** step writes `.p8` + exports `ASC_KEY_PATH`/`ASC_KEY_ID`/`ASC_ISSUER_ID`. Archive switched to `CODE_SIGN_STYLE=Automatic` + `-allowProvisioningUpdates` + `-authenticationKey*` flags (dropped manual `CODE_SIGN_IDENTITY`/`PROVISIONING_PROFILE_SPECIFIER`). Export step uses same auth-key flags (replaced `-apiKey`/`-apiIssuer` + inline key write).
   - **`ios/App/App/ExportOptions.plist`:** `signingStyle` manual → automatic; removed `provisioningProfiles` + `signingCertificate` pins.
   - Xcode now mints a profile matching the keychain cert via the API key — `BUILD_PROVISION_PROFILE_BASE64` no longer needs to be in sync.
-- **Verify:** Push to `master` → re-run **Deploy to TestFlight**. Archive should sign via auto profile; export uploads to TestFlight. The API key (`APP_STORE_CONNECT_*` secrets) must have App Manager/Admin role to create profiles.
+- **Attempt #43 root cause:** `error: App has conflicting provisioning settings. App is automatically signed, but provisioning profile PopupHub_TestFlight_Profile has been manually specified.` The `project.pbxproj` still hardcoded manual signing while CLI forced Automatic.
+- **Attempt #43 fix — `ios/App/App.xcodeproj/project.pbxproj`:** `ProvisioningStyle` Manual → Automatic; all `CODE_SIGN_STYLE` Manual → Automatic (3); `PROVISIONING_PROFILE_SPECIFIER` cleared to `""` (2). Project now coherent with automatic signing + matches documented local Xcode workflow.
+- **Verify:** Push to `master` → re-run **Deploy to TestFlight**. Archive should sign via auto profile (no conflict); export uploads to TestFlight. API key (`APP_STORE_CONNECT_*` secrets) needs App Manager/Admin role to create profiles.
 - **Next:** User re-runs workflow; paste logs if archive/export fails (e.g. API key lacks profile-create permission).
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
