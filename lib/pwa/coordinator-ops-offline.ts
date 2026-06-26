@@ -127,12 +127,19 @@ export async function removePendingCoordinatorMutation(id: string): Promise<void
   db.close()
 }
 
+export type CoordinatorOpsFlushResult = {
+  synced: number
+  failed: number
+  remaining: number
+  appliedIds: string[]
+}
+
 export async function flushCoordinatorOpsQueue(
   eventId: string
-): Promise<{ synced: number; failed: number; remaining: number }> {
+): Promise<CoordinatorOpsFlushResult> {
   const pending = await listPendingCoordinatorMutations(eventId)
   if (pending.length === 0) {
-    return { synced: 0, failed: 0, remaining: 0 }
+    return { synced: 0, failed: 0, remaining: 0, appliedIds: [] }
   }
 
   try {
@@ -142,36 +149,68 @@ export async function flushCoordinatorOpsQueue(
       body: JSON.stringify({ mutations: pending }),
     })
     if (!res.ok) {
-      return { synced: 0, failed: pending.length, remaining: pending.length }
+      return {
+        synced: 0,
+        failed: pending.length,
+        remaining: pending.length,
+        appliedIds: [],
+      }
     }
     const body = (await res.json()) as { appliedIds?: string[] }
     const applied = new Set(body.appliedIds ?? [])
+    const appliedIds: string[] = []
     let synced = 0
     for (const row of pending) {
       if (applied.has(row.id)) {
         await removePendingCoordinatorMutation(row.id)
+        appliedIds.push(row.id)
         synced += 1
       }
     }
     const remaining = pending.length - synced
-    return { synced, failed: remaining, remaining }
+    return { synced, failed: remaining, remaining, appliedIds }
   } catch {
-    return { synced: 0, failed: pending.length, remaining: pending.length }
+    return {
+      synced: 0,
+      failed: pending.length,
+      remaining: pending.length,
+      appliedIds: [],
+    }
   }
+}
+
+export type CoordinatorMutationCommitResult = {
+  mutationId: string
+  /** True only when this mutation was removed from the queue after server apply. */
+  synced: boolean
+  /** Browser reports offline — caller should keep optimistic UI and skip live fallback. */
+  offline: boolean
+  queued: boolean
+}
+
+/** Derive per-mutation commit status from a flush result (unit-tested). */
+export function coordinatorMutationCommitResult(
+  mutationId: string,
+  appliedIds: readonly string[],
+  offline: boolean
+): CoordinatorMutationCommitResult {
+  if (offline) {
+    return { mutationId, synced: false, offline: true, queued: true }
+  }
+  const synced = appliedIds.includes(mutationId)
+  return { mutationId, synced, offline: false, queued: !synced }
 }
 
 export async function commitCoordinatorMutation(
   eventId: string,
   type: CoordinatorMutationType,
   payload: Record<string, unknown>
-): Promise<{ queued: boolean; synced: boolean }> {
-  await queueCoordinatorMutation(eventId, type, payload)
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { queued: true, synced: false }
+): Promise<CoordinatorMutationCommitResult> {
+  const entry = await queueCoordinatorMutation(eventId, type, payload)
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine
+  if (offline) {
+    return coordinatorMutationCommitResult(entry.id, [], true)
   }
   const result = await flushCoordinatorOpsQueue(eventId)
-  return {
-    queued: result.remaining > 0,
-    synced: result.synced > 0,
-  }
+  return coordinatorMutationCommitResult(entry.id, result.appliedIds, false)
 }
