@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
+
+const PAYMENT_STATUS_FIELDS = new Set(['payment_status', 'application_payment_status'])
+const RELIABILITY_PROFILE_FIELDS = new Set([
+  'late_arrival_count',
+  'left_early_count',
+  'reliability_score',
+])
 
 export async function POST(
   request: Request,
@@ -87,7 +94,12 @@ async function applyMutation(
       return !error
     }
     case 'payment_status': {
-      const updates = (payload.updates ?? {}) as Record<string, unknown>
+      const raw = (payload.updates ?? {}) as Record<string, unknown>
+      const updates: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(raw)) {
+        if (PAYMENT_STATUS_FIELDS.has(key)) updates[key] = value
+      }
+      if (Object.keys(updates).length === 0) return false
       const { error } = await supabase
         .from('booth_applications')
         .update(updates)
@@ -104,11 +116,15 @@ async function applyMutation(
       if (error) return false
 
       const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { late_arrival_count?: number; reliability_score?: number }
-        | undefined
+      const reliabilityPatch = payload.reliabilityPatch as Record<string, unknown> | undefined
       if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+        const ok = await applyVendorReliabilityPatch(
+          eventId,
+          applicationId,
+          vendorId,
+          reliabilityPatch
+        )
+        if (!ok) return false
       }
       return true
     }
@@ -132,11 +148,15 @@ async function applyMutation(
       if (error) return false
 
       const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { left_early_count?: number; reliability_score?: number }
-        | undefined
+      const reliabilityPatch = payload.reliabilityPatch as Record<string, unknown> | undefined
       if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+        const ok = await applyVendorReliabilityPatch(
+          eventId,
+          applicationId,
+          vendorId,
+          reliabilityPatch
+        )
+        if (!ok) return false
       }
       return true
     }
@@ -146,4 +166,31 @@ async function applyMutation(
     default:
       return false
   }
+}
+
+/** Vendor profile RLS blocks coordinator session writes — apply after event/application checks. */
+async function applyVendorReliabilityPatch(
+  eventId: string,
+  applicationId: string,
+  vendorId: string,
+  patch: Record<string, unknown>
+): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data: application } = await admin
+    .from('booth_applications')
+    .select('vendor_id')
+    .eq('id', applicationId)
+    .eq('event_id', eventId)
+    .maybeSingle()
+
+  if (!application || application.vendor_id !== vendorId) return false
+
+  const sanitized: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(patch)) {
+    if (RELIABILITY_PROFILE_FIELDS.has(key)) sanitized[key] = value
+  }
+  if (Object.keys(sanitized).length === 0) return true
+
+  const { error } = await admin.from('profiles').update(sanitized).eq('id', vendorId)
+  return !error
 }

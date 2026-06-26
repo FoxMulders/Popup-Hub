@@ -1,10 +1,14 @@
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import type { BoothCell, LayoutRoom } from '@/types/database'
 import type { ShopperRouteMode } from '@/lib/shopper/layout'
 
 export type PublicFloorplanMode = 'patron' | 'vendor-setup'
 
 export function isGuestTableCell(cell: BoothCell): boolean {
-  return cell.tablePurpose === 'guest'
+  return isGuestTableBooth({
+    tablePurpose: cell.tablePurpose,
+    tableShape: cell.tableShape,
+  })
 }
 
 export function isVendorBoothCell(cell: BoothCell): boolean {
