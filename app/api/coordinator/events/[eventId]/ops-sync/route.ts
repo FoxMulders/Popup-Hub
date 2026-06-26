@@ -1,8 +1,32 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
+import {
+  applyVendorEarlyExitStrike,
+  applyVendorLateArrivalStrike,
+  shouldApplyEarlyExitStrike,
+  shouldApplyLateArrivalStrike,
+} from '@/lib/coordinator/ops-sync-vendor-reliability'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
+import type { ApplicationPaymentStatus, PaymentStatus } from '@/types/database'
+
+const PAYMENT_STATUS_FIELDS = new Set([
+  'payment_status',
+  'application_payment_status',
+])
+
+function pickPaymentStatusUpdates(
+  raw: Record<string, unknown>
+): Record<string, PaymentStatus | ApplicationPaymentStatus> {
+  const updates: Record<string, PaymentStatus | ApplicationPaymentStatus> = {}
+  for (const key of PAYMENT_STATUS_FIELDS) {
+    if (key in raw) {
+      updates[key] = raw[key] as PaymentStatus | ApplicationPaymentStatus
+    }
+  }
+  return updates
+}
 
 export async function POST(
   request: Request,
@@ -87,7 +111,10 @@ async function applyMutation(
       return !error
     }
     case 'payment_status': {
-      const updates = (payload.updates ?? {}) as Record<string, unknown>
+      const updates = pickPaymentStatusUpdates(
+        (payload.updates ?? {}) as Record<string, unknown>
+      )
+      if (Object.keys(updates).length === 0) return false
       const { error } = await supabase
         .from('booth_applications')
         .update(updates)
@@ -96,19 +123,32 @@ async function applyMutation(
       return !error
     }
     case 'load_in_status': {
+      const nextStatus = (payload.load_in_status as string | null) ?? null
+      const { data: application, error: readError } = await supabase
+        .from('booth_applications')
+        .select('load_in_status, vendor_id')
+        .eq('id', applicationId)
+        .eq('event_id', eventId)
+        .maybeSingle()
+      if (readError || !application) return false
+
       const { error } = await supabase
         .from('booth_applications')
-        .update({ load_in_status: (payload.load_in_status as string | null) ?? null })
+        .update({ load_in_status: nextStatus })
         .eq('id', applicationId)
         .eq('event_id', eventId)
       if (error) return false
 
-      const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { late_arrival_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+      if (
+        application.vendor_id &&
+        shouldApplyLateArrivalStrike(application.load_in_status, nextStatus)
+      ) {
+        const admin = createAdminClient()
+        const reliabilityApplied = await applyVendorLateArrivalStrike(
+          admin,
+          application.vendor_id
+        )
+        if (!reliabilityApplied) return false
       }
       return true
     }
@@ -121,6 +161,14 @@ async function applyMutation(
       return !error
     }
     case 'early_exit': {
+      const { data: application, error: readError } = await supabase
+        .from('booth_applications')
+        .select('left_early, vendor_id')
+        .eq('id', applicationId)
+        .eq('event_id', eventId)
+        .maybeSingle()
+      if (readError || !application) return false
+
       const { error } = await supabase
         .from('booth_applications')
         .update({
@@ -131,18 +179,22 @@ async function applyMutation(
         .eq('event_id', eventId)
       if (error) return false
 
-      const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { left_early_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+      if (
+        application.vendor_id &&
+        shouldApplyEarlyExitStrike(Boolean(application.left_early))
+      ) {
+        const admin = createAdminClient()
+        const reliabilityApplied = await applyVendorEarlyExitStrike(
+          admin,
+          application.vendor_id
+        )
+        if (!reliabilityApplied) return false
       }
       return true
     }
     case 'floor_plan_doc_patch':
-      // Layout persistence requires full room payload — queued for a future pass.
-      return true
+      // Layout persistence requires full room payload — not yet implemented.
+      return false
     default:
       return false
   }
