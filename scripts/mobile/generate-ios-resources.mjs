@@ -244,8 +244,6 @@ async function ensureIosEntitlements() {
 \t<array>
 \t\t<string>applinks:popuphub.ca</string>
 \t</array>
-\t<key>aps-environment</key>
-\t<string>development</string>
 </dict>
 </plist>
 `
