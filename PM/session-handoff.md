@@ -10,7 +10,7 @@
   - **`public/popup-hub-mark.svg`** — deleted so `process-logo.mjs` rasterizes from the PNG icon source instead of the over-stylized vector.
   - **`npm run assets:logo`** — regenerated `popup-hub-brand(.dark).png` (568×568), `popup-hub-icon(.dark).png`, `logo.png`, `placeholder-logo.png`, favicons, PWA icons, `app/icon.png` + `apple-icon.png`, badge from the new master.
   - **`lib/brand/brand-logo-paths.ts`** — `BRAND_LOGO` now points at `/popup-hub-brand.png` (light) and `/popup-hub-brand-dark.png` (dark), 568×568. This drives all `PopupHubLogo`/`BrandLogoMark` usages AND the loader animations (`popup-loader-scene.tsx`, `initial-loader-reveal.tsx`) via `useBrandLogoSrc()`.
-  - **`src/qa_review/components/auth/Login_qa.tsx`** — removed the large `popup-hub-brand.png` `<img>` above "Welcome back" on the standalone `/login` page (heading + subtitle kept). `/signup` had no logo above "Create your account" (top-left is the nav wordmark, left intact).
+  - **`src/qa_review/components/auth/Login_qa.tsx`** — kept the storefront logo above the heading on `/login` (now renders the proper `/popup-hub-brand.png` attachment artwork). Heading changed "Welcome back" → "Welcome to Popup Hub"; removed the "Sign in to your Popup Hub account" subtitle. `/signup` has no logo above "Create your account" (top-left is the nav wordmark, left intact).
   - **`public/sw.js`** — cache bumped `v19` → `v20` so clients refetch the new marks.
 - **Untouched (per request):** `popup-hub-wordmark.png` and `BrandLogoLockup` (text logos), `popup-hub-logo.png` lockup source.
 - **Verify:** `/login` shows no storefront logo above "Welcome back"; footer/auth/rail marks + loader animation render the new glossy storefront+pin; favicons/PWA/app icon updated.
