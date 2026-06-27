@@ -9,19 +9,56 @@ type PublishedEvent = {
   start_at: string | null
 }
 
+type OrganizerLinkRow = {
+  id: string
+  slug: string
+  claimed_by: string | null
+  popup_hub_coordinator_id: string | null
+  source: string | null
+}
+
+/** Whether publish sync may set claimed_by for an existing organizer row. */
+export function canAutoClaimOrganizerOnPublish(
+  organizer: Pick<OrganizerLinkRow, 'claimed_by' | 'popup_hub_coordinator_id'>,
+  coordinatorId: string
+): boolean {
+  return (
+    organizer.claimed_by === coordinatorId ||
+    organizer.popup_hub_coordinator_id === coordinatorId
+  )
+}
+
+function organizerUpdatePayload(
+  organizer: Pick<OrganizerLinkRow, 'claimed_by' | 'popup_hub_coordinator_id'>,
+  coordinatorId: string,
+  now: string
+): Record<string, string> {
+  const payload: Record<string, string> = {
+    popup_hub_coordinator_id: coordinatorId,
+    updated_at: now,
+  }
+
+  if (canAutoClaimOrganizerOnPublish(organizer, coordinatorId)) {
+    payload.claimed_by = coordinatorId
+    payload.claimed_at = now
+  }
+
+  return payload
+}
+
 /** Sync a published PopUp Hub event into the trust directory for a claimed organizer. */
 export async function syncPublishedEventToTrustDirectory(
   supabase: SupabaseClient,
   event: PublishedEvent
 ): Promise<void> {
-  const { data: organizer } = await supabase
+  const { data: linkedOrganizer } = await supabase
     .from('organizers')
-    .select('id, slug')
+    .select('id, slug, claimed_by, popup_hub_coordinator_id, source')
     .or(`claimed_by.eq.${event.coordinator_id},popup_hub_coordinator_id.eq.${event.coordinator_id}`)
     .eq('listing_status', 'published')
     .maybeSingle()
 
-  let organizerId = organizer?.id
+  let organizerId = linkedOrganizer?.id
 
   if (!organizerId) {
     const { data: profile } = await supabase
@@ -33,10 +70,24 @@ export async function syncPublishedEventToTrustDirectory(
     const displayName = profile?.full_name?.trim() || 'Market organizer'
     const slug = organizerSlugFromName(displayName)
 
-    const { data: created } = await supabase
+    const { data: existingBySlug } = await supabase
       .from('organizers')
-      .upsert(
-        {
+      .select('id, slug, claimed_by, popup_hub_coordinator_id, source')
+      .eq('slug', slug)
+      .eq('listing_status', 'published')
+      .maybeSingle()
+
+    if (existingBySlug) {
+      if (!canAutoClaimOrganizerOnPublish(existingBySlug, event.coordinator_id)) {
+        // HubGuard profiles require admin-approved claims — never overwrite via publish sync.
+        return
+      }
+      organizerId = existingBySlug.id
+    } else {
+      const now = new Date().toISOString()
+      const { data: created } = await supabase
+        .from('organizers')
+        .insert({
           slug,
           display_name: displayName,
           city: event.city ?? 'Edmonton',
@@ -44,25 +95,20 @@ export async function syncPublishedEventToTrustDirectory(
           region: 'edmonton-metro',
           claimed_by: event.coordinator_id,
           popup_hub_coordinator_id: event.coordinator_id,
-          claimed_at: new Date().toISOString(),
+          claimed_at: now,
           listing_status: 'published',
           source: 'popup_hub',
-        },
-        { onConflict: 'slug' }
-      )
-      .select('id')
-      .single()
+        })
+        .select('id')
+        .single()
 
-    organizerId = created?.id
-  } else {
+      organizerId = created?.id
+    }
+  } else if (linkedOrganizer) {
+    const now = new Date().toISOString()
     await supabase
       .from('organizers')
-      .update({
-        popup_hub_coordinator_id: event.coordinator_id,
-        claimed_by: event.coordinator_id,
-        claimed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .update(organizerUpdatePayload(linkedOrganizer, event.coordinator_id, now))
       .eq('id', organizerId)
   }
 
