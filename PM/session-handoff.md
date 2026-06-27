@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Logo revert to attachment artwork + auth logo removal (local, not deployed)
+- **Goal:** The vector recreation (`popup-hub-mark.svg`) deviated too much from the intended storefront mark. Revert every storefront-icon instance (and the loader animation) to the supplied PNG artwork, and remove the large logo above the auth heading. Leave all wordmark/text logos untouched.
+- **Persona:** All personas · nav rail/footer/auth marks, initial + replay loader animations, favicons/PWA/app icons; Guest · `/login`.
+- **Shipped locally:**
+  - **`public/popup-hub-icon-source.png` / `popup-hub-icon-source-dark.png`** — replaced with the supplied 1024×1024 transparent storefront+pin artwork (canonical icon master).
+  - **`public/popup-hub-mark.svg`** — deleted so `process-logo.mjs` rasterizes from the PNG icon source instead of the over-stylized vector.
+  - **`npm run assets:logo`** — regenerated `popup-hub-brand(.dark).png` (568×568), `popup-hub-icon(.dark).png`, `logo.png`, `placeholder-logo.png`, favicons, PWA icons, `app/icon.png` + `apple-icon.png`, badge from the new master.
+  - **`lib/brand/brand-logo-paths.ts`** — `BRAND_LOGO` now points at `/popup-hub-brand.png` (light) and `/popup-hub-brand-dark.png` (dark), 568×568. This drives all `PopupHubLogo`/`BrandLogoMark` usages AND the loader animations (`popup-loader-scene.tsx`, `initial-loader-reveal.tsx`) via `useBrandLogoSrc()`.
+  - **`src/qa_review/components/auth/Login_qa.tsx`** — removed the large `popup-hub-brand.png` `<img>` above "Welcome back" on the standalone `/login` page (heading + subtitle kept). `/signup` had no logo above "Create your account" (top-left is the nav wordmark, left intact).
+  - **`public/sw.js`** — cache bumped `v19` → `v20` so clients refetch the new marks.
+- **Untouched (per request):** `popup-hub-wordmark.png` and `BrandLogoLockup` (text logos), `popup-hub-logo.png` lockup source.
+- **Verify:** `/login` shows no storefront logo above "Welcome back"; footer/auth/rail marks + loader animation render the new glossy storefront+pin; favicons/PWA/app icon updated.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Auth + native splash cleanup (local, not deployed)
 - **Goal:** Remove duplicate branding on signup and skip the native launch splash so only the booth-table web loader animation plays on first open.
 - **Persona:** Guest · signup/login; all personas · native mobile cold launch.

@@ -1,9 +1,9 @@
-/** Square Location Tent storefront icon — vector mark for crisp UI rendering. */
+/** Square Location Tent storefront icon — transparent PNG mark for UI + animations. */
 export const BRAND_LOGO = {
-  width: 994,
-  height: 994,
-  light: '/popup-hub-mark.svg',
-  dark: '/popup-hub-mark.svg',
+  width: 568,
+  height: 568,
+  light: '/popup-hub-brand.png',
+  dark: '/popup-hub-brand-dark.png',
 } as const
 
 /** Horizontal "PopupHub" wordmark — transparent PNG for sticky header chrome. */

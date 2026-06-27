@@ -365,9 +365,8 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
             className="w-44 h-auto object-contain mx-auto mb-4"
           />
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
-            Welcome back
+            Welcome to Popup Hub
           </h1>
-          <p className="text-muted-foreground mt-1">Sign in to your Popup Hub account</p>
         </div>
       ) : null}
 
