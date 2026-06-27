@@ -2,6 +2,15 @@ const MIN_VERIFICATION_NOTE_LENGTH = 20
 
 export { MIN_VERIFICATION_NOTE_LENGTH }
 
+/** Auto-generated note for coordinator home claim suggestions (match reasons). */
+export function buildCoordinatorSuggestionClaimNote(
+  displayName: string,
+  reasonLabels: string[]
+): string {
+  const reasons = reasonLabels.filter(Boolean).join('; ')
+  return `I manage ${displayName}. PopUp Hub suggested this match: ${reasons}.`
+}
+
 export function validateOrganizerClaimVerificationNote(
   note: string | null | undefined
 ): { ok: true } | { ok: false; error: string } {
