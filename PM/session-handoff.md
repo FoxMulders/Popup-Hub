@@ -32,8 +32,9 @@
   - **`lib/auth/native-oauth.ts`** — native path uses `skipBrowserRedirect` + `Browser.open`; web path unchanged.
   - **`lib/auth/oauth-callback-url.ts`** — `buildNativeOAuthCallbackUrl()` → `ca.popuphub.app://auth/callback?...` (matches deep links).
   - **Login + signup** wired to shared helper with pending spinner + cancel via `browserFinished`.
-  - **`capacitor-init.tsx`** — `markNativeOAuthDeepLinkReturn()` + `Browser.close()` on auth deep link.
+  - **`capacitor-init.tsx`** — `markNativeOAuthDeepLinkReturn()` + `Browser.close()` on auth deep link; **`navigateToOAuthCallback()`** uses `window.location.replace` (not `router.push`) so PKCE session cookies persist.
   - **`mobile/README.md`** — corrected OAuth architecture note + Supabase redirect URL checklist.
+- **Bug fix (critical-bug automation):** Deep-link return used `router.push('/api/auth/callback')`, which fetches the route handler without storing `Set-Cookie` — native Google sign-in always failed after account picker. Fixed via `lib/auth/oauth-callback-navigation.ts`.
 - **Manual follow-up:** Supabase Auth → Redirect URLs must include `ca.popuphub.app://auth/callback` (documented in `mobile/README.md`, `PM/ios-testflight.md`). **New native store build required** after sync (TestFlight / Play).
 - **Verify:** Native app → `/login` → Continue with Google → system browser opens (Done/close visible) → account picker → returns signed in. Web `popuphub.ca/login` regression unchanged.
 - **Next:** Commit + deploy web when user asks; rebuild native binaries for store.
