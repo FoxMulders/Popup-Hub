@@ -1,1 +1,1 @@
-feat: ship 21 session updates (Popup Hub logo vector recreation; Mobile footer link trim; Native Google OAuth; iOS routing coverage GeoJSON; +17 more)
+feat: ship 23 session updates (Auth + native splash cleanup; Header wordmark swap; Popup Hub logo vector recreation; Mobile footer link trim; +19 more)

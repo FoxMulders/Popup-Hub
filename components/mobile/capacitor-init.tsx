@@ -33,6 +33,12 @@ export function CapacitorInit() {
   useEffect(() => {
     markNativeAppCookie()
 
+    if (isNativeApp()) {
+      void import('@capacitor/splash-screen')
+        .then(({ SplashScreen }) => SplashScreen.hide())
+        .catch(() => undefined)
+    }
+
     let removeUrlListener: (() => void) | undefined
 
     void import('@capacitor/app')

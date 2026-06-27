@@ -6,6 +6,17 @@ export const BRAND_LOGO = {
   dark: '/popup-hub-mark.svg',
 } as const
 
+/** Horizontal "PopupHub" wordmark — transparent PNG for sticky header chrome. */
+export const BRAND_WORDMARK = {
+  width: 878,
+  height: 215,
+  src: '/popup-hub-wordmark.png',
+} as const
+
+export function brandWordmarkSrc() {
+  return `${BRAND_WORDMARK.src}?v=${brandLogoVersion()}`
+}
+
 export function brandLogoVersion() {
   return (
     process.env.NEXT_PUBLIC_BUILD_NUMBER ??

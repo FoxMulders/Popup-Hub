@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { PopupLoaderScene } from '@/components/brand/popup-loader-scene'
 import { pickRandomLoaderVariant, type LoaderVariantId } from '@/lib/brand/loader-variants'
-import { BRAND_LOGO } from '@/lib/brand/brand-logo-paths'
+import { BRAND_LOGO, BRAND_WORDMARK, brandWordmarkSrc } from '@/lib/brand/brand-logo-paths'
 import { useBrandLogoSrc } from '@/hooks/use-brand-logo-src'
 
 /** Square storefront icon (stall + pin) — no wordmark text. */
@@ -202,7 +202,7 @@ interface BrandLogoMarkProps {
   href?: string
 }
 
-/** Storefront icon for nav headers and auth screens. */
+/** Horizontal "PopupHub" wordmark for sticky header chrome. */
 export function BrandLogoLockup({
   className,
   href,
@@ -212,14 +212,36 @@ export function BrandLogoLockup({
   href?: string
   size?: BrandLogoMarkSize
 }) {
-  return (
-    <PopupHubLogo
-      className={cn(MARK_HEIGHTS[size], className)}
-      title="Popup Hub"
+  const wordmark = (
+    <Image
+      src={brandWordmarkSrc()}
+      alt="Popup Hub"
+      width={BRAND_WORDMARK.width}
+      height={BRAND_WORDMARK.height}
+      unoptimized
       priority
-      href={href}
+      draggable={false}
+      className={cn(
+        'pointer-events-none w-auto max-w-full select-none object-contain object-left',
+        MARK_HEIGHTS[size],
+        className,
+      )}
     />
   )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="inline-flex shrink-0 items-center rounded-md"
+        aria-label="Popup Hub"
+      >
+        {wordmark}
+      </Link>
+    )
+  }
+
+  return wordmark
 }
 
 export function BrandLogoMark({ size = 'nav', className, href }: BrandLogoMarkProps) {

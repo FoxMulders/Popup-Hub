@@ -33,14 +33,13 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1200,
+      // Skip the native splash overlay — the web initial-loader animation
+      // is the only branded first-paint experience.
+      launchShowDuration: 0,
       launchAutoHide: true,
+      launchFadeOutDuration: 0,
       backgroundColor: '#faf8f5',
-      androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
       showSpinner: false,
-      splashFullScreen: true,
-      splashImmersive: true,
     },
     StatusBar: {
       style: 'DARK',

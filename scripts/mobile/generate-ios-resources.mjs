@@ -29,23 +29,21 @@ async function ensureBrandAssets() {
   await copyFile(iconSource, path.join(resourcesDir, 'icon-only.png'))
   await copyFile(brandSource, path.join(wwwDir, 'popup-hub-brand.png'))
 
-  const splash = await sharp(brandSource)
-    .resize(960, 960, {
-      fit: 'contain',
+  // iOS requires a launch image asset; keep it a plain cream canvas with
+  // no logo. Capacitor SplashScreen is disabled at runtime (duration 0).
+  const splash = await sharp({
+    create: {
+      width: 1080,
+      height: 1800,
+      channels: 4,
       background: cream,
-    })
-    .extend({
-      top: 420,
-      bottom: 420,
-      left: 60,
-      right: 60,
-      background: cream,
-    })
+    },
+  })
     .png()
     .toBuffer()
 
   await sharp(splash).toFile(path.join(resourcesDir, 'splash.png'))
-  console.log('Wrote mobile/resources/icon-only.png + splash.png')
+  console.log('Wrote mobile/resources/icon-only.png + plain cream splash.png (no logo)')
 }
 
 async function writeIosAppIcon() {

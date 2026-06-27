@@ -2,6 +2,29 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Auth + native splash cleanup (local, not deployed)
+- **Goal:** Remove duplicate branding on signup and skip the native launch splash so only the booth-table web loader animation plays on first open.
+- **Persona:** Guest · signup/login; all personas · native mobile cold launch.
+- **Shipped locally:**
+  - **`app/(auth)/signup/page.tsx`** — removed large `BrandLogoMark` above "Create your account" (kept on check-email confirmation).
+  - **`capacitor.config.ts`** — `launchShowDuration: 0`, `launchFadeOutDuration: 0` (Capacitor splash overlay disabled).
+  - **`components/mobile/capacitor-init.tsx`** — `SplashScreen.hide()` on native mount.
+  - **Android** — launch theme uses solid cream background + transparent icon (no splash drawable).
+  - **iOS** — `LaunchScreen.storyboard` is plain cream (no Splash image).
+  - **`scripts/mobile/generate-ios-resources.mjs`** — splash asset generation stays cream-only for any legacy references.
+- **Verify:** Rebuild native app (`npm run mobile:sync` + Xcode/Android Studio archive). Cold launch should go straight to web content → booth deal animation (no standalone logo screen).
+- **Next:** Commit + native rebuild when user asks.
+
+## Active work — Header wordmark swap (local, not deployed)
+- **Goal:** Replace the single storefront/tent icon in the sticky headers with the new horizontal "PopupHub" wordmark.
+- **Persona:** All personas · sticky header chrome (`AppNav`, `ShopperTopBar`, `GuestNav`).
+- **Shipped locally:**
+  - **`public/popup-hub-wordmark.png`** — transparent, trimmed wordmark (878×215) keyed from the supplied black-background art via `scripts/brand/build-wordmark.mjs` (alpha = boosted max(r,g,b) so green "Popup" + blue "Hub" stay opaque on cream/dark chrome).
+  - **`lib/brand/brand-logo-paths.ts`** — added `BRAND_WORDMARK` + `brandWordmarkSrc()`.
+  - **`components/brand/popup-hub-logo.tsx`** — `BrandLogoLockup` now renders the wordmark `Image` (height `h-9`/`sm:h-10`, `w-auto object-left`) instead of the tent `PopupHubLogo`. Footer/auth/rail still use the storefront icon.
+- **Verify:** `npx tsc --noEmit` clean for brand modules. Headers show the wordmark left-aligned, linking home; transparent bg over `bg-cream/80`.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Popup Hub logo vector recreation (local, not deployed)
 - **Goal:** Fix jagged/soft edges on the storefront + pin logo by redrawing as clean vector art.
 - **Persona:** All personas · nav header, auth, rail, footer, favicons, loader.
