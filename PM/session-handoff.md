@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug: native OAuth session cookies (PR #99, not deployed)
+- **Goal:** Fix native Google sign-in failing after OAuth deep-link return.
+- **Persona:** All personas · Capacitor iOS/Android cold/warm OAuth.
+- **Bug:** `CapacitorInit` used `router.push('/api/auth/callback?...')` on `ca.popuphub.app://auth/callback` — soft navigation does not persist `Set-Cookie` from PKCE exchange; user returns logged out.
+- **Fix:** `window.location.replace(apiAuthCallbackHref(query))` + shared helper in `lib/auth/oauth-callback-url.ts`; signup OAuth cancel listener re-registers on `authMode` tab switch.
+- **Branch:** `cursor/critical-bug-investigation-a056` @ `1c20f0da`.
+- **Verify:** `npx tsx lib/auth/oauth-callback-url.test.ts` PASS. Native smoke: Google sign-in on device → session persists after deep link.
+- **Next:** Merge PR #99; native OAuth smoke on TestFlight/APK.
+
 ## Active work — SEO growth roadmap implementation (local, not deployed)
 - **Goal:** Implement PopupHub.ca SEO audit plan — technical indexing, local landing pages, schema, guides, embed badges, CRO for organic visitors.
 - **Persona:** Patron discovery · Vendor applications · Coordinator software · HubGuard trust.
