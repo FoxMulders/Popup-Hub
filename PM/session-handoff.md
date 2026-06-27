@@ -2256,9 +2256,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `7bac99e` (pushed to `origin/master`)
-- Last deploy commit: `7bac99e` - feat: ship 26 session updates (SEO growth roadmap implementation; QA sprint: navigation, auth, branding; Logo revert to attachment artwork + auth logo removal; Auth + native splash cleanup; +22 more)
-- Production: https://popuphub.ca - **v1.170.0 build 1** | commit `445a124` (handoff updated 2026-06-27 13:47)
+- Branch: `master` @ `529d6d9` (pushed to `origin/master`)
+- Last deploy commit: `529d6d9` - feat: ship 29 session updates (Chrome audit + HubGuard patron gate; List-mode map previews; HubGuard / global header cleanup; SEO growth roadmap implementation; +25 more)
+- Production: https://popuphub.ca - **v1.171.0 build 1** | commit `ed03671` (handoff updated 2026-06-27 14:43)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2635,7 +2635,7 @@
 
 
 ## Last deploy
-- 2026-06-27 13:47 - Deploy via deploy-popuphub.ps1 - `feat: ship 26 session updates (SEO growth roadmap implementation; QA sprint: navigation, auth, branding; Logo revert to attachment artwork + auth logo removal; Auth + native splash cleanup; +22 more)` (7bac99e)
+- 2026-06-27 14:43 - Deploy via deploy-popuphub.ps1 - `feat: ship 29 session updates (Chrome audit + HubGuard patron gate; List-mode map previews; HubGuard / global header cleanup; SEO growth roadmap implementation; +25 more)` (529d6d9)
 
 
 ## Goal
