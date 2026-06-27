@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Native OAuth callback navigation fix (cursor/critical-bug-investigation-acbe)
+- **Goal:** Fix broken Google sign-in on native after deep-link return from system browser.
+- **Persona:** All personas · Login/Signup in Capacitor shell.
+- **Bug:** `capacitor-init.tsx` used `router.push('/api/auth/callback?...')` on OAuth deep link; client-side navigation does not apply `Set-Cookie` from the route handler, so PKCE exchange never establishes a session.
+- **Fix:** `navigateToOAuthCallback()` → `window.location.replace` (same pattern as login/signup pages). Unit test in `lib/auth/oauth-callback-url.test.ts`.
+- **Next:** Merge PR, native rebuild not required (web bundle fix via Capacitor server URL).
+
 ## Active work — Auth + native splash cleanup (local, not deployed)
 - **Goal:** Remove duplicate branding on signup and skip the native launch splash so only the booth-table web loader animation plays on first open.
 - **Persona:** Guest · signup/login; all personas · native mobile cold launch.
