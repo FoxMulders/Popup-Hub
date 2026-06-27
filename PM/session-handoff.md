@@ -2204,9 +2204,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `afca6e5` (pushed to `origin/master`)
-- Last deploy commit: `afca6e5` - feat: ship 17 session updates (Three Operational Vectors; Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; +13 more)
-- Production: https://popuphub.ca - **v1.158.0 build 1** | commit `ef1cd14` (handoff updated 2026-06-26 14:11)
+- Branch: `master` @ `e274e6d` (pushed to `origin/master`)
+- Last deploy commit: `e274e6d` - feat: ship 26 session updates (SEO growth roadmap implementation; QA sprint: navigation, auth, branding; Logo revert to attachment artwork + auth logo removal; Auth + native splash cleanup; +22 more)
+- Production: https://popuphub.ca - **v1.169.0 build 1** | commit `ddb8fd2` (handoff updated 2026-06-27 10:08)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2583,7 +2583,7 @@
 
 
 ## Last deploy
-- 2026-06-26 14:11 - Deploy via deploy-popuphub.ps1 - `feat: ship 17 session updates (Three Operational Vectors; Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; +13 more)` (afca6e5)
+- 2026-06-27 10:08 - Deploy via deploy-popuphub.ps1 - `feat: ship 26 session updates (SEO growth roadmap implementation; QA sprint: navigation, auth, branding; Logo revert to attachment artwork + auth logo removal; Auth + native splash cleanup; +22 more)` (e274e6d)
 
 
 ## Goal
