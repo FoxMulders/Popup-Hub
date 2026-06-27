@@ -106,6 +106,8 @@ function SignupForm() {
   const postSignupPath = paramNext ?? defaultPostSignupPath(role)
 
   useEffect(() => {
+    if (authMode !== 'signup') return
+
     onNativeOAuthBrowserFinished((reason) => {
       setGoogleOAuthPending(false)
       if (reason === 'cancelled') {
@@ -115,7 +117,7 @@ function SignupForm() {
     return () => {
       onNativeOAuthBrowserFinished(null)
     }
-  }, [])
+  }, [authMode])
 
   async function handleGoogleSignUp() {
     if (!termsAccepted || googleOAuthPending) {
