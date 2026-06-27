@@ -2,8 +2,9 @@
 
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { markNativeAppCookie, isNativeApp } from '@/lib/mobile/native-app'
+import { apiAuthCallbackHref } from '@/lib/auth/oauth-callback-url'
 import { closeNativeOAuthBrowser, markNativeOAuthDeepLinkReturn } from '@/lib/auth/native-oauth'
+import { markNativeAppCookie, isNativeApp } from '@/lib/mobile/native-app'
 import { NativePushRegister } from '@/components/mobile/native-push-register'
 
 function resolveNativeLaunchPath(input: {
@@ -52,7 +53,8 @@ export function CapacitorInit() {
               const query = params.toString()
               markNativeOAuthDeepLinkReturn()
               void closeNativeOAuthBrowser()
-              router.push(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
+              // Full navigation required so /api/auth/callback Set-Cookie headers persist.
+              window.location.replace(apiAuthCallbackHref(query))
               return
             }
             const path = `${url.pathname}${url.search}${url.hash}`
