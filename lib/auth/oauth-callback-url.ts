@@ -33,6 +33,14 @@ export function buildOAuthCallbackUrl(
   return query ? `${base}/api/auth/callback?${query}` : `${base}/api/auth/callback`
 }
 
+/**
+ * Server PKCE exchange route — must be opened via full navigation (`location.replace`)
+ * so Set-Cookie from `/api/auth/callback` persists (client router.push skips it).
+ */
+export function apiAuthCallbackHref(query?: string): string {
+  return query ? `/api/auth/callback?${query}` : '/api/auth/callback'
+}
+
 /** Client-side origin for OAuth — prefer the live browser origin on any deployed domain. */
 export function getOAuthOrigin(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {

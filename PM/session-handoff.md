@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug automation: native OAuth session cookies (PR pending)
+- **Goal:** Deep bug scan on push `107fc0b` (ship 24 session updates).
+- **Finding:** `CapacitorInit` used `router.push` for `ca.popuphub.app://auth/callback` deep links — skips `Set-Cookie` from `/api/auth/callback`, breaking native Google sign-in after system-browser OAuth.
+- **Fix (branch `cursor/critical-bug-investigation-133b`, commit `02ace3bb`):** `window.location.replace(apiAuthCallbackHref(query))` in `capacitor-init.tsx`; shared `apiAuthCallbackHref()` helper; signup `onNativeOAuthBrowserFinished` re-registers on `authMode` tab switch; unit test added.
+- **Validation:** `npx tsx lib/auth/oauth-callback-url.test.ts` PASS.
+- **No other critical bugs** found in recent ship batch (logo/assets, splash, wordmark, footer trim — cosmetic/low blast radius).
+- **Next:** Merge PR + deploy web; native store rebuild still required for OAuth Browser plugin.
+
 ## Active work — Logo revert to attachment artwork + auth logo removal (local, not deployed)
 - **Goal:** The vector recreation (`popup-hub-mark.svg`) deviated too much from the intended storefront mark. Revert every storefront-icon instance (and the loader animation) to the supplied PNG artwork, and remove the large logo above the auth heading. Leave all wordmark/text logos untouched.
 - **Persona:** All personas · nav rail/footer/auth marks, initial + replay loader animations, favicons/PWA/app icons; Guest · `/login`.
