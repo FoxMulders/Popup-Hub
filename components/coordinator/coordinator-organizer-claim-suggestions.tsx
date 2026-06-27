@@ -10,6 +10,7 @@ import {
   organizerClaimMatchReasonLabel,
   type OrganizerClaimSuggestion,
 } from '@/lib/organizers/match-coordinator-organizers'
+import { buildCoordinatorSuggestionClaimNote } from '@/lib/organizers/claim-verification'
 import { cn } from '@/lib/utils'
 
 const DISMISS_STORAGE_KEY = 'popup-hub:dismissed-organizer-claim-suggestions'
@@ -65,19 +66,26 @@ export function CoordinatorOrganizerClaimSuggestions({
     })
   }
 
-  async function handleClaim(slug: string, displayName: string) {
-    setClaimingSlug(slug)
+  async function handleClaim(suggestion: OrganizerClaimSuggestion) {
+    setClaimingSlug(suggestion.slug)
     try {
-      const res = await fetch(`/api/organizers/${slug}/claim`, { method: 'POST' })
-      const data = (await res.json()) as { error?: string; nextPath?: string }
+      const verificationNote = buildCoordinatorSuggestionClaimNote(
+        suggestion.displayName,
+        suggestion.reasons.map(organizerClaimMatchReasonLabel)
+      )
+      const res = await fetch(`/api/organizers/${suggestion.slug}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verificationNote }),
+      })
+      const data = (await res.json()) as { error?: string; status?: string }
       if (!res.ok) {
-        toast.error(data.error ?? 'Could not claim profile')
+        toast.error(data.error ?? 'Could not submit claim')
         return
       }
-      toast.success(`You claimed ${displayName}.`)
-      dismissSuggestion(slug)
-      if (data.nextPath) router.push(data.nextPath)
-      else router.refresh()
+      toast.success(`Claim submitted for ${suggestion.displayName}. An admin will review it shortly.`)
+      dismissSuggestion(suggestion.slug)
+      router.refresh()
     } finally {
       setClaimingSlug(null)
     }
@@ -98,8 +106,8 @@ export function CoordinatorOrganizerClaimSuggestions({
             HubGuard profiles that may be yours
           </p>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            We matched your coordinator profile to unclaimed trust listings. Claim yours to respond
-            to vendor reviews and sync published markets.
+            We matched your coordinator profile to unclaimed trust listings. Submit a claim to
+            respond to vendor reviews and sync published markets after admin verification.
           </p>
         </div>
         <Link
@@ -145,14 +153,14 @@ export function CoordinatorOrganizerClaimSuggestions({
                 size="sm"
                 className="gap-1.5"
                 disabled={claimingSlug === row.slug}
-                onClick={() => void handleClaim(row.slug, row.displayName)}
+                onClick={() => void handleClaim(row)}
               >
                 {claimingSlug === row.slug ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 ) : (
                   <BadgeCheck className="h-4 w-4" aria-hidden />
                 )}
-                Claim profile
+                Submit claim
               </Button>
               <Link
                 href={`/organizers/${row.slug}`}

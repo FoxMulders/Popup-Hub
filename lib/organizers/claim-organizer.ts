@@ -180,7 +180,7 @@ export async function approveOrganizerClaimRequest(
 
   const now = new Date().toISOString()
 
-  const { error: orgError } = await admin
+  const { data: claimedOrganizer, error: orgError } = await admin
     .from('organizers')
     .update({
       claimed_by: request.requested_by,
@@ -189,9 +189,15 @@ export async function approveOrganizerClaimRequest(
       updated_at: now,
     })
     .eq('id', request.organizer_id)
+    .is('claimed_by', null)
+    .select('id')
+    .maybeSingle()
 
   if (orgError) {
     return { ok: false, status: 500, error: orgError.message }
+  }
+  if (!claimedOrganizer) {
+    return { ok: false, status: 409, error: 'Organizer was claimed by someone else' }
   }
 
   await admin
