@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (2026-06-27, no PR)
+- **Scope:** Commits `529d6d94` + `e9b2c421` (29 session updates + deploy handoff).
+- **Result:** No critical bugs found — no fix PR opened.
+- **Reviewed:** HubGuard claims/OAuth, AuthSessionGuard reload, profile migration 129, e-transfer resolver, vendor map auth, sitemap.
+- **Follow-up (medium, not critical):** `AuthSessionGuard` may sign out on retryable `getUser()` network errors during reload — should ignore `isAuthRetryableFetchError`.
+- **Next:** None unless user wants AuthSessionGuard hardening.
+
 ## Active work — Chrome audit + HubGuard patron gate (local, not deployed)
 - **Goal:** Fix header/footer/bottom-nav sizing and spacing across surfaces; remove HubGuard from logged-in patron ribbon.
 - **Personas:** All personas · sticky headers + global footer + mobile bottom navs; Patron browse shell · HubGuard nav gate.
