@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug: native OAuth session cookies (PR #98, not deployed)
+- **Goal:** Fix native Google OAuth completing in system browser but returning logged out.
+- **Persona:** All personas · native iOS/Android app · Google sign-in.
+- **Root cause:** `CapacitorInit` deep-link handler used `router.push('/api/auth/callback?...')`, which skips `Set-Cookie` from the PKCE exchange route; login/signup already used `window.location.replace`.
+- **Fix (branch `cursor/critical-bug-investigation-d818` @ `8f3ff4e`):** `apiAuthCallbackHref()` helper; `window.location.replace` in `CapacitorInit`; signup `onNativeOAuthBrowserFinished` re-registers on `authMode` tab switch; unit tests in `lib/auth/oauth-callback-url.test.ts`.
+- **Next:** Merge PR #98; smoke-test native Google OAuth on TestFlight/APK.
+
 ## Active work — Logo revert to attachment artwork + auth logo removal (local, not deployed)
 - **Goal:** The vector recreation (`popup-hub-mark.svg`) deviated too much from the intended storefront mark. Revert every storefront-icon instance (and the loader animation) to the supplied PNG artwork, and remove the large logo above the auth heading. Leave all wordmark/text logos untouched.
 - **Persona:** All personas · nav rail/footer/auth marks, initial + replay loader animations, favicons/PWA/app icons; Guest · `/login`.

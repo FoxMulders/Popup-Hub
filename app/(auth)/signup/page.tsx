@@ -20,7 +20,7 @@ import {
   onNativeOAuthBrowserFinished,
   signInWithGoogleOAuth,
 } from '@/lib/auth/native-oauth'
-import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
+import { apiAuthCallbackHref, buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { LoginForm } from '@/app/(auth)/login/login-form'
 import { VendorSignupPassportPreview } from '@/components/marketing/vendor-signup-passport-preview'
@@ -90,7 +90,7 @@ function SignupForm() {
 
     const search = new URLSearchParams(params.toString())
     search.delete('redirectTo')
-    window.location.replace(`/api/auth/callback?${search.toString()}`)
+    window.location.replace(apiAuthCallbackHref(search.toString()))
   }, [params])
 
   useEffect(() => {
@@ -115,7 +115,7 @@ function SignupForm() {
     return () => {
       onNativeOAuthBrowserFinished(null)
     }
-  }, [])
+  }, [authMode])
 
   async function handleGoogleSignUp() {
     if (!termsAccepted || googleOAuthPending) {

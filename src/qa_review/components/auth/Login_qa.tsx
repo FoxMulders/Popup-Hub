@@ -22,6 +22,7 @@ import {
   signInWithGoogleOAuth,
 } from '@/lib/auth/native-oauth'
 import { isEmailNotConfirmedAuthError } from '@/lib/auth/email-confirmation'
+import { apiAuthCallbackHref } from '@/lib/auth/oauth-callback-url'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import {
   clearNedryLockoutState,
@@ -189,7 +190,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
 
     const params = new URLSearchParams(searchParams.toString())
     params.delete('redirectTo')
-    window.location.replace(`/api/auth/callback?${params.toString()}`)
+    window.location.replace(apiAuthCallbackHref(params.toString()))
   }, [searchParams])
 
   useEffect(() => {
