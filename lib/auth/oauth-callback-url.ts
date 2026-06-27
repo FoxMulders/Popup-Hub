@@ -1,5 +1,22 @@
 import { getURL } from '@/lib/url/public-app-url'
 
+/** Custom-scheme callback registered in Supabase + Android/iOS deep links. */
+export const NATIVE_OAUTH_CALLBACK_URL = 'ca.popuphub.app://auth/callback'
+
+/** Build native deep-link OAuth return URL (no /api prefix — mapped in CapacitorInit). */
+export function buildNativeOAuthCallbackUrl(
+  params?: Record<string, string | null | undefined>,
+): string {
+  const search = new URLSearchParams()
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value != null && value !== '') search.set(key, value)
+    }
+  }
+  const query = search.toString()
+  return query ? `${NATIVE_OAUTH_CALLBACK_URL}?${query}` : NATIVE_OAUTH_CALLBACK_URL
+}
+
 /** Build the Supabase OAuth return URL (must be allow-listed in Supabase Auth settings). */
 export function buildOAuthCallbackUrl(
   origin: string,

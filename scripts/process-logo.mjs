@@ -21,6 +21,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const input = path.join(root, 'public', 'popup-hub-logo.png')
 const outputLogo = path.join(root, 'public', 'popup-hub-logo.png')
+/** Canonical vector mark — rasterized to high-res PNG before icon extraction. */
+const markSvg = path.join(root, 'public', 'popup-hub-mark.svg')
 /** Canonical stall+pin artwork — preferred over lockup crop when present. */
 const iconSource = path.join(root, 'public', 'popup-hub-icon-source.png')
 const iconSourceDark = path.join(root, 'public', 'popup-hub-icon-source-dark.png')
@@ -208,18 +210,49 @@ async function writeBrandMark(square, { iconOut, brandOut, label }) {
   await sharp(square).toFile(iconOut)
   console.log(`Wrote icon mark (${label}):`, iconOut)
 
-  const brandSquare = await sharp(square)
-    .resize(994, 994, {
-      fit: 'contain',
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-      kernel: sharp.kernel.lanczos3,
-    })
-    .png()
-    .toBuffer()
+  const meta = await sharp(square).metadata()
+  const maxDim = Math.max(meta.width, meta.height)
+  let brandSquare
+  if (maxDim <= 994) {
+    brandSquare = await sharp(square).png().toBuffer()
+  } else {
+    brandSquare = await sharp(square)
+      .resize(994, 994, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+        kernel: sharp.kernel.lanczos3,
+      })
+      .png()
+      .toBuffer()
+  }
   await writePngAtomically(brandOut, brandSquare)
   console.log(`Wrote UI brand icon (${label}):`, brandOut)
 
   return brandSquare
+}
+
+/** Render vector mark to crisp raster master for favicons and loader assets. */
+async function renderSvgToIconSources() {
+  try {
+    await access(markSvg)
+  } catch {
+    console.log('No popup-hub-mark.svg — using existing icon sources')
+    return
+  }
+
+  const masterSize = 2048
+  const master = await sharp(markSvg, { density: 300 })
+    .resize(masterSize, masterSize, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer()
+
+  await writePngAtomically(iconSource, master)
+  await writePngAtomically(iconSourceDark, master)
+  const meta = await sharp(master).metadata()
+  console.log('Rasterized vector mark:', markSvg, `${meta.width}x${meta.height}`)
 }
 
 async function extractIconMark() {
@@ -427,6 +460,7 @@ async function writeIcons(iconMark) {
   console.log('Wrote badge icon:', path.join(iconsDir, 'badge-96x96.png'))
 }
 
+await renderSvgToIconSources()
 await makeTransparentLogo()
 const iconMark = await extractIconMark()
 await extractDarkIconMark()

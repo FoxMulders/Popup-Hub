@@ -1,9 +1,9 @@
-/** Square Location Tent storefront icon — light and dark artwork variants. */
+/** Square Location Tent storefront icon — vector mark for crisp UI rendering. */
 export const BRAND_LOGO = {
   width: 994,
   height: 994,
-  light: '/popup-hub-brand.png',
-  dark: '/popup-hub-brand-dark.png',
+  light: '/popup-hub-mark.svg',
+  dark: '/popup-hub-mark.svg',
 } as const
 
 export function brandLogoVersion() {

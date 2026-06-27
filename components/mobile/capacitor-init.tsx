@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { markNativeAppCookie, isNativeApp } from '@/lib/mobile/native-app'
+import { closeNativeOAuthBrowser, markNativeOAuthDeepLinkReturn } from '@/lib/auth/native-oauth'
 import { NativePushRegister } from '@/components/mobile/native-push-register'
 
 function resolveNativeLaunchPath(input: {
@@ -43,6 +44,8 @@ export function CapacitorInit() {
             if (url.host === 'auth' && url.pathname.startsWith('/callback')) {
               const params = url.searchParams
               const query = params.toString()
+              markNativeOAuthDeepLinkReturn()
+              void closeNativeOAuthBrowser()
               router.push(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
               return
             }

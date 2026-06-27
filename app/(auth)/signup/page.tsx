@@ -16,6 +16,10 @@ import { GuestNav } from '@/components/nav/guest-nav'
 import { Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { type SignupRole } from '@/lib/auth/rbac'
+import {
+  onNativeOAuthBrowserFinished,
+  signInWithGoogleOAuth,
+} from '@/lib/auth/native-oauth'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { LoginForm } from '@/app/(auth)/login/login-form'
@@ -72,12 +76,13 @@ function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleOAuthPending, setGoogleOAuthPending] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [resending, setResending] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [shareContactWithVendors, setShareContactWithVendors] = useState(false)
 
-  const canSubmit = termsAccepted && !loading
+  const canSubmit = termsAccepted && !loading && !googleOAuthPending
 
   useEffect(() => {
     const code = params.get('code')
@@ -100,30 +105,44 @@ function SignupForm() {
 
   const postSignupPath = paramNext ?? defaultPostSignupPath(role)
 
+  useEffect(() => {
+    onNativeOAuthBrowserFinished((reason) => {
+      setGoogleOAuthPending(false)
+      if (reason === 'cancelled') {
+        toast.message('Sign-in was cancelled.')
+      }
+    })
+    return () => {
+      onNativeOAuthBrowserFinished(null)
+    }
+  }, [])
+
   async function handleGoogleSignUp() {
-    if (!termsAccepted) {
-      toast.error('Please accept the terms and conditions first.')
+    if (!termsAccepted || googleOAuthPending) {
+      if (!termsAccepted) {
+        toast.error('Please accept the terms and conditions first.')
+      }
       return
     }
     localStorage.setItem('signup_role', role)
     if (role === 'shopper') {
       document.cookie = `signup_share_contact=${shareContactWithVendors ? '1' : '0'}; path=/; max-age=600; SameSite=Lax`
     }
-    const supabase = createClient()
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), {
-          role,
-          ...(postSignupPath ? { next: postSignupPath } : {}),
-        }),
-        queryParams: {
-          prompt: 'select_account',
-        },
-      },
+    setGoogleOAuthPending(true)
+
+    const result = await signInWithGoogleOAuth(supabase, {
+      role,
+      ...(postSignupPath ? { next: postSignupPath } : {}),
     })
-    if (oauthError) {
-      toast.error(oauthError.message)
+
+    if (result.mode === 'error') {
+      setGoogleOAuthPending(false)
+      toast.error(result.message)
+      return
+    }
+
+    if (result.mode === 'redirect') {
+      setGoogleOAuthPending(false)
     }
   }
 
@@ -267,9 +286,6 @@ function SignupForm() {
             Sign in
           </Button>
         </div>
-        <div className="mx-auto mb-3 flex justify-center overflow-hidden">
-          <BrandLogoMark size="auth" />
-        </div>
         {authMode === 'signup' ? (
           <>
             <CardTitle className="font-heading text-2xl">{signupTitle}</CardTitle>
@@ -400,8 +416,9 @@ function SignupForm() {
               variant="outline"
               className="w-full h-11 gap-2 touch-manipulation"
               onClick={handleGoogleSignUp}
-              disabled={!canSubmit}
+              disabled={!termsAccepted || googleOAuthPending}
             >
+              {googleOAuthPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               <svg className="h-4 w-4" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />

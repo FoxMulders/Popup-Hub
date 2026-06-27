@@ -11,3 +11,8 @@ export const SITE_FOOTER_MARKETING_LINKS = [
   },
   { href: '/legal/about', label: 'About Us' },
 ] as const
+
+/** Mobile footer — About Us only; full marketing row stays on sm+ */
+export const SITE_FOOTER_MOBILE_MARKETING_LINKS = SITE_FOOTER_MARKETING_LINKS.filter(
+  (link) => link.href === '/legal/about'
+)

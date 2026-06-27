@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 994 994" fill="none" role="img" aria-label="Popup Hub">
+  <defs>
+    <linearGradient id="awningTop" x1="90" y1="45" x2="910" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#B5E86A"/>
+      <stop offset="25%" stop-color="#8FD04A"/>
+      <stop offset="100%" stop-color="#4A9628"/>
+    </linearGradient>
+    <linearGradient id="awningHighlight" x1="100" y1="50" x2="500" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D4F5A0" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#8FD04A" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="valance" x1="497" y1="170" x2="497" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#72C03A"/>
+      <stop offset="100%" stop-color="#358A1C"/>
+    </linearGradient>
+    <linearGradient id="pillar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4A9628"/>
+      <stop offset="35%" stop-color="#96D84E"/>
+      <stop offset="100%" stop-color="#358A1C"/>
+    </linearGradient>
+    <linearGradient id="baseBar" x1="140" y1="875" x2="854" y2="910" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4A9628"/>
+      <stop offset="45%" stop-color="#96D84E"/>
+      <stop offset="100%" stop-color="#358A1C"/>
+    </linearGradient>
+    <linearGradient id="pinBody" x1="350" y1="220" x2="650" y2="920" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5BC4FA"/>
+      <stop offset="25%" stop-color="#2196F3"/>
+      <stop offset="65%" stop-color="#1565C0"/>
+      <stop offset="100%" stop-color="#0D47A1"/>
+    </linearGradient>
+    <radialGradient id="pinGloss" cx="400" cy="330" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pinEdge" x1="570" y1="260" x2="640" y2="750" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="pinHole" cx="497" cy="395" r="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A3D7A"/>
+      <stop offset="60%" stop-color="#1565C0"/>
+      <stop offset="100%" stop-color="#42A5F5"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Left pillar -->
+  <rect x="148" y="255" width="26" height="615" rx="13" fill="url(#pillar)"/>
+  <!-- Right pillar -->
+  <rect x="820" y="255" width="26" height="615" rx="13" fill="url(#pillar)"/>
+
+  <!-- Awning top (perspective trapezoid) -->
+  <path d="M 98 108 L 896 108 L 918 192 L 76 192 Z" fill="url(#awningTop)"/>
+  <path d="M 108 112 L 540 112 L 500 186 L 88 186 Z" fill="url(#awningHighlight)"/>
+
+  <!-- Scalloped valance — five downward lobes -->
+  <path
+    d="M 148 192
+       H 846
+       V 228
+       C 810 228 788 278 754 278
+       C 720 278 698 228 662 228
+       C 626 228 604 278 570 278
+       C 536 278 514 228 497 228
+       C 480 228 458 278 424 278
+       C 390 278 368 228 332 228
+       C 296 228 274 278 240 278
+       C 206 278 184 228 148 228
+       Z"
+    fill="url(#valance)"
+  />
+
+  <!-- Base bar -->
+  <rect x="142" y="862" width="710" height="32" rx="16" fill="url(#baseBar)"/>
+  <ellipse cx="161" cy="902" rx="24" ry="9" fill="#358A1C"/>
+  <ellipse cx="833" cy="902" rx="24" ry="9" fill="#358A1C"/>
+
+  <!-- Location pin -->
+  <path
+    d="M 497 235
+       C 612 235 690 315 690 415
+       C 690 495 635 575 497 760
+       C 359 575 304 495 304 415
+       C 304 315 382 235 497 235
+       Z"
+    fill="url(#pinBody)"
+  />
+  <ellipse cx="415" cy="355" rx="115" ry="90" fill="url(#pinGloss)"/>
+  <path
+    d="M 595 265
+       C 660 310 685 380 665 465
+       C 645 550 585 635 535 680
+       L 575 660
+       C 620 600 650 520 660 440
+       C 670 370 645 305 595 265
+       Z"
+    fill="url(#pinEdge)"
+  />
+  <circle cx="497" cy="395" r="68" fill="url(#pinHole)"/>
+  <circle cx="497" cy="395" r="68" fill="none" stroke="#64B5F6" stroke-width="3" stroke-opacity="0.35"/>
+  <ellipse cx="450" cy="350" rx="32" ry="20" fill="#FFFFFF" fill-opacity="0.6"/>
+</svg>

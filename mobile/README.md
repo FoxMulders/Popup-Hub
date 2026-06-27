@@ -7,7 +7,7 @@ Native iOS wrapper for the production web app at [https://popuphub.ca](https://p
 - **Bundle ID:** `ca.popuphub.app`
 - **Launch URL:** `https://popuphub.ca/discover` (vendors with active vendor portal redirect to `/vendor/events` on native cold launch)
 - **Web assets:** `mobile/www/` is a minimal offline fallback; production builds load the hosted site via `server.url` in `capacitor.config.ts`.
-- **Auth / checkout:** OAuth and payment domains are listed in `server.allowNavigation` so redirects stay inside the WKWebView.
+- **Auth / checkout:** Google OAuth opens in the **system browser** (`@capacitor/browser`) because Google blocks sign-in inside embedded WebViews; the app returns via the `ca.popuphub.app://auth/callback` deep link. Payment domains remain in `server.allowNavigation` for in-app checkout redirects.
 
 Capacitor documents `server.url` as a dev/live-reload option. We use it intentionally for v1 so coordinator + vendor flows ship without a static Next.js export. See `PM/ios-testflight.md` for App Store review notes and a bundled-asset migration path.
 
@@ -71,11 +71,14 @@ Rebuild or re-sync after changing `CAPACITOR_SERVER_URL`.
 
 ## OAuth deep link (Supabase)
 
-Register this redirect URL in Supabase Auth settings:
+Register these redirect URLs in **Supabase Dashboard → Authentication → URL Configuration**:
 
 ```
 ca.popuphub.app://auth/callback
+https://popuphub.ca/api/auth/callback
 ```
+
+(Add preview/staging origins as needed.) Login and signup use `lib/auth/native-oauth.ts` to open Google OAuth in the system browser on native and redirect back through the custom scheme above.
 
 After the iOS project exists, confirm `ios/App/App/Info.plist` contains the `CFBundleURLTypes` entry from `mobile/ios/url-scheme-snippet.plist` (applied automatically on first `mobile:assets` run when `ios/` is present).
 

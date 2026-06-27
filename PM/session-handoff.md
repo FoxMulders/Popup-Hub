@@ -2,6 +2,42 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Popup Hub logo vector recreation (local, not deployed)
+- **Goal:** Fix jagged/soft edges on the storefront + pin logo by redrawing as clean vector art.
+- **Persona:** All personas · nav header, auth, rail, footer, favicons, loader.
+- **Root cause:** `popup-hub-brand.png` was upscaled from a ~158×145 px raster; aliasing was baked into the pixels.
+- **Shipped locally:**
+  - **`public/popup-hub-mark.svg`** — faithful vector recreation (green awning + scalloped valance + pillars + glossy blue pin).
+  - **`lib/brand/brand-logo-paths.ts`** — UI logo now points at `/popup-hub-mark.svg` for light and dark themes.
+  - **`scripts/process-logo.mjs`** — rasterizes SVG to 2048 px master before icon extraction; skips upscaling when source ≤994 px.
+  - **`npm run assets:logo`** — regenerated `popup-hub-brand(.dark).png`, favicons, PWA icons, `app/icon.png`, loader PNGs from crisp vector master.
+- **Verify:** SVG renders sharp at header (`h-9`/`h-10`), auth, rail, footer; favicon 32×32 and brand PNG 994×994 have smooth curves (no stair-stepping).
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Mobile footer link trim (local, not deployed)
+- **Goal:** Reduce clutter on mobile site footer — keep About Us + copyright only.
+- **Persona:** Patron & guest chrome · global site footer (`BuildVersionFooter`).
+- **Shipped locally:**
+  - `lib/nav/site-footer-links.ts` — added `SITE_FOOTER_MOBILE_MARKETING_LINKS` (About Us only).
+  - `components/brand/build-version-footer.tsx` — mobile (`< sm`) shows About Us only; desktop keeps full marketing + legal link row.
+- **Verify:** `npx tsc --noEmit` PASS. Mobile viewport: footer nav shows About Us + copyright; desktop unchanged.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Native Google OAuth (local, not deployed)
+- **Goal:** Fix "Access blocked: Popup Hub's request does not comply with Google's policies" when signing in with Google inside the Capacitor app.
+- **Persona:** All personas · Login (`/login`) and Signup (`/signup`) in native shell.
+- **Root cause:** `signInWithOAuth` navigated the embedded WebView to Google; Google blocks OAuth in WebViews.
+- **Shipped locally:**
+  - **`@capacitor/browser@7`** installed + synced to iOS/Android.
+  - **`lib/auth/native-oauth.ts`** — native path uses `skipBrowserRedirect` + `Browser.open`; web path unchanged.
+  - **`lib/auth/oauth-callback-url.ts`** — `buildNativeOAuthCallbackUrl()` → `ca.popuphub.app://auth/callback?...` (matches deep links).
+  - **Login + signup** wired to shared helper with pending spinner + cancel via `browserFinished`.
+  - **`capacitor-init.tsx`** — `markNativeOAuthDeepLinkReturn()` + `Browser.close()` on auth deep link.
+  - **`mobile/README.md`** — corrected OAuth architecture note + Supabase redirect URL checklist.
+- **Manual follow-up:** Supabase Auth → Redirect URLs must include `ca.popuphub.app://auth/callback` (documented in `mobile/README.md`, `PM/ios-testflight.md`). **New native store build required** after sync (TestFlight / Play).
+- **Verify:** Native app → `/login` → Continue with Google → system browser opens (Done/close visible) → account picker → returns signed in. Web `popuphub.ca/login` regression unchanged.
+- **Next:** Commit + deploy web when user asks; rebuild native binaries for store.
+
 ## Active work — iOS routing coverage GeoJSON (local, not deployed)
 - **Goal:** App Store Connect geographic coverage file for location-based market discovery.
 - **Shipped locally:** `mobile/ios/routing-app-coverage.geojson` — single `MultiPolygon` bounding Canada for national coverage; upload instructions in `PM/ios-testflight.md` §6.

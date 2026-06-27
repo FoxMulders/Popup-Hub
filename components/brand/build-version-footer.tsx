@@ -2,7 +2,10 @@ import Link from 'next/link'
 import { getBuildInfo } from '@/lib/build-info'
 import { COPYRIGHT_NOTICE, PRODUCT_BRAND_NAME } from '@/lib/legal/entity'
 import { LEGAL_LINKS } from '@/lib/legal/links'
-import { SITE_FOOTER_MARKETING_LINKS } from '@/lib/nav/site-footer-links'
+import {
+  SITE_FOOTER_MARKETING_LINKS,
+  SITE_FOOTER_MOBILE_MARKETING_LINKS,
+} from '@/lib/nav/site-footer-links'
 import { cn } from '@/lib/utils'
 
 interface BuildVersionFooterProps {
@@ -32,8 +35,18 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
       >
         <nav aria-label="Site links" className="min-w-0 flex-1">
           <ul className="m-0 flex list-none flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1 p-0 sm:justify-start">
+            {SITE_FOOTER_MOBILE_MARKETING_LINKS.map(({ href, label }) => (
+              <li key={`mobile-${href}`} className="m-0 sm:hidden">
+                <Link
+                  href={href}
+                  className="inline-flex min-h-8 items-center text-xs font-medium text-foreground/75 transition-colors hover:text-forest hover:underline touch-manipulation sm:text-sm"
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
             {SITE_FOOTER_MARKETING_LINKS.map(({ href, label }) => (
-              <li key={href} className="m-0">
+              <li key={`desktop-${href}`} className="m-0 hidden sm:list-item">
                 <Link
                   href={href}
                   className="inline-flex min-h-8 items-center text-xs font-medium text-foreground/75 transition-colors hover:text-forest hover:underline touch-manipulation sm:text-sm"

@@ -1,1 +1,1 @@
-feat: ship 17 session updates (Three Operational Vectors; Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; +13 more)
+feat: ship 21 session updates (Popup Hub logo vector recreation; Mobile footer link trim; Native Google OAuth; iOS routing coverage GeoJSON; +17 more)

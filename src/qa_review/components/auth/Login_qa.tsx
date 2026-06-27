@@ -17,7 +17,10 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
+import {
+  onNativeOAuthBrowserFinished,
+  signInWithGoogleOAuth,
+} from '@/lib/auth/native-oauth'
 import { isEmailNotConfirmedAuthError } from '@/lib/auth/email-confirmation'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import {
@@ -52,6 +55,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleOAuthPending, setGoogleOAuthPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [strikes, setStrikes] = useState(0)
   const [cooldownRemaining, setCooldownRemaining] = useState(0)
@@ -321,20 +325,33 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
-  async function handleGoogleSignIn() {
-    if (isLockedOut) return
-    setError(null)
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), { next: redirectTo }),
-        queryParams: {
-          prompt: 'select_account',
-        },
-      },
+  useEffect(() => {
+    onNativeOAuthBrowserFinished((reason) => {
+      setGoogleOAuthPending(false)
+      if (reason === 'cancelled') {
+        setError('Sign-in was cancelled.')
+      }
     })
-    if (oauthError) {
-      setError(oauthError.message)
+    return () => {
+      onNativeOAuthBrowserFinished(null)
+    }
+  }, [])
+
+  async function handleGoogleSignIn() {
+    if (isLockedOut || googleOAuthPending) return
+    setError(null)
+    setGoogleOAuthPending(true)
+
+    const result = await signInWithGoogleOAuth(supabase, { next: redirectTo })
+
+    if (result.mode === 'error') {
+      setGoogleOAuthPending(false)
+      setError(result.message)
+      return
+    }
+
+    if (result.mode === 'redirect') {
+      setGoogleOAuthPending(false)
     }
   }
 
@@ -368,8 +385,9 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
               className="w-full min-h-11 gap-2 touch-manipulation"
               onClick={handleGoogleSignIn}
               type="button"
-              disabled={isLockedOut || loading}
+              disabled={isLockedOut || loading || googleOAuthPending}
             >
+              {googleOAuthPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
