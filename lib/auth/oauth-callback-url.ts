@@ -17,6 +17,14 @@ export function buildNativeOAuthCallbackUrl(
   return query ? `${NATIVE_OAUTH_CALLBACK_URL}?${query}` : NATIVE_OAUTH_CALLBACK_URL
 }
 
+/** Relative path for PKCE code exchange — must use full navigation (not router.push) so Set-Cookie persists. */
+export function apiAuthCallbackHref(searchParams?: URLSearchParams | string): string {
+  if (!searchParams) return '/api/auth/callback'
+  const query =
+    typeof searchParams === 'string' ? searchParams : searchParams.toString()
+  return query ? `/api/auth/callback?${query}` : '/api/auth/callback'
+}
+
 /** Build the Supabase OAuth return URL (must be allow-listed in Supabase Auth settings). */
 export function buildOAuthCallbackUrl(
   origin: string,
