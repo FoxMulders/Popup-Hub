@@ -31,7 +31,7 @@ export function PassportPageView({
 
   if (showVendorWizard) {
     return (
-      <div className="mx-auto w-full max-w-[1100px] px-4 py-8 pb-24 sm:px-6 xl:px-10">
+      <div className="mx-auto w-full max-w-[1100px] min-w-0 overflow-x-hidden px-4 py-8 pb-24 sm:px-6 sm:pb-8 xl:px-10">
         <div className="mb-8 space-y-3">
           <Link
             href={passportRoute === 'vendor' ? '/vendor/dashboard' : '/profile'}
@@ -80,7 +80,7 @@ export function PassportPageView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 xl:px-10">
+    <div className="mx-auto w-full max-w-[1100px] min-w-0 overflow-x-hidden px-4 py-8 sm:px-6 xl:px-10">
       <PassportProfileForm profile={profile} existing={passport} />
       {profile.role === 'coordinator' ? (
         <div className="mt-8">

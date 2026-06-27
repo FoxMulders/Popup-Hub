@@ -11,6 +11,8 @@ type ClaimRow = {
   status: string
   verification_note: string | null
   created_at: string
+  matchScore?: number
+  matchSignals?: { label: string; matched: boolean }[]
   organizer: { slug: string; display_name: string; city: string } | null
   requester: { full_name: string | null; email: string | null } | null
 }
@@ -91,6 +93,19 @@ export function OrganizerClaimAdminPanel() {
             <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm whitespace-pre-wrap">
               {row.verification_note}
             </p>
+          ) : (
+            <p className="text-xs text-red-700">No verification note provided.</p>
+          )}
+          {row.matchSignals && row.matchSignals.length > 0 ? (
+            <ul className="flex flex-wrap gap-2 text-xs">
+              {row.matchSignals.map((signal) => (
+                <li key={signal.label}>
+                  <Badge variant={signal.matched ? 'default' : 'outline'}>
+                    {signal.matched ? '✓' : '○'} {signal.label}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button

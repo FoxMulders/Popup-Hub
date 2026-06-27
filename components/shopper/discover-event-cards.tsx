@@ -45,6 +45,7 @@ export function DiscoverEventCards({
             vendorCount={event.vendor_count}
             liveAuctionId={activeAuctionByEventId[event.id]}
             showCoordinatorTrust
+            showLocationMap
             actions={
               <div className="mt-3 flex gap-2">
                 <Button

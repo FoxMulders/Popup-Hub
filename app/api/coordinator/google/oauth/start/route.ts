@@ -6,19 +6,32 @@ import {
   getGoogleOAuthClientId,
   getGoogleOAuthRedirectUri,
 } from '@/lib/google/oauth'
-import { buildGoogleOAuthState } from '@/lib/google/oauth-return'
+import { buildGoogleOAuthState, googleOAuthReturnUrl } from '@/lib/google/oauth-return'
+
+function safeReturnTo(value: string | null): string {
+  if (value && value.startsWith('/') && !value.startsWith('//')) return value
+  return '/coordinator/events/new'
+}
 
 export async function GET(request: Request) {
+  const requestUrl = new URL(request.url)
+  const origin = requestUrl.origin
+  const returnTo = safeReturnTo(requestUrl.searchParams.get('return_to'))
+
   const clientId = getGoogleOAuthClientId()
   if (!clientId) {
-    return NextResponse.json({ error: 'Google OAuth is not configured' }, { status: 503 })
+    return NextResponse.redirect(
+      googleOAuthReturnUrl(origin, returnTo, 'error_not_configured')
+    )
   }
 
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!user) {
+    return NextResponse.redirect(`/login?redirectTo=${encodeURIComponent(returnTo)}`)
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -27,12 +40,9 @@ export async function GET(request: Request) {
     .single()
 
   if (!canActAsCoordinator(profile)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.redirect(googleOAuthReturnUrl(origin, returnTo, 'error_forbidden'))
   }
 
-  const requestUrl = new URL(request.url)
-  const returnTo = requestUrl.searchParams.get('return_to')
-  const origin = requestUrl.origin
   const redirectUri = getGoogleOAuthRedirectUri(origin)
   const url = buildGoogleOAuthUrl({
     clientId,

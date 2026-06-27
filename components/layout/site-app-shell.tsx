@@ -47,7 +47,7 @@ export function SiteAppShell({
           portalCookie={portalCookie}
           vendorPortal={vendorPortal}
         />
-        {!viewportFill ? <PageBackBar /> : null}
+        {!viewportFill && availablePortals.length <= 1 ? <PageBackBar /> : null}
         <main
           id="site-main"
           className={

@@ -108,6 +108,7 @@ function MarketGrid({
                 ? formatDistance(event.distance_km)
                 : undefined
             }
+            showLocationMap
             actions={
               <>
                 <div className="md:hidden">

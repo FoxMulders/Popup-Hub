@@ -19,7 +19,7 @@ export default async function CoordinatorHomePage() {
 
   const scope = await getCoordinatorScope(supabase, user.id)
 
-  const [{ data: profile }, eventsQuery, claimSuggestions, { data: coordProfile }, { data: squareEvent }] =
+  const [{ data: profile }, eventsQuery, claimSuggestions, { data: coordProfile }, { data: squareEvent }, { data: recentEvents }] =
     await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
     scope.isAdmin
@@ -41,6 +41,18 @@ export default async function CoordinatorHomePage() {
       .not('square_merchant_id', 'is', null)
       .limit(1)
       .maybeSingle(),
+    scope.isAdmin
+      ? supabase
+          .from('events')
+          .select('id, name, start_at, status')
+          .order('start_at', { ascending: true })
+          .limit(6)
+      : supabase
+          .from('events')
+          .select('id, name, start_at, status')
+          .eq('coordinator_id', user.id)
+          .order('start_at', { ascending: true })
+          .limit(6),
   ])
 
   const marketCount = eventsQuery.count ?? 0
@@ -56,6 +68,7 @@ export default async function CoordinatorHomePage() {
     <CoordinatorHome
       displayName={profile?.full_name ?? null}
       marketCount={marketCount}
+      recentMarkets={recentEvents ?? []}
       claimSuggestions={claimSuggestions}
       showPaymentReadiness={showPaymentReadiness}
       organizationName={coordProfile?.coordinator_organization_name ?? null}

@@ -10,6 +10,7 @@ import { BANKING_PORTAL_LINKS } from '@/lib/wallet/etransfer-config'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
 import { buildWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { WalletQrPanel } from '@/components/wallet/wallet-qr-panel'
+import { PopupFundsLogoMark } from '@/components/brand/popup-funds-logo'
 import { WalletAmountChips } from '@/components/wallet/wallet-amount-chips'
 import { WalletCardTitle } from '@/components/wallet/wallet-card-title'
 import type { WalletDepositRequest } from '@/types/database'
@@ -91,6 +92,9 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
             scan your wallet QR and add the exact amount you paid — or look you up by name at the desk
             if you don&apos;t have your phone.
           </p>
+          <div className="flex justify-center py-2">
+            <PopupFundsLogoMark size="lg" />
+          </div>
           <WalletQrPanel
             title="Show this QR at the door"
             qrPayload={qrPayload}

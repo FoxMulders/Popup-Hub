@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
-import { COORDINATOR_MARKETS_PATH } from '@/lib/coordinator/coordinator-routes'
 import type { DashboardEventSummary } from './market-management-context'
 
 function statusLabel(status: string): string {
@@ -77,12 +76,6 @@ export function HubGridMarketPicker({ events, onSelect, className }: HubGridMark
           <Link href="/coordinator/events/new" className={cn(buttonVariants(), 'gap-1.5')}>
             <Plus className="h-4 w-4" aria-hidden />
             Create New Market
-          </Link>
-          <Link
-            href={COORDINATOR_MARKETS_PATH}
-            className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}
-          >
-            Browse all markets
           </Link>
         </div>
       </div>

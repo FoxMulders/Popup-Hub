@@ -51,7 +51,7 @@ export default async function ProfilePage() {
   const passportHref = passportPathForProfile(profile as Profile)
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 xl:px-16">
+    <div className="mx-auto w-full max-w-[1400px] min-w-0 overflow-x-hidden px-4 py-8 sm:px-6 xl:px-16">
         <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold text-foreground">Profile Settings</h1>

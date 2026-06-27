@@ -1,6 +1,9 @@
-/** Public legal and policy contact addresses for Popup Hub. */
-export const LEGAL_CONTACT_EMAIL = 'legal@popuphub.app'
+/** Public support and policy contact for Popup Hub. */
+export const SUPPORT_CONTACT_EMAIL = 'help@popuphub.ca'
 
-export const PRIVACY_CONTACT_EMAIL = 'privacy@popuphub.app'
+/** @deprecated Use SUPPORT_CONTACT_EMAIL — kept for imports that reference legal contact. */
+export const LEGAL_CONTACT_EMAIL = SUPPORT_CONTACT_EMAIL
 
-export const ACCESSIBILITY_CONTACT_EMAIL = 'accessibility@popuphub.app'
+export const PRIVACY_CONTACT_EMAIL = SUPPORT_CONTACT_EMAIL
+
+export const ACCESSIBILITY_CONTACT_EMAIL = SUPPORT_CONTACT_EMAIL

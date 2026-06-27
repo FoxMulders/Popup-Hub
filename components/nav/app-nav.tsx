@@ -11,6 +11,7 @@ import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
+import { NavBackButton } from '@/components/nav/nav-back-button'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
@@ -242,6 +243,7 @@ export function AppNav({
               </div>
             </div>
             <div className="flex w-full min-w-0 items-center gap-2 overflow-x-hidden">
+              <NavBackButton />
               <div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
                 <PortalTabs
                   availablePortals={availablePortals}

@@ -5,6 +5,7 @@ import { useProfileSettings } from '@/hooks/use-profile-settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { ArrowRight, IdCard, Loader2, User } from 'lucide-react'
 import type { Profile } from '@/types/database'
 import { passportPathForProfile } from '@/lib/passport/requirements'
@@ -23,11 +24,12 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
   }
 
   return (
-    <form onSubmit={handleSave} className="rounded-2xl border bg-white p-8 space-y-6">
+    <form onSubmit={handleSave} className="rounded-2xl border bg-white p-4 space-y-6 sm:p-8">
       <div>
         <h2 className="text-sm font-semibold text-foreground">Private account details</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Legal identity and contact used for sign-in and automated alerts only.
+          Legal identity and contact used for sign-in and automated alerts only. All fields below are
+          optional except where required for your role.
         </p>
       </div>
 
@@ -46,6 +48,19 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="preferred_name" className="text-sm font-medium">
+            Preferred name <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="preferred_name"
+            value={state.preferredName}
+            onChange={(e) => updateField('preferredName', e.target.value)}
+            placeholder="What we call you in emails"
+            className="h-11"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
             Private Email
           </Label>
@@ -55,12 +70,14 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
             disabled
             className="h-11 bg-canvas text-muted-foreground"
           />
-          <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
+          <p className="text-xs text-muted-foreground">
+            Change your email under Account Security below.
+          </p>
         </div>
 
-        <div className="space-y-2 md:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="phone" className="text-sm font-medium">
-            Phone Number
+            Phone Number <span className="font-normal text-muted-foreground">(optional)</span>
           </Label>
           <p className="text-xs text-muted-foreground -mt-1">
             Private — Used only for automated system SMS alerts.
@@ -73,7 +90,47 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
             value={state.phone}
             onChange={(e) => updateField('phone', e.target.value)}
             placeholder="+1 (555) 000-0000"
-            className="h-11 max-w-[16rem]"
+            className="h-11 max-w-full md:max-w-[16rem]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="city" className="text-sm font-medium">
+            City <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="city"
+            value={state.city}
+            onChange={(e) => updateField('city', e.target.value)}
+            placeholder="Edmonton"
+            className="h-11"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="province" className="text-sm font-medium">
+            Province <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="province"
+            value={state.province}
+            onChange={(e) => updateField('province', e.target.value)}
+            placeholder="AB"
+            className="h-11"
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="bio_short" className="text-sm font-medium">
+            Private note <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Textarea
+            id="bio_short"
+            rows={3}
+            value={state.bioShort}
+            onChange={(e) => updateField('bioShort', e.target.value)}
+            placeholder="Anything helpful for support — never shown on your public passport."
+            className="resize-y"
           />
         </div>
       </div>
@@ -119,8 +176,8 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
         </div>
       ) : null}
 
-      <div className="flex items-center gap-4 pt-2">
-        <Button type="submit" disabled={loading} className="h-11 px-8">
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-4 flex items-center gap-4 border-t border-stone-200/80 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pt-2 md:bottom-auto">
+        <Button type="submit" disabled={loading} className="h-11 w-full px-8 sm:w-auto">
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

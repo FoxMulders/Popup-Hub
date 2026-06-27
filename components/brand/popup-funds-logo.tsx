@@ -24,7 +24,7 @@ export function PopupFundsWordmark({
       priority={priority}
       draggable={false}
       className={cn(
-        'pointer-events-none h-8 w-auto max-w-full select-none object-contain object-left sm:h-9',
+        'pointer-events-none h-10 w-auto max-w-full select-none object-contain object-left sm:h-12',
         className
       )}
     />
@@ -38,7 +38,7 @@ export function PopupFundsLogoMark({
   className?: string
   size?: 'sm' | 'md' | 'lg'
 }) {
-  const heights = { sm: 'h-8', md: 'h-12', lg: 'h-16' }
+  const heights = { sm: 'h-10', md: 'h-14', lg: 'h-20 sm:h-24' }
   return (
     <Image
       src={popupFundsLogoSrc()}

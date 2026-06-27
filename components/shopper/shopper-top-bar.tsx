@@ -110,8 +110,11 @@ export function ShopperTopBar({
   )
 
   return (
-    <header className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top">
-      <div className="mx-auto flex max-w-full overflow-x-hidden px-4 py-2 sm:max-w-7xl sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
+    <header
+      className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top"
+      style={{ minHeight: 'var(--app-nav-height, 3.25rem)' }}
+    >
+      <div className="mx-auto flex max-w-full overflow-x-hidden px-4 py-2 sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
           centerAlign="start"
           left={

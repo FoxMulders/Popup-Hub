@@ -203,6 +203,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    overscroll-behavior-y: none;
     background-image: radial-gradient(
       ellipse 120% 80% at 50% -20%,
       rgb(245 236 220 / 0.45),
@@ -1243,7 +1244,7 @@
 
   @media (max-width: 767px) {
     .popup-hub-chrome-footer {
-      font-size: 0.5em;
+      font-size: 0.6875rem;
     }
 
     .popup-hub-chrome-footer > div {
@@ -1253,8 +1254,8 @@
     }
 
     .popup-hub-chrome-footer nav a {
-      min-height: 0.75rem;
-      font-size: 0.5rem;
+      min-height: 1.75rem;
+      font-size: 0.6875rem;
     }
 
     body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {
@@ -2010,7 +2011,7 @@
 
   /* PWA / mobile shell */
   .safe-top {
-    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .safe-bottom {

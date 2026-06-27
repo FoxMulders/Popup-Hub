@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ChangePasswordDialog } from '@/components/profile/change-password-dialog'
-import { ChevronDown, KeyRound, Shield } from 'lucide-react'
+import { ChangeEmailDialog } from '@/components/profile/change-email-dialog'
+import { ChevronDown, KeyRound, Mail, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AccountSecurityCardProps {
@@ -13,6 +14,7 @@ interface AccountSecurityCardProps {
 export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
   const [open, setOpen] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
 
   return (
     <>
@@ -51,7 +53,16 @@ export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
             <Button
               type="button"
               variant="outline"
-              className="gap-2 h-11"
+              className="gap-2 h-11 w-full sm:w-auto"
+              onClick={() => setEmailDialogOpen(true)}
+            >
+              <Mail className="h-4 w-4" />
+              Change Email
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2 h-11 w-full sm:w-auto"
               onClick={() => setPasswordDialogOpen(true)}
             >
               <KeyRound className="h-4 w-4" />
@@ -61,6 +72,11 @@ export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
         ) : null}
       </div>
 
+      <ChangeEmailDialog
+        currentEmail={email}
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+      />
       <ChangePasswordDialog
         email={email}
         open={passwordDialogOpen}

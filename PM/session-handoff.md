@@ -2,6 +2,58 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Chrome audit + HubGuard patron gate (local, not deployed)
+- **Goal:** Fix header/footer/bottom-nav sizing and spacing across surfaces; remove HubGuard from logged-in patron ribbon.
+- **Personas:** All personas · sticky headers + global footer + mobile bottom navs; Patron browse shell · HubGuard nav gate.
+- **Shipped locally:**
+  - **`app/globals.css`** — mobile footer links legible (~11px, 1.75rem min-height) instead of 0.5em/0.5rem.
+  - **`shopper-bottom-nav.tsx`**, **`vendor-bottom-nav.tsx`** — tab min-height 3.25rem, labels 10px (within 3.5rem reserved band).
+  - **`guest-nav.tsx`**, **`shopper-top-bar.tsx`** — consistent `--app-nav-height` min-height; ShopperTopBar max-width aligned to 1600px.
+  - **`site-ribbon-links.ts`** — HubGuard removed from `PATRON_RIBBON_LINKS` only (guest ribbon, footer, vendor nav unchanged; `/check` stays public).
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: logged-in patron ribbon has no HubGuard; guest/vendor/footer still link to `/check`; mobile footer readable; header height steady guest ↔ patron.
+- **Next:** User commit + deploy when ready.
+
+## Active work — List-mode map previews (local, not deployed)
+- **Goal:** Show Google map location thumbnails on event cards in list mode for patron Discover and vendor market browse.
+- **Personas:** Patron · `/discover` list view · Vendor · `/vendor/events` list view.
+- **Shipped locally:**
+  - **`lib/maps/static-map.ts`** — `buildStaticMapUrl()` for Google Static Maps API thumbnails.
+  - **`components/map/static-event-map.tsx`** — lazy-loaded thumbnail with `onError` fallback + tap-to-directions.
+  - **`components/events/event-card.tsx`** — `showLocationMap` prop renders compact map row below event details.
+  - **`discover-event-cards.tsx`**, **`vendor-market-grid.tsx`** — enable `showLocationMap` on list cards.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: `/discover` list tab shows map thumbnail per card; `/vendor/events` list tab same; tap opens Google directions.
+- **Blockers:** Enable **Maps Static API** on `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` in Google Cloud (referrer: popuphub.ca + localhost). Without it, cards show pin placeholder fallback.
+- **Next:** User commit + deploy when ready.
+
+- **Goal:** Close user QA list — per-market invite links, Google OAuth exit trap, PopupFunds logos, mobile profile/passport, profile email + optional fields, HubGuard claim verification, stale-session reload sign-out, help@popuphub.ca, loader linen match.
+- **Personas:** Coordinator (markets, Google Docs, claims) · Vendor/Patron (profile, passport, wallet) · Admin (claim review).
+- **Shipped locally:**
+  - **Markets:** Per-row `VendorInviteCopyButton` on markets list + coordinator home; removed HubGrid picker "Browse all markets" aggregate.
+  - **Google Docs:** OAuth start redirects on misconfig; `/api/coordinator/google/status` preflight; connect buttons no longer trap on raw JSON.
+  - **PopupFunds:** User artwork → `public/popup-funds-*.png`; larger wordmark + coin logo above wallet QR; SW cache v21.
+  - **Mobile:** Sticky profile Save above bottom nav; passport stories `overflow-x-hidden` + responsive grid.
+  - **Profile:** Change email dialog (Supabase Auth); optional `preferred_name`, `city`, `province`, `bio_short` — migration `129_profile_optional_fields.sql`.
+  - **Claims:** Required verification note (20+ chars); vendor/patron "Coordinator required" callout; admin match signals.
+  - **Auth:** `AuthSessionGuard` signs out on reload only when session/user invalid.
+  - **Legal:** All contact emails → `help@popuphub.ca` via `lib/legal/contacts.ts`.
+  - **Loader:** Sky gradient unified to `#faf8f7` (--linen).
+- **Verify:** `npx tsc --noEmit` PASS.
+- **Blockers:** `npm run db:push` for migrations **127** (if pending) + **129**; Vercel `GOOGLE_OAUTH_*` for Google Docs import.
+- **SEO ops (manual post-deploy):** Submit `https://popuphub.ca/sitemap.xml` in GSC; set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca`; inspect `/markets/edmonton/vendor-applications`, `/for-vendors`, `/legal/guides`.
+- **Next:** User commit + deploy when ready.
+
+## Active work — HubGuard / global header cleanup (local, not deployed)
+- **Goal:** Tighten top chrome globally — remove top gap, pin header on scroll, move Back inline before Patron/Vendor tabs, drop "Popup Hub" from HubGuard tagline.
+- **Persona:** All personas · sticky header; Patron/Vendor multi-portal · HubGuard `/check`.
+- **Shipped locally:**
+  - **`lib/nav/trust-directory-nav.ts`** — tagline → `Security & fraud prevention`.
+  - **`app/globals.css`** — `.safe-top` uses only safe-area inset (no 0.75rem floor); `body { overscroll-behavior-y: none }` to stop rubber-band drift on sticky nav.
+  - **`components/nav/nav-back-button.tsx`** — compact back pill for stacked nav row.
+  - **`components/nav/app-nav.tsx`** — `NavBackButton` first on portal-tabs line when multi-portal stacked header.
+  - **`site-app-shell.tsx`**, **`site-content-shell.tsx`**, **`hubguard-shell.tsx`** — hide standalone `PageBackBar` when `availablePortals.length > 1` (avoids duplicate back).
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: `/check` multi-portal — tighter top, Back left of Patron/Vendor, tagline "SECURITY & FRAUD PREVENTION"; single-portal/guest still get standalone back bar.
+- **Next:** User commit + deploy when ready.
+
 ## Active work — SEO growth roadmap implementation (local, not deployed)
 - **Goal:** Implement PopupHub.ca SEO audit plan — technical indexing, local landing pages, schema, guides, embed badges, CRO for organic visitors.
 - **Persona:** Patron discovery · Vendor applications · Coordinator software · HubGuard trust.

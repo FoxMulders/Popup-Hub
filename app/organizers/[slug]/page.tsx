@@ -11,7 +11,7 @@ import {
 } from '@/lib/queries/organizers'
 import { Badge } from '@/components/ui/badge'
 import { OrganizerReviewList } from '@/components/check/organizer-review-list'
-import { OrganizerClaimButton } from '@/components/check/organizer-claim-button'
+import { OrganizerClaimButton, OrganizerClaimCoordinatorRequired } from '@/components/check/organizer-claim-button'
 import { getPendingOrganizerClaimForUser } from '@/lib/organizers/claim-organizer'
 import { JsonLdScript } from '@/components/seo/json-ld-script'
 import { buildBreadcrumbJsonLd } from '@/lib/seo/breadcrumb-json-ld'
@@ -78,6 +78,7 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
 
   const isClaimed = Boolean(organizer.claimed_by)
   const canClaim = Boolean(user && canActAsCoordinator(profile) && !isClaimed)
+  const showCoordinatorRequired = Boolean(user && !canActAsCoordinator(profile) && !isClaimed)
   const claimPending =
     user && canClaim ? await getPendingOrganizerClaimForUser(organizer.id, user.id) : false
   const canRespondToReviews = Boolean(
@@ -169,6 +170,8 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
         canClaim={canClaim}
         claimPending={claimPending}
       />
+
+      {showCoordinatorRequired ? <OrganizerClaimCoordinatorRequired /> : null}
 
       {scamAlerts.length > 0 ? (
         <section className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">

@@ -50,7 +50,7 @@ export async function HubGuardShell({ children }: HubGuardShellProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col site-surface">
       {nav}
-      <SiteContentShell>
+      <SiteContentShell showBackBar={availablePortals.length <= 1}>
         <header className="border-b border-stone-200/70 bg-cream/60 px-4 py-3 sm:py-4">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2">
             <HubGuardLogo variant="lockup" size="md" href="/check" priority />

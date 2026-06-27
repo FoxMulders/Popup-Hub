@@ -343,7 +343,7 @@ export function PassportStoryUploader({
       : null
 
   return (
-    <div className={cn('space-y-4 rounded-2xl border border-stone-200/80 marketing-glass-card p-5 shadow-[var(--shadow-market-md)]', className)}>
+    <div className={cn('min-w-0 max-w-full space-y-4 overflow-x-hidden rounded-2xl border border-stone-200/80 marketing-glass-card p-3 shadow-[var(--shadow-market-md)] sm:p-5', className)}>
       <div>
         <p className="text-[10px] font-bold uppercase tracking-widest text-harvest-700">Passport stories</p>
         <h3 className="mt-1 font-semibold text-foreground">Share clips & photos</h3>
@@ -421,8 +421,8 @@ export function PassportStoryUploader({
             className="grid gap-3"
             style={{
               gridTemplateColumns: usesPerStoryCaptions
-                ? 'repeat(auto-fill, minmax(180px, 1fr))'
-                : 'repeat(auto-fill, minmax(140px, 1fr))',
+                ? 'repeat(auto-fill, minmax(min(100%, 140px), 1fr))'
+                : 'repeat(auto-fill, minmax(min(100%, 120px), 1fr))',
             }}
           >
             {pendingItems.map((item) => {

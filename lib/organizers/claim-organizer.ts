@@ -1,6 +1,7 @@
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { validateOrganizerClaimVerificationNote } from '@/lib/organizers/claim-verification'
 
 export async function assertOrganizerClaimHolder(
   organizerSlug: string,
@@ -87,6 +88,11 @@ export async function submitOrganizerClaimRequest(
 
   if (organizer.claimed_by === userId) {
     return { ok: true, status: 'pending' }
+  }
+
+  const noteCheck = validateOrganizerClaimVerificationNote(verificationNote)
+  if (!noteCheck.ok) {
+    return { ok: false, status: 400, error: noteCheck.error }
   }
 
   const { data: existingPending } = await supabase

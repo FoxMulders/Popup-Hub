@@ -40,6 +40,7 @@ export function GoogleDocsContractImport({
   const [connected, setConnected] = useState<boolean | null>(null)
   const [docs, setDocs] = useState<GoogleDocListItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [connecting, setConnecting] = useState(false)
   const [importingId, setImportingId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [connectOpen, setConnectOpen] = useState(false)
@@ -70,6 +71,31 @@ export function GoogleDocsContractImport({
   useEffect(() => {
     if (pickerOpen) void refreshDocs()
   }, [pickerOpen, refreshDocs])
+
+  async function startGoogleConnect() {
+    setConnecting(true)
+    try {
+      const res = await fetch('/api/coordinator/google/status')
+      const json = (await res.json()) as { configured?: boolean; authorized?: boolean; error?: string }
+      if (!res.ok || !json.authorized) {
+        toast.error(json.error ?? 'You must be signed in as a coordinator to connect Google.')
+        return
+      }
+      if (!json.configured) {
+        toast.error(
+          'Google OAuth is not configured on this server. Ask your platform admin to set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET.'
+        )
+        setConnectOpen(false)
+        setPickerOpen(false)
+        return
+      }
+      window.location.href = oauthStartHref()
+    } catch {
+      toast.error('Could not start Google connection. Try again.')
+    } finally {
+      setConnecting(false)
+    }
+  }
 
   async function importDoc(docId: string) {
     setImportingId(docId)
@@ -124,12 +150,20 @@ export function GoogleDocsContractImport({
             <Button type="button" variant="outline" onClick={() => setConnectOpen(false)}>
               Cancel
             </Button>
-            <a
-              href={oauthStartHref()}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            <Button
+              type="button"
+              disabled={connecting}
+              onClick={() => void startGoogleConnect()}
             >
-              Continue to Google
-            </a>
+              {connecting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                  Connecting…
+                </>
+              ) : (
+                'Continue to Google'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -184,12 +218,20 @@ export function GoogleDocsContractImport({
               Close
             </Button>
             {connected === false || loadError ? (
-              <a
-                href={oauthStartHref()}
-                className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              <Button
+                type="button"
+                disabled={connecting}
+                onClick={() => void startGoogleConnect()}
               >
-                Connect Google
-              </a>
+                {connecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Connecting…
+                  </>
+                ) : (
+                  'Connect Google'
+                )}
+              </Button>
             ) : (
               <Button type="button" variant="ghost" onClick={() => void refreshDocs()}>
                 Refresh

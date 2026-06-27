@@ -160,6 +160,10 @@ export interface Profile {
   coordinator_account_status?: CoordinatorAccountStatus
   coordinator_is_verified?: boolean
   coordinator_successful_events_count?: number
+  preferred_name?: string | null
+  city?: string | null
+  province?: string | null
+  bio_short?: string | null
   updated_at: string
 }
 

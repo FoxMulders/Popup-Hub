@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { getEventDateLabel } from '@/lib/shopper/events'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { CoordinatorTrustChip } from '@/components/coordinator/coordinator-reliability-badge'
+import { StaticEventMap } from '@/components/map/static-event-map'
 import { vendorApplicationCardBadgeLabel } from '@/lib/vendor/application-status-ui'
 import type { ApplicationStatus, Event } from '@/types/database'
 import type { EventDisplayStatus } from '@/lib/queries/events'
@@ -28,6 +29,7 @@ interface EventCardProps {
   showCoordinatorTrust?: boolean
   vendorApplicationStatus?: ApplicationStatus | null
   vendorApplicationsOpen?: boolean
+  showLocationMap?: boolean
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -61,6 +63,7 @@ export function EventCard({
   showCoordinatorTrust = false,
   vendorApplicationStatus = null,
   vendorApplicationsOpen = true,
+  showLocationMap = false,
 }: EventCardProps) {
   const badgeStatus = displayStatus ?? event.status
   const appliedLabel =
@@ -181,6 +184,18 @@ export function EventCard({
             ) : null}
           </CardContent>
         </Link>
+        {showLocationMap &&
+        Number.isFinite(event.latitude) &&
+        Number.isFinite(event.longitude) ? (
+          <div className="px-4 pb-3">
+            <StaticEventMap
+              lat={event.latitude}
+              lng={event.longitude}
+              locationName={event.location_name}
+              address={event.address}
+            />
+          </div>
+        ) : null}
         {showMarketOwner && coordinator?.full_name ? (
           <div className="px-4 pb-3">
             <p className="text-xs text-muted-foreground">

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { MIN_VERIFICATION_NOTE_LENGTH } from '@/lib/organizers/claim-verification'
 
 type Props = {
   organizerSlug: string
@@ -43,12 +44,19 @@ export function OrganizerClaimButton({
   }
 
   async function handleClaim() {
+    if (note.trim().length < MIN_VERIFICATION_NOTE_LENGTH) {
+      toast.error(
+        `Describe how we can verify you run this market (at least ${MIN_VERIFICATION_NOTE_LENGTH} characters).`
+      )
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch(`/api/organizers/${organizerSlug}/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verificationNote: note.trim() || null }),
+        body: JSON.stringify({ verificationNote: note.trim() }),
       })
       const data = (await res.json()) as { error?: string; status?: string }
       if (!res.ok) {
@@ -72,7 +80,7 @@ export function OrganizerClaimButton({
       </p>
       <div className="space-y-2">
         <Label htmlFor="claim-verification-note" className="text-xs">
-          How can we verify you run this market? (optional)
+          How can we verify you run this market? (required)
         </Label>
         <Textarea
           id="claim-verification-note"
@@ -80,9 +88,20 @@ export function OrganizerClaimButton({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Official website, business email domain, market social accounts, or other proof."
+          required
+          minLength={MIN_VERIFICATION_NOTE_LENGTH}
         />
+        <p className="text-[11px] text-muted-foreground">
+          At least {MIN_VERIFICATION_NOTE_LENGTH} characters — e.g. link to your market Facebook group or
+          business email domain.
+        </p>
       </div>
-      <Button type="button" size="sm" onClick={() => void handleClaim()} disabled={loading}>
+      <Button
+        type="button"
+        size="sm"
+        onClick={() => void handleClaim()}
+        disabled={loading || note.trim().length < MIN_VERIFICATION_NOTE_LENGTH}
+      >
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
@@ -92,6 +111,18 @@ export function OrganizerClaimButton({
           'Submit claim for review'
         )}
       </Button>
+    </div>
+  )
+}
+
+export function OrganizerClaimCoordinatorRequired() {
+  return (
+    <div className="rounded-xl border border-stone-200 bg-muted/40 px-4 py-4 text-sm">
+      <p className="font-medium text-foreground">Coordinator account required</p>
+      <p className="mt-1 text-muted-foreground">
+        Only market coordinators can claim HubGuard organizer profiles. Vendors and patrons cannot
+        claim listings. Sign up or switch to a coordinator account to submit a claim.
+      </p>
     </div>
   )
 }

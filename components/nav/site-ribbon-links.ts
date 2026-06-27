@@ -25,11 +25,6 @@ export const GUEST_RIBBON_LINKS: SiteRibbonLink[] = [
 export const PATRON_RIBBON_LINKS: SiteRibbonLink[] = [
   { href: SITE_HOME_PATH, label: 'Home' },
   { href: '/discover', label: 'Discover Markets' },
-  {
-    href: TRUST_DIRECTORY_LINKS.check.href,
-    label: TRUST_DIRECTORY_LINKS.check.navLabel,
-    title: `${TRUST_DIRECTORY_LINKS.check.label} — ${TRUST_DIRECTORY_LINKS.check.tagline}`,
-  },
   { href: '/favorites', label: 'Favorites' },
   { href: '/wallet', label: 'Wallet' },
   { href: '/legal/faq', label: 'FAQ' },

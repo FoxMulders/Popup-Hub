@@ -43,7 +43,7 @@ export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
               key={href}
               href={href}
               className={cn(
-                'flex min-h-[35px] min-w-[60px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[9px] font-semibold transition-colors',
+                'flex min-h-[3.25rem] min-w-[60px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[10px] font-semibold transition-colors',
                 active ? 'text-forest' : 'text-muted-foreground'
               )}
             >

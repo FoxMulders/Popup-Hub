@@ -13,7 +13,7 @@ import {
   coordinatorStudioHref,
 } from '@/lib/coordinator/coordinator-routes'
 import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
-import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
+import { VendorInviteCopyButton } from '@/components/coordinator/vendor-invite-copy-button'
 import { CloneMarketButton } from '@/components/coordinator/clone-market-button'
 import { cn } from '@/lib/utils'
 
@@ -58,9 +58,11 @@ function showCloneAction(status: string): boolean {
 function MarketRow({
   market,
   showCommandCenterLink,
+  showInviteLink,
 }: {
   market: CoordinatorMarketSummary
   showCommandCenterLink: boolean
+  showInviteLink?: boolean
 }) {
   return (
     <li className="marketing-glass-card transition-colors hover:border-forest/30 hover:shadow-[var(--shadow-market-md)]">
@@ -110,6 +112,11 @@ function MarketRow({
           <CloneMarketButton eventId={market.id} variant="ghost" />
         ) : null}
       </div>
+      {showInviteLink ? (
+        <div className="border-t border-stone-200/80 px-4 py-2.5">
+          <VendorInviteCopyButton eventId={market.id} eventName={market.name} className="w-full sm:w-auto" />
+        </div>
+      ) : null}
     </li>
   )
 }
@@ -118,10 +125,12 @@ function MarketSection({
   title,
   markets,
   showCommandCenterLink,
+  showInviteLinks,
 }: {
   title: string
   markets: CoordinatorMarketSummary[]
   showCommandCenterLink: boolean
+  showInviteLinks?: boolean
 }) {
   if (markets.length === 0) return null
 
@@ -136,6 +145,7 @@ function MarketSection({
             key={market.id}
             market={market}
             showCommandCenterLink={showCommandCenterLink}
+            showInviteLink={showInviteLinks}
           />
         ))}
       </ul>
@@ -192,15 +202,6 @@ export function CoordinatorMarketsList({
         </Link>
       </div>
 
-      {totalCount > 0 && activeMarkets[0] ? (
-        <VendorRecruitmentCallout
-          variant="compact"
-          eventId={activeMarkets[0].id}
-          eventName={activeMarkets[0].name}
-          eventStatus={activeMarkets[0].status}
-        />
-      ) : null}
-
       {totalCount === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
@@ -217,6 +218,7 @@ export function CoordinatorMarketsList({
             title={`Upcoming & active (${activeMarkets.length})`}
             markets={activeMarkets}
             showCommandCenterLink
+            showInviteLinks
           />
           <MarketSection
             title={`Past markets (${archivedMarkets.length})`}

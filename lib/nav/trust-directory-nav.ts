@@ -5,7 +5,7 @@ export const TRUST_DIRECTORY_LINKS = {
     label: 'HubGuard',
     /** Nav ribbon and menu label */
     navLabel: 'HubGuard',
-    tagline: 'Popup Hub security & fraud prevention',
+    tagline: 'Security & fraud prevention',
     ctaOpen: 'Open HubGuard',
     /** Hero / callout headline — always name HubGuard explicitly */
     boothFeeHeadline: 'Before you pay for a booth, use HubGuard to check the organizer',
