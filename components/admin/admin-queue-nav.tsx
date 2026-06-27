@@ -21,6 +21,17 @@ export function AdminQueueNav() {
         ) : null}
       </Link>
       <Link
+        href="/admin/organizer-claims"
+        className="relative rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
+      >
+        Organizer claims
+        {counts.organizerClaims > 0 ? (
+          <Badge className="ml-2 h-5 min-w-5 px-1.5 text-[10px] leading-none">
+            {counts.organizerClaims > 9 ? '9+' : counts.organizerClaims}
+          </Badge>
+        ) : null}
+      </Link>
+      <Link
         href="/admin/venues"
         className="relative rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
       >

@@ -84,7 +84,9 @@ export function MarketDashboardClient({
 }: MarketDashboardClientProps) {
   const searchParams = useSearchParams()
   const forceMobileOverview = searchParams.get('overview') === 'mobile'
-  const useMobileOverview = forceMobileOverview || isMobileDevice()
+  const eventQuery = searchParams.get('event')
+  const useMobileOverview =
+    (forceMobileOverview || isMobileDevice()) && !initialEventId && !eventQuery
   const layoutSnapshotRef = useRef<LayoutSnapshotGetter | null>(null)
 
   if (events.length === 0) {

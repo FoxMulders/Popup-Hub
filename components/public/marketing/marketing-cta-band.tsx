@@ -9,24 +9,38 @@ export function MarketingCtaBand() {
           Ready to find your next market — or run one?
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-sm text-white/75 sm:text-base">
-          Browse events as a guest, sign up as a vendor, or create a coordinator account and publish
-          your first listing.
+          Browse events as a guest, apply with a free vendor passport, or publish your market and
+          replace spreadsheet chaos with one coordinator hub.
         </p>
         <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <Link href="/discover" className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto">
-            Explore markets
+            Discover markets
           </Link>
-          <Link href="/signup" className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
-            Create free account
+          <Link href="/for-vendors" className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
+            Vendor passport
+          </Link>
+          <Link
+            href="/for-organizers"
+            className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+          >
+            Run a market
           </Link>
         </div>
-        <Link
-          href={TRUST_DIRECTORY_LINKS.check.href}
-          className="mt-5 inline-flex text-sm font-medium text-white/80 hover:text-white hover:underline underline-offset-2"
-          title={TRUST_DIRECTORY_LINKS.check.tagline}
-        >
-          {TRUST_DIRECTORY_LINKS.check.label} — {TRUST_DIRECTORY_LINKS.check.tagline} →
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+          <Link
+            href={TRUST_DIRECTORY_LINKS.check.href}
+            className="font-medium text-white/80 hover:text-white hover:underline underline-offset-2"
+            title={TRUST_DIRECTORY_LINKS.check.tagline}
+          >
+            {TRUST_DIRECTORY_LINKS.check.label} — verify before you pay →
+          </Link>
+          <Link
+            href="/legal/guides"
+            className="font-medium text-white/80 hover:text-white hover:underline underline-offset-2"
+          >
+            Market guides →
+          </Link>
+        </div>
       </div>
     </section>
   )

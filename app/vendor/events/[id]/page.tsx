@@ -169,11 +169,6 @@ export default async function VendorEventDetailPage({ params }: Props) {
             Dashboard
           </Button>
         </Link>
-        <Link href="/vendor/events">
-          <Button variant="ghost" size="sm" className="gap-1.5">
-            All markets
-          </Button>
-        </Link>
       </div>
 
       <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">

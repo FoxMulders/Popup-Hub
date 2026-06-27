@@ -31,9 +31,9 @@ export function buildWebSiteJsonLd() {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${publicAppUrl('/check')}?q={search_term_string}`,
+        urlTemplate: `${publicAppUrl('/discover')}?when=weekend`,
       },
-      'query-input': 'required name=search_term_string',
+      'query-input': 'optional name=search_term_string',
     },
   }
 }

@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   Plus,
   Settings,
-  Store,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
@@ -23,23 +22,28 @@ import {
 } from '@/lib/coordinator/coordinator-event-route'
 import {
   COORDINATOR_HOME_PATH,
-  COORDINATOR_MARKETS_PATH,
   COORDINATOR_STUDIO_PATH,
+  coordinatorHubGridNavHref,
   coordinatorStudioHref,
   isCoordinatorStudioPath,
 } from '@/lib/coordinator/coordinator-routes'
+import { useIsMobileNav } from '@/hooks/use-is-mobile-nav'
 
-const RAIL_LINKS = [
+const RAIL_LINKS_BASE = [
   { href: COORDINATOR_HOME_PATH, label: 'Home', icon: Calendar },
-  { href: COORDINATOR_MARKETS_PATH, label: 'Markets', icon: Store },
-  { href: COORDINATOR_STUDIO_PATH, label: 'HubGrid', icon: LayoutDashboard },
+  { href: '_hubgrid', label: 'HubGrid', icon: LayoutDashboard },
   { href: '/coordinator/events/new', label: 'New market', icon: Plus },
   { href: '/coordinator/payment-methods', label: 'Payments', icon: CreditCard },
-  { href: '/wallet', label: 'Wallet', icon: Settings },
+  { href: '/wallet', label: 'PopupFunds', icon: Settings },
 ] as const
 
 export function CoordinatorWorkspaceRail() {
   const pathname = usePathname() ?? ''
+  const mobile = useIsMobileNav()
+  const hubGridHref = coordinatorHubGridNavHref({ mobile })
+  const railLinks = RAIL_LINKS_BASE.map((link) =>
+    link.href === '_hubgrid' ? { ...link, href: hubGridHref } : link
+  )
   const eventIdFromRoute = coordinatorEventIdFromPath(pathname)
   const onStudio = isCoordinatorStudioPath(pathname)
   const onEventHub = isCoordinatorEventHubPath(pathname)
@@ -80,11 +84,11 @@ export function CoordinatorWorkspaceRail() {
       </div>
 
       <ul className="flex flex-col gap-1" role="list">
-        {RAIL_LINKS.map(({ href, label, icon: Icon }) => {
+        {railLinks.map(({ href, label, icon: Icon }) => {
           const active =
             href === COORDINATOR_HOME_PATH
               ? pathname === COORDINATOR_HOME_PATH
-              : href === COORDINATOR_STUDIO_PATH
+              : href === hubGridHref || href === COORDINATOR_STUDIO_PATH
                 ? isCoordinatorStudioPath(pathname)
                 : pathname === href || pathname.startsWith(`${href}/`)
           return (
@@ -138,7 +142,7 @@ export function CoordinatorWorkspaceRail() {
           href={
             eventIdFromRoute
               ? coordinatorStudioHref(eventIdFromRoute)
-              : COORDINATOR_STUDIO_PATH
+              : coordinatorHubGridNavHref({ mobile })
           }
           className={cn(
             buttonVariants({ size: 'sm' }),

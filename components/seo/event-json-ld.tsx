@@ -15,12 +15,19 @@ type EventJsonLdProps = {
     longitude?: number | null
     cover_image_url?: string | null
     status?: string | null
-    coordinator?: { full_name?: string | null } | { full_name?: string | null }[] | null
+    coordinator?: { id?: string; full_name?: string | null } | { id?: string; full_name?: string | null }[] | null
   }
   vendorCount?: number
+  vendorNames?: string[]
+  organizerId?: string | null
 }
 
-export function EventJsonLd({ event, vendorCount }: EventJsonLdProps) {
+export function EventJsonLd({
+  event,
+  vendorCount,
+  vendorNames,
+  organizerId,
+}: EventJsonLdProps) {
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
 
   const jsonLd = buildEventJsonLd({
@@ -32,12 +39,15 @@ export function EventJsonLd({ event, vendorCount }: EventJsonLdProps) {
     locationName: event.location_name,
     address: event.address,
     city: event.city,
+    province: 'AB',
     latitude: event.latitude,
     longitude: event.longitude,
     coverImageUrl: event.cover_image_url,
     vendorCount,
     status: event.status,
     organizerName: coordinator?.full_name,
+    organizerId: organizerId ?? coordinator?.id ?? null,
+    vendorNames,
   })
 
   return <JsonLdScript data={jsonLd} />

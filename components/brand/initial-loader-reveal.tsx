@@ -177,7 +177,7 @@ const BRAND = {
   gold: '#c4892e',
   ink: '#1a1612',
   linen: '#faf8f7',
-  cream: '#fffdf9',
+  cream: '#faf8f7',
 } as const
 
 /** Extended below the booth ring so the progress bar is never clipped. */

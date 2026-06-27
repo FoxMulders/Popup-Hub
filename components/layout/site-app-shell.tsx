@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { AppNav } from '@/components/nav/app-nav'
 import { FeatureRequestProvider } from '@/components/feedback/feature-request-context'
 import { VendorBottomNav } from '@/components/vendor/vendor-bottom-nav'
+import { PageBackBar } from '@/components/navigation/page-back-bar'
 import { cn } from '@/lib/utils'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
@@ -46,13 +47,14 @@ export function SiteAppShell({
           portalCookie={portalCookie}
           vendorPortal={vendorPortal}
         />
+        {!viewportFill ? <PageBackBar /> : null}
         <main
           id="site-main"
           className={
             viewportFill
               ? 'min-h-0 flex-1 overflow-hidden'
               : cn(
-                  'w-full max-w-full overflow-x-hidden',
+                  'site-main-gutter w-full max-w-full overflow-x-hidden',
                   vendorPortal &&
                     'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0'
                 )

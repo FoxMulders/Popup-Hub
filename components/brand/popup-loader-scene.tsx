@@ -316,7 +316,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
          */}
         <linearGradient id="premium-loader-sky" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#f4f8f4" />
-          <stop offset="100%" stopColor="#fffdf9" />
+          <stop offset="100%" stopColor="#faf8f7" />
         </linearGradient>
         {/*
          * Ground + sidewalk gradients re-tuned to warm canvas / espresso

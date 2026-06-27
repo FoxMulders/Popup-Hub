@@ -2,6 +2,7 @@
 
 import { ShopperTopBar } from '@/components/shopper/shopper-top-bar'
 import { ShopperBottomNav } from '@/components/shopper/shopper-bottom-nav'
+import { PageBackBar } from '@/components/navigation/page-back-bar'
 import { FeatureRequestProvider, useFeatureRequest } from '@/components/feedback/feature-request-context'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
@@ -31,9 +32,10 @@ function ShopperShellInner({
         portalCookie={portalCookie}
         onSuggestImprovement={open}
       />
+      <PageBackBar />
       <main
         id="site-main"
-        className="w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+        className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
       >
         {children}
       </main>
@@ -57,9 +59,10 @@ export function ShopperShellClient({
           availablePortals={availablePortals}
           portalCookie={portalCookie}
         />
+        <PageBackBar />
         <main
           id="site-main"
-          className="w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+          className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
         >
           {children}
         </main>

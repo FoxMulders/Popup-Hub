@@ -1,5 +1,6 @@
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export async function assertOrganizerClaimHolder(
   organizerSlug: string,
@@ -43,10 +44,16 @@ export async function assertOrganizerClaimHolder(
   return { ok: true, organizerId: organizer.id }
 }
 
-export async function claimOrganizerProfile(
+export type OrganizerClaimSubmitResult =
+  | { ok: true; status: 'pending' }
+  | { ok: false; status: number; error: string }
+
+/** Submit a claim for admin review — does not set claimed_by until approved. */
+export async function submitOrganizerClaimRequest(
   organizerSlug: string,
-  userId: string
-): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  userId: string,
+  verificationNote?: string | null
+): Promise<OrganizerClaimSubmitResult> {
   const supabase = await createClient()
 
   const { data: profile } = await supabase
@@ -65,7 +72,7 @@ export async function claimOrganizerProfile(
 
   const { data: organizer } = await supabase
     .from('organizers')
-    .select('id, claimed_by')
+    .select('id, claimed_by, display_name')
     .eq('slug', organizerSlug)
     .eq('listing_status', 'published')
     .maybeSingle()
@@ -78,15 +85,163 @@ export async function claimOrganizerProfile(
     return { ok: false, status: 409, error: 'This profile has already been claimed.' }
   }
 
-  const { error } = await supabase
+  if (organizer.claimed_by === userId) {
+    return { ok: true, status: 'pending' }
+  }
+
+  const { data: existingPending } = await supabase
+    .from('organizer_claim_requests')
+    .select('id')
+    .eq('organizer_id', organizer.id)
+    .eq('requested_by', userId)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (existingPending) {
+    return { ok: true, status: 'pending' }
+  }
+
+  const { error } = await supabase.from('organizer_claim_requests').insert({
+    organizer_id: organizer.id,
+    requested_by: userId,
+    status: 'pending',
+    verification_note: verificationNote?.trim() || null,
+  })
+
+  if (error) {
+    return { ok: false, status: 500, error: error.message }
+  }
+
+  return { ok: true, status: 'pending' }
+}
+
+/** @deprecated Instant claim — use submitOrganizerClaimRequest + admin approval. */
+export async function claimOrganizerProfile(
+  organizerSlug: string,
+  userId: string
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const result = await submitOrganizerClaimRequest(organizerSlug, userId)
+  if (!result.ok) return result
+  return { ok: true }
+}
+
+export async function getPendingOrganizerClaimForUser(
+  organizerId: string,
+  userId: string
+): Promise<boolean> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('organizer_claim_requests')
+    .select('id')
+    .eq('organizer_id', organizerId)
+    .eq('requested_by', userId)
+    .eq('status', 'pending')
+    .maybeSingle()
+  return Boolean(data)
+}
+
+export async function approveOrganizerClaimRequest(
+  requestId: string,
+  adminUserId: string
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const admin = await createServiceClient()
+
+  const { data: request } = await admin
+    .from('organizer_claim_requests')
+    .select('id, organizer_id, requested_by, status')
+    .eq('id', requestId)
+    .maybeSingle()
+
+  if (!request) {
+    return { ok: false, status: 404, error: 'Claim request not found' }
+  }
+  if (request.status !== 'pending') {
+    return { ok: false, status: 409, error: 'Claim request is no longer pending' }
+  }
+
+  const { data: organizer } = await admin
+    .from('organizers')
+    .select('id, claimed_by')
+    .eq('id', request.organizer_id)
+    .maybeSingle()
+
+  if (!organizer) {
+    return { ok: false, status: 404, error: 'Organizer not found' }
+  }
+  if (organizer.claimed_by && organizer.claimed_by !== request.requested_by) {
+    return { ok: false, status: 409, error: 'Organizer was claimed by someone else' }
+  }
+
+  const now = new Date().toISOString()
+
+  const { error: orgError } = await admin
     .from('organizers')
     .update({
-      claimed_by: userId,
-      popup_hub_coordinator_id: userId,
-      claimed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      claimed_by: request.requested_by,
+      popup_hub_coordinator_id: request.requested_by,
+      claimed_at: now,
+      updated_at: now,
     })
-    .eq('id', organizer.id)
+    .eq('id', request.organizer_id)
+
+  if (orgError) {
+    return { ok: false, status: 500, error: orgError.message }
+  }
+
+  await admin
+    .from('organizer_claim_requests')
+    .update({
+      status: 'approved',
+      reviewed_by: adminUserId,
+      reviewed_at: now,
+      updated_at: now,
+    })
+    .eq('id', requestId)
+
+  await admin
+    .from('organizer_claim_requests')
+    .update({
+      status: 'rejected',
+      reviewed_by: adminUserId,
+      reviewed_at: now,
+      updated_at: now,
+    })
+    .eq('organizer_id', request.organizer_id)
+    .eq('status', 'pending')
+    .neq('id', requestId)
+
+  return { ok: true }
+}
+
+export async function rejectOrganizerClaimRequest(
+  requestId: string,
+  adminUserId: string
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const admin = await createServiceClient()
+
+  const { data: request } = await admin
+    .from('organizer_claim_requests')
+    .select('id, status')
+    .eq('id', requestId)
+    .maybeSingle()
+
+  if (!request) {
+    return { ok: false, status: 404, error: 'Claim request not found' }
+  }
+  if (request.status !== 'pending') {
+    return { ok: false, status: 409, error: 'Claim request is no longer pending' }
+  }
+
+  const now = new Date().toISOString()
+  const { error } = await admin
+    .from('organizer_claim_requests')
+    .update({
+      status: 'rejected',
+      reviewed_by: adminUserId,
+      reviewed_at: now,
+      updated_at: now,
+    })
+    .eq('id', requestId)
 
   if (error) {
     return { ok: false, status: 500, error: error.message }

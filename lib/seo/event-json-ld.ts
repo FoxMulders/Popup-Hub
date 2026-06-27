@@ -9,12 +9,15 @@ type EventJsonLdInput = {
   locationName?: string | null
   address?: string | null
   city?: string | null
+  province?: string | null
   latitude?: number | null
   longitude?: number | null
   coverImageUrl?: string | null
   vendorCount?: number
   status?: string | null
   organizerName?: string | null
+  organizerId?: string | null
+  vendorNames?: string[]
 }
 
 function eventStatusSchema(status?: string | null): string {
@@ -37,6 +40,9 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
   }
   if (event.city?.trim()) {
     addressParts.addressLocality = event.city.trim()
+  }
+  if (event.province?.trim()) {
+    addressParts.addressRegion = event.province.trim()
   }
   if (Object.keys(addressParts).length > 0) {
     addressParts['@type'] = 'PostalAddress'
@@ -83,9 +89,19 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
 
   if (event.organizerName?.trim()) {
     jsonLd.organizer = {
-      '@type': 'Person',
+      '@type': 'Organization',
       name: event.organizerName.trim(),
+      ...(event.organizerId
+        ? { url: publicAppUrl(`/coordinators/${event.organizerId}`) }
+        : {}),
     }
+  }
+
+  if (event.vendorNames && event.vendorNames.length > 0) {
+    jsonLd.performer = event.vendorNames.slice(0, 12).map((name) => ({
+      '@type': 'Organization',
+      name,
+    }))
   }
 
   if (event.vendorCount != null && event.vendorCount > 0) {
@@ -95,7 +111,7 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
       price: 0,
       priceCurrency: 'CAD',
       availability: 'https://schema.org/InStock',
-      description: `${event.vendorCount} confirmed vendor${event.vendorCount === 1 ? '' : 's'}`,
+      description: `Free to attend — ${event.vendorCount} confirmed vendor${event.vendorCount === 1 ? '' : 's'}`,
     }
   }
 

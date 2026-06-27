@@ -8,38 +8,69 @@ export type MarketCitySeoPage = MarketCity & {
   keywords: string[]
 }
 
-const CITY_SEO: Record<string, Omit<MarketCitySeoPage, keyof MarketCity | 'slug'>> = {
-  edmonton: {
-    headline: 'Makers markets in Edmonton',
-    description:
-      'Find upcoming pop-up and makers markets in Edmonton, Alberta — see confirmed vendors, dates, and locations on Popup Hub.',
-    intro:
-      'Plan your weekend around Edmonton-area artisan markets, craft fairs, and community pop-ups. Popup Hub lists published markets with confirmed vendor counts so you know who is vending before you go.',
-    keywords: [
-      'Edmonton makers market',
-      'Edmonton craft fair',
-      'Edmonton pop-up market',
-      'farmers market Edmonton',
-      'weekend market Edmonton',
-    ],
-  },
-  calgary: {
-    headline: 'Makers markets in Calgary',
-    description:
-      'Discover pop-up and makers markets in Calgary, Alberta — browse dates, locations, and confirmed vendors on Popup Hub.',
-    intro:
-      'From Calgary community halls to outdoor artisan fairs, Popup Hub helps patrons and vendors find published markets across the Calgary area with vendor lineups you can browse ahead of market day.',
-    keywords: [
-      'Calgary makers market',
-      'Calgary craft fair',
-      'Calgary pop-up market',
-      'farmers market Calgary',
-      'weekend market Calgary',
-    ],
-  },
+function cityName(label: string): string {
+  return label.split(',')[0]!.trim()
 }
 
-export const INDEXABLE_MARKET_CITY_SLUGS = ['edmonton', 'calgary'] as const
+function buildCitySeo(
+  slug: string,
+  variants: {
+    marketNoun?: string
+    extraKeywords?: string[]
+    intro?: string
+  } = {},
+): Omit<MarketCitySeoPage, keyof MarketCity | 'slug'> {
+  const city = getMarketCityById(slug)
+  const name = cityName(city.label)
+  const marketNoun = variants.marketNoun ?? 'makers markets'
+  const headline = `${marketNoun.charAt(0).toUpperCase() + marketNoun.slice(1)} in ${name}`
+  const description = `Find upcoming pop-up and ${marketNoun} in ${name}, Alberta — see confirmed vendors, dates, and locations on Popup Hub.`
+  const intro =
+    variants.intro ??
+    `Plan your weekend around ${name}-area artisan markets, craft fairs, and community pop-ups. Popup Hub lists published markets with confirmed vendor counts so you know who is vending before you go.`
+
+  const keywords = [
+    `${name} makers market`,
+    `${name} craft fair`,
+    `${name} pop-up market`,
+    `farmers market ${name}`,
+    `weekend market ${name}`,
+    ...(variants.extraKeywords ?? []),
+  ]
+
+  return { headline, description, intro, keywords }
+}
+
+const CITY_SEO: Record<string, Omit<MarketCitySeoPage, keyof MarketCity | 'slug'>> = {
+  edmonton: buildCitySeo('edmonton', {
+    extraKeywords: ['Edmonton artisan market', 'vendor call Edmonton'],
+  }),
+  calgary: buildCitySeo('calgary', {
+    extraKeywords: ['Calgary night market', 'vendor application Calgary'],
+  }),
+  'red-deer': buildCitySeo('red-deer'),
+  lethbridge: buildCitySeo('lethbridge'),
+  'medicine-hat': buildCitySeo('medicine-hat'),
+  'grande-prairie': buildCitySeo('grande-prairie'),
+  'sherwood-park': buildCitySeo('sherwood-park', {
+    intro:
+      'Sherwood Park and Strathcona County hosts artisan fairs and community pop-ups throughout the year. Browse published markets with confirmed vendor lineups on Popup Hub.',
+  }),
+  'st-albert': buildCitySeo('st-albert'),
+  airdrie: buildCitySeo('airdrie'),
+}
+
+export const INDEXABLE_MARKET_CITY_SLUGS = [
+  'edmonton',
+  'calgary',
+  'red-deer',
+  'lethbridge',
+  'medicine-hat',
+  'grande-prairie',
+  'sherwood-park',
+  'st-albert',
+  'airdrie',
+] as const
 
 export type IndexableMarketCitySlug = (typeof INDEXABLE_MARKET_CITY_SLUGS)[number]
 
@@ -67,3 +98,8 @@ export function isIndexableMarketCitySlug(slug: string): slug is IndexableMarket
 
 /** All configured market cities (for internal tools — not all have SEO landing pages). */
 export { MARKET_CITIES }
+
+export function getMarketCityShortName(slug: string): string {
+  const page = getMarketCitySeoPage(slug)
+  return page ? cityName(page.label) : slug
+}

@@ -148,6 +148,7 @@
   --sidebar-ring: #8fb892;
 
   --app-nav-height: 3.25rem;
+  --app-nav-height-stacked: 5.5rem;
   --build-strip-height: 1.17rem;
   --command-center-left: 320px;
   --command-center-right: 360px;
@@ -246,6 +247,17 @@
 
   .site-app-shell #site-main {
     @apply min-h-0;
+  }
+
+  .site-main-gutter {
+    --page-gutter: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-left: var(--page-gutter);
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  }
+
+  .page-back-bar {
+    --page-gutter: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
   }
 
   /*

@@ -128,7 +128,10 @@ export function ForOrganizersLanding() {
                 Popup Hub discovery
               </Link>
               . Vendors apply through your market listing — you stay in control of approvals and booth
-              fees.
+              fees.{' '}
+              <Link href="/for-organizers/embed" className="font-semibold text-forest hover:underline">
+                Embed official application badges →
+              </Link>
             </p>
           </div>
         </section>

@@ -4,6 +4,5 @@ export function resolveCoordinatorEtransferEmail(profile: {
 } | null | undefined): string | null {
   const dedicated = profile?.etransfer_payment_email?.trim()
   if (dedicated) return dedicated
-  const email = profile?.email?.trim()
-  return email || null
+  return null
 }

@@ -7,27 +7,30 @@ import {
   getGoogleOAuthClientSecret,
   getGoogleOAuthRedirectUri,
 } from '@/lib/google/oauth'
+import { googleOAuthReturnUrl, parseGoogleOAuthState } from '@/lib/google/oauth-return'
 
-function redirectWithError(request: Request, code: string) {
-  const url = new URL(`${new URL(request.url).origin}/coordinator/events/new`)
-  url.searchParams.set('google_error', code)
-  return NextResponse.redirect(url.toString())
+function redirectWithError(request: Request, returnTo: string, code: string) {
+  const origin = new URL(request.url).origin
+  return NextResponse.redirect(googleOAuthReturnUrl(origin, returnTo, `error_${code}`))
 }
 
 export async function GET(request: Request) {
   const clientId = getGoogleOAuthClientId()
   const clientSecret = getGoogleOAuthClientSecret()
+  const { searchParams } = new URL(request.url)
+  const parsedState = parseGoogleOAuthState(searchParams.get('state'))
+  const returnTo = parsedState?.returnTo ?? '/coordinator/events/new'
+
   if (!clientId || !clientSecret) {
-    return redirectWithError(request, 'not_configured')
+    return redirectWithError(request, returnTo, 'not_configured')
   }
 
-  const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')?.trim()
   const state = searchParams.get('state')?.trim()
   const error = searchParams.get('error')?.trim()
 
-  if (error || !code || !state) {
-    return redirectWithError(request, error ?? 'missing_code')
+  if (error || !code || !state || !parsedState) {
+    return redirectWithError(request, returnTo, error ?? 'missing_code')
   }
 
   const supabase = await createClient()
@@ -35,8 +38,8 @@ export async function GET(request: Request) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user || user.id !== state) {
-    return redirectWithError(request, 'session_mismatch')
+  if (!user || user.id !== parsedState.userId) {
+    return redirectWithError(request, returnTo, 'session_mismatch')
   }
 
   const { data: profile } = await supabase
@@ -46,7 +49,7 @@ export async function GET(request: Request) {
     .single()
 
   if (!canActAsCoordinator(profile)) {
-    return redirectWithError(request, 'forbidden')
+    return redirectWithError(request, returnTo, 'forbidden')
   }
 
   try {
@@ -70,11 +73,10 @@ export async function GET(request: Request) {
       })
       .eq('id', user.id)
 
-    const successUrl = new URL(`${new URL(request.url).origin}/coordinator/events/new`)
-    successUrl.searchParams.set('google_connected', '1')
-    return NextResponse.redirect(successUrl.toString())
+    const origin = new URL(request.url).origin
+    return NextResponse.redirect(googleOAuthReturnUrl(origin, returnTo, 'connected'))
   } catch (err) {
     console.error('[google/oauth/callback]', err)
-    return redirectWithError(request, 'token_exchange_failed')
+    return redirectWithError(request, returnTo, 'token_exchange_failed')
   }
 }

@@ -6,6 +6,7 @@ import {
   getGoogleOAuthClientId,
   getGoogleOAuthRedirectUri,
 } from '@/lib/google/oauth'
+import { buildGoogleOAuthState } from '@/lib/google/oauth-return'
 
 export async function GET(request: Request) {
   const clientId = getGoogleOAuthClientId()
@@ -29,12 +30,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const origin = new URL(request.url).origin
+  const requestUrl = new URL(request.url)
+  const returnTo = requestUrl.searchParams.get('return_to')
+  const origin = requestUrl.origin
   const redirectUri = getGoogleOAuthRedirectUri(origin)
   const url = buildGoogleOAuthUrl({
     clientId,
     redirectUri,
-    state: user.id,
+    state: buildGoogleOAuthState(user.id, returnTo),
   })
 
   return NextResponse.redirect(url)

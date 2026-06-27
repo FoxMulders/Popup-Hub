@@ -32,6 +32,17 @@ export function coordinatorStudioHref(eventId?: string | null): string {
   return `${COORDINATOR_STUDIO_PATH}?event=${encodeURIComponent(eventId)}`
 }
 
+/** HubGrid nav target — on mobile without an event, land on markets picker (avoids redirect loop). */
+export function coordinatorHubGridNavHref(options?: {
+  mobile?: boolean
+  eventId?: string | null
+}): string {
+  const { mobile = false, eventId } = options ?? {}
+  if (eventId) return coordinatorStudioHref(eventId)
+  if (mobile) return COORDINATOR_MARKETS_PATH
+  return COORDINATOR_STUDIO_PATH
+}
+
 export function coordinatorStudioLedgerHref(searchParams?: Record<string, string>): string {
   if (!searchParams || Object.keys(searchParams).length === 0) {
     return COORDINATOR_STUDIO_LEDGER_PATH

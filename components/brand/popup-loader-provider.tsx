@@ -16,6 +16,7 @@ import {
 import { PopupLoaderContext } from '@/components/brand/popup-loader-context'
 import { InitialLoaderReveal } from '@/components/brand/initial-loader-reveal'
 import { PopupLoaderScene } from '@/components/brand/popup-loader-scene'
+import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import {
   pickRandomLoaderVariant,
   type LoaderControllerMode,
@@ -129,16 +130,21 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
       role="status"
       aria-label={session.mode === 'initial' ? 'Popup Hub loading' : 'Popup Hub market animation'}
     >
-      {session.mode === 'initial' ? (
-        <InitialLoaderReveal onReadyToDismiss={dismiss} />
-      ) : (
-        <PopupLoaderScene
-          key={session.key}
-          variantId={session.variantId}
-          mode={session.mode}
-          onReadyToDismiss={dismiss}
-        />
-      )}
+      <div className="flex h-full w-full max-w-[min(92vw,520px)] flex-col items-center justify-center gap-3 px-4">
+        <BrandLogoLockup className="shrink-0" size="header" />
+        <div className="loader-screen__lottie min-h-0 w-full flex-1">
+          {session.mode === 'initial' ? (
+            <InitialLoaderReveal onReadyToDismiss={dismiss} />
+          ) : (
+            <PopupLoaderScene
+              key={session.key}
+              variantId={session.variantId}
+              mode={session.mode}
+              onReadyToDismiss={dismiss}
+            />
+          )}
+        </div>
+      </div>
     </div>
   ) : null
 

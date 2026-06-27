@@ -157,10 +157,15 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
       return
     }
     if (authError === 'auth_callback_failed') {
+      const pkceHint =
+        authErrorDetail?.toLowerCase().includes('pkce') ||
+        authErrorDetail?.toLowerCase().includes('code verifier')
+          ? ' If you opened the sign-in link in a different browser or cleared cookies, try again in the same window.'
+          : ''
       setError(
         authErrorDetail
-          ? `Google sign-in could not be completed: ${authErrorDetail}`
-          : 'Google sign-in could not be completed. Please try again.'
+          ? `Google sign-in could not be completed: ${authErrorDetail}${pkceHint}`
+          : `Google sign-in could not be completed. Please try again.${pkceHint}`
       )
       return
     }

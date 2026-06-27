@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { Bell, Lightbulb, LogOut } from 'lucide-react'
+import { Bell, Lightbulb, LogOut, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { UserAvatar } from '@/components/profile/user-avatar'
 import type { UserAvatarSource } from '@/hooks/use-user-avatar'
 import { cn } from '@/lib/utils'
@@ -34,6 +34,8 @@ interface AppMenuSheetProps {
   extraLinks?: AppMenuLink[]
   footer?: ReactNode
   onSuggestImprovement?: () => void
+  /** Coordinator: per-market links in slide-out menu. */
+  marketLinks?: AppMenuLink[]
 }
 
 function isActivePath(pathname: string, href: string) {
@@ -163,6 +165,7 @@ export function AppMenuSheet({
   extraLinks = [],
   footer,
   onSuggestImprovement,
+  marketLinks = [],
 }: AppMenuSheetProps) {
   const router = useRouter()
 
@@ -189,10 +192,18 @@ export function AppMenuSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-dvh max-h-dvh w-[min(100vw-1rem,20rem)] min-h-0 flex-col gap-0 overflow-hidden p-0 data-[side=right]:h-dvh data-[side=right]:max-h-dvh"
+        showCloseButton={false}
+        className="safe-top safe-x flex h-dvh max-h-dvh w-[min(100vw-1rem,20rem)] min-h-0 flex-col gap-0 overflow-hidden p-0 pt-[max(0.75rem,env(safe-area-inset-top,0px))] data-[side=right]:h-dvh data-[side=right]:max-h-dvh"
       >
+        <SheetClose
+          className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top,0px))] z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-white text-foreground hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Close menu"
+        >
+          <X className="h-4 w-4" aria-hidden />
+          <span className="sr-only">Close</span>
+        </SheetClose>
         {menuProfile ? (
-          <div className="safe-top shrink-0 border-b border-stone-200 px-3 py-2.5 pr-11">
+          <div className="shrink-0 border-b border-stone-200 px-3 py-2.5 pr-11">
             <Link
               href="/profile"
               onClick={close}
@@ -214,7 +225,7 @@ export function AppMenuSheet({
             </Link>
           </div>
         ) : (
-          <SheetHeader className="safe-top space-y-0 px-3 pb-0 pt-3 pr-11">
+          <SheetHeader className="space-y-0 px-3 pb-0 pt-3 pr-11">
             <SheetTitle className="text-left font-heading text-base">Menu</SheetTitle>
             {profileName ? (
               <p className="truncate text-left text-xs text-muted-foreground">{profileName}</p>
@@ -223,9 +234,25 @@ export function AppMenuSheet({
         )}
 
         <nav
-          className="safe-bottom flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch]"
+          className="safe-bottom flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 pt-1 [-webkit-overflow-scrolling:touch]"
           aria-label="App menu"
         >
+          {marketLinks.length > 0 ? (
+            <MenuSection title="Your markets" listClassName="flex flex-col">
+              {marketLinks.map(({ href, label, title, badgeCount }) => (
+                <MenuLinkItem
+                  key={`market-${href}-${label}`}
+                  href={href}
+                  label={label}
+                  title={title}
+                  badgeCount={badgeCount}
+                  pathname={pathname}
+                  onNavigate={close}
+                />
+              ))}
+            </MenuSection>
+          ) : null}
+
           {allNavLinks.length > 0 ? (
             <MenuSection title={allNavLinks.length > 1 ? 'Navigate' : undefined} listClassName="flex flex-col">
               {allNavLinks.map(({ href, label, title, badgeCount }) => (
@@ -239,17 +266,6 @@ export function AppMenuSheet({
                   onNavigate={close}
                 />
               ))}
-            </MenuSection>
-          ) : null}
-
-          {!menuProfile ? (
-            <MenuSection>
-              <MenuLinkItem
-                href="/profile"
-                label="Profile settings"
-                pathname={pathname}
-                onNavigate={close}
-              />
             </MenuSection>
           ) : null}
 

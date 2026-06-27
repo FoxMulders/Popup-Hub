@@ -48,11 +48,11 @@ export default async function PublicEventPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: event }, { count: vendorCount }] = await Promise.all([
+  const [{ data: event }, { count: vendorCount }, { data: vendorApps }] = await Promise.all([
     supabase
       .from('events')
       .select(
-        'id, name, description, start_at, end_at, location_name, address, city, latitude, longitude, cover_image_url, status, coordinator:profiles!events_coordinator_id_fkey(full_name)'
+        'id, name, description, start_at, end_at, location_name, address, city, latitude, longitude, cover_image_url, status, coordinator_id, coordinator:profiles!events_coordinator_id_fkey(id, full_name)'
       )
       .eq('id', id)
       .in('status', ['published', 'active', 'completed'])
@@ -62,13 +62,37 @@ export default async function PublicEventPage({ params }: Props) {
       .select('id', { count: 'exact', head: true })
       .eq('event_id', id)
       .eq('status', 'approved'),
+    supabase
+      .from('booth_applications')
+      .select('passport:vendor_passports(business_name)')
+      .eq('event_id', id)
+      .eq('status', 'approved')
+      .limit(12),
   ])
+
+  const vendorNames = (vendorApps ?? [])
+    .map((row) => {
+      const passport = Array.isArray(row.passport) ? row.passport[0] : row.passport
+      return (passport as { business_name?: string } | null | undefined)?.business_name?.trim()
+    })
+    .filter((name): name is string => Boolean(name))
+
+  const coordinator = event
+    ? Array.isArray(event.coordinator)
+      ? event.coordinator[0]
+      : event.coordinator
+    : null
 
   return (
     <>
       {event ? (
         <>
-          <EventJsonLd event={event} vendorCount={vendorCount ?? 0} />
+          <EventJsonLd
+            event={event}
+            vendorCount={vendorCount ?? 0}
+            vendorNames={vendorNames}
+            organizerId={coordinator?.id ?? event.coordinator_id ?? null}
+          />
           <JsonLdScript
             data={buildBreadcrumbJsonLd([
               { name: 'Home', path: '/' },

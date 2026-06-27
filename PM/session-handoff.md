@@ -2,6 +2,37 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — SEO growth roadmap implementation (local, not deployed)
+- **Goal:** Implement PopupHub.ca SEO audit plan — technical indexing, local landing pages, schema, guides, embed badges, CRO for organic visitors.
+- **Persona:** Patron discovery · Vendor applications · Coordinator software · HubGuard trust.
+- **Shipped locally:**
+  - **Technical:** `/for-vendors` added to `lib/auth/public-paths.ts` (fixes login redirect for crawlers/guests). Hardened `app/sitemap.ts` with double-fallback + minimal static entries. Expanded `lib/seo/collect-sitemap-entries.ts` (9 Alberta city pages, intent URLs, guides, vendor profiles, organizers).
+  - **Local architecture:** Expanded `lib/seo/market-city-pages.ts` to 9 indexable cities. New intent routes `app/(browse)/markets/[city]/[intent]/page.tsx` (vendor-applications, this-weekend, artisan-markets). Enhanced `MarketCityLanding` with ItemList JSON-LD, sibling intent links, evergreen empty states.
+  - **Schema:** Improved `lib/seo/event-json-ld.ts` (AB region, Organization organizer, performer lineup, clearer offers). Added `vendor-profile-json-ld`, `organizer-json-ld`, guide Article JSON-LD.
+  - **Content:** Six guides at `/legal/guides` + `[slug]` (5 pillars + safe vendor checklist) via `lib/seo/guides/guide-registry.ts`.
+  - **Authority:** `/for-organizers/embed` — copy-paste official application / HubGuard / vendor lineup badges + outreach kit links.
+  - **CRO:** `discover-empty-state` city/vendor/HubGuard links; `MarketingLocalMarkets` on homepage; tri-path `MarketingCtaBand`; footer links for guides + Edmonton/Calgary.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: unauthenticated `/for-vendors` shows vendor landing; `/sitemap.xml` returns entries; `/markets/edmonton/vendor-applications` renders; `/legal/guides` index loads.
+- **Blockers:** Production `/sitemap.xml` 500 needs deploy to verify fix. Google Search Console + analytics instrumentation still manual post-deploy.
+- **Next:** User commit + deploy; submit sitemap in GSC; monitor indexed city/guide pages.
+
+## Active work — QA sprint: navigation, auth, branding (local, not deployed)
+- **Goal:** Close 15 QA items — global back button, mobile gutters/menu notch, HubGrid mobile loop, auth/menu/Google Docs, stacked header, per-market menu links, organizer claim approval, PopupFunds rebrand, payment instruction templates, loader wordmark.
+- **Personas:** Patron/Vendor/Coordinator chrome; HubGuard claims; PopupFunds wallet.
+- **Shipped locally:**
+  - **Navigation:** `PageBackBar` + `lib/navigation/page-back.ts` in `site-app-shell`, `shopper-shell-client`, `site-content-shell`; `.site-main-gutter` safe horizontal padding.
+  - **Menu:** `app-menu-sheet` safe-top/notch close button; guest Profile settings removed; coordinator **Your markets** dynamic links via `/api/coordinator/markets-menu`.
+  - **HubGrid mobile:** `coordinatorHubGridNavHref` — mobile without event → `/coordinator/markets`; studio redirect skipped when `?event=` present.
+  - **Header:** Stacked layout when multi-portal — wordmark row above portal tabs (`app-nav--stacked`).
+  - **Auth:** Explicit PKCE cookie adapter in `lib/supabase/client.ts`; Google Docs OAuth `return_to` + dismissible `GoogleOAuthReturnAlert`; `.env.example` `GOOGLE_OAUTH_*`.
+  - **Claims:** Migration `127_organizer_claim_requests.sql` + admin `/admin/organizer-claims` approve/reject; patrons/vendors still blocked; coordinators submit pending claims.
+  - **PopupFunds:** `public/popup-funds-logo.png`, `popup-funds-wordmark.png`; nav label + wallet page branding.
+  - **Payments:** `<insert email>` suggestion clears on type; no profile-email fallback for vendor e-Transfer display; migration `128_scrub_operator_payment_email.sql`.
+  - **Loader:** `BrandLogoLockup` above full-screen animation; cream backgrounds aligned to `--linen`.
+- **Verify:** `npx tsc --noEmit` (pre-existing `guide-registry` sitemap error only). Smoke: back on inner pages; mobile menu first link tappable; HubGrid from markets no loop; guest menu no Profile; coordinator claim → pending; wallet shows PopupFunds.
+- **Blockers:** Production Google Docs import needs `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET` in Vercel. Apply migrations **127** + **128** via `npm run db:push`.
+- **Next:** User commit + deploy; set Vercel Google OAuth env vars; native PKCE smoke on Capacitor.
+
 ## Active work — Logo revert to attachment artwork + auth logo removal (local, not deployed)
 - **Goal:** The vector recreation (`popup-hub-mark.svg`) deviated too much from the intended storefront mark. Revert every storefront-icon instance (and the loader animation) to the supplied PNG artwork, and remove the large logo above the auth heading. Leave all wordmark/text logos untouched.
 - **Persona:** All personas · nav rail/footer/auth marks, initial + replay loader animations, favicons/PWA/app icons; Guest · `/login`.

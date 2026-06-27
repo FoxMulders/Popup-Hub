@@ -25,6 +25,14 @@ export interface GoogleDocsContractImportProps {
   disabled?: boolean
 }
 
+function oauthStartHref(): string {
+  const returnTo =
+    typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '/coordinator/events/new'
+  return `/api/coordinator/google/oauth/start?return_to=${encodeURIComponent(returnTo)}`
+}
+
 export function GoogleDocsContractImport({
   onImportClauses,
   disabled = false,
@@ -34,9 +42,12 @@ export function GoogleDocsContractImport({
   const [loading, setLoading] = useState(false)
   const [importingId, setImportingId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const refreshDocs = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     const res = await fetch('/api/coordinator/google/docs')
     const json = (await res.json()) as {
       connected?: boolean
@@ -45,7 +56,11 @@ export function GoogleDocsContractImport({
     }
     setLoading(false)
     if (!res.ok) {
-      toast.error(json.error ?? 'Could not load Google Docs')
+      const msg = json.error ?? 'Could not load Google Docs'
+      setLoadError(msg)
+      if (res.status === 503) {
+        setConnected(false)
+      }
       return
     }
     setConnected(json.connected ?? false)
@@ -74,6 +89,14 @@ export function GoogleDocsContractImport({
     toast.success(`Imported ${json.clauses.length} contract clause${json.clauses.length === 1 ? '' : 's'}`)
   }
 
+  function openFlow() {
+    if (connected === false) {
+      setConnectOpen(true)
+      return
+    }
+    setPickerOpen(true)
+  }
+
   return (
     <>
       <Button
@@ -82,17 +105,34 @@ export function GoogleDocsContractImport({
         size="sm"
         className="gap-1.5"
         disabled={disabled}
-        onClick={() => {
-          if (connected === false) {
-            window.location.href = '/api/coordinator/google/oauth/start'
-            return
-          }
-          setPickerOpen(true)
-        }}
+        onClick={openFlow}
       >
         <FileText className="h-4 w-4" />
         Import from Google Docs
       </Button>
+
+      <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Google account</DialogTitle>
+            <DialogDescription>
+              You will leave this page briefly to authorize Google Docs access, then return here
+              automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setConnectOpen(false)}>
+              Cancel
+            </Button>
+            <a
+              href={oauthStartHref()}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Continue to Google
+            </a>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -107,6 +147,15 @@ export function GoogleDocsContractImport({
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Loading docs…
               </p>
+            ) : loadError ? (
+              <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+                <p>{loadError}</p>
+                {loadError.includes('not configured') ? (
+                  <p className="text-xs text-red-800/80">
+                    Platform operators must set Google OAuth environment variables in production.
+                  </p>
+                ) : null}
+              </div>
             ) : connected === false ? (
               <p className="text-sm text-muted-foreground">
                 Connect Google to browse your Docs.
@@ -130,17 +179,20 @@ export function GoogleDocsContractImport({
               ))
             )}
           </div>
-          <DialogFooter>
-            {connected === false ? (
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => setPickerOpen(false)}>
+              Close
+            </Button>
+            {connected === false || loadError ? (
               <a
-                href="/api/coordinator/google/oauth/start"
+                href={oauthStartHref()}
                 className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Connect Google
               </a>
             ) : (
-              <Button type="button" variant="outline" onClick={() => setPickerOpen(false)}>
-                Close
+              <Button type="button" variant="ghost" onClick={() => void refreshDocs()}>
+                Refresh
               </Button>
             )}
           </DialogFooter>

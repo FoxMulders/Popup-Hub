@@ -10,6 +10,9 @@ export const SITE_FOOTER_MARKETING_LINKS = [
     label: TRUST_DIRECTORY_LINKS.check.navLabel,
   },
   { href: '/legal/about', label: 'About Us' },
+  { href: '/legal/guides', label: 'Market Guides' },
+  { href: '/markets/edmonton', label: 'Edmonton Markets' },
+  { href: '/markets/calgary', label: 'Calgary Markets' },
 ] as const
 
 /** Mobile footer — About Us only; full marketing row stays on sm+ */

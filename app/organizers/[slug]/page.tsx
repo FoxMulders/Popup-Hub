@@ -12,8 +12,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { OrganizerReviewList } from '@/components/check/organizer-review-list'
 import { OrganizerClaimButton } from '@/components/check/organizer-claim-button'
+import { getPendingOrganizerClaimForUser } from '@/lib/organizers/claim-organizer'
 import { JsonLdScript } from '@/components/seo/json-ld-script'
 import { buildBreadcrumbJsonLd } from '@/lib/seo/breadcrumb-json-ld'
+import { buildOrganizerTrustJsonLd } from '@/lib/seo/organizer-json-ld'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import type { Profile } from '@/types/database'
@@ -76,20 +78,40 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
 
   const isClaimed = Boolean(organizer.claimed_by)
   const canClaim = Boolean(user && canActAsCoordinator(profile) && !isClaimed)
+  const claimPending =
+    user && canClaim ? await getPendingOrganizerClaimForUser(organizer.id, user.id) : false
   const canRespondToReviews = Boolean(
     user &&
       canActAsCoordinator(profile) &&
       (organizer.claimed_by === user.id || organizer.popup_hub_coordinator_id === user.id)
   )
 
+  const ratedReviews = reviews.filter((review) => review.communication_rating != null)
+  const averageRating =
+    ratedReviews.length > 0
+      ? ratedReviews.reduce((sum, review) => sum + (review.communication_rating ?? 0), 0) /
+        ratedReviews.length
+      : null
+
   return (
     <>
       <JsonLdScript
-        data={buildBreadcrumbJsonLd([
-          { name: 'Home', path: '/' },
-          { name: 'HubGuard', path: '/check' },
-          { name: organizer.display_name, path: `/organizers/${organizer.slug}` },
-        ])}
+        data={[
+          buildBreadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'HubGuard', path: '/check' },
+            { name: organizer.display_name, path: `/organizers/${organizer.slug}` },
+          ]),
+          buildOrganizerTrustJsonLd({
+            slug: organizer.slug,
+            displayName: organizer.display_name,
+            city: organizer.city,
+            province: organizer.province,
+            websiteUrl: organizer.website_url,
+            reviewCount: ratedReviews.length,
+            averageRating,
+          }),
+        ]}
       />
       <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
       <Link
@@ -145,6 +167,7 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
         displayName={organizer.display_name}
         isClaimed={isClaimed}
         canClaim={canClaim}
+        claimPending={claimPending}
       />
 
       {scamAlerts.length > 0 ? (

@@ -28,6 +28,7 @@ import {
 import { enabledContractClausesForStorage } from '@/lib/booth-contract/resolve-event-contract'
 import { uploadBoothContractPdf } from '@/lib/coordinator/upload-booth-contract-pdf'
 import { GoogleDocsContractImport } from '@/components/coordinator/google-docs-contract-import'
+import { GoogleOAuthReturnAlert } from '@/components/coordinator/google-oauth-return-alert'
 import { buildBoothContractEnhancementPrefill } from '@/lib/feedback/booth-contract-enhancement-prefill'
 import { useFeatureRequest } from '@/components/feedback/feature-request-context'
 import type { BoothClearancePolicy, BoothContractClause } from '@/types/database'
@@ -197,6 +198,7 @@ export function BoothContractEditor({
 
   return (
     <div className={cn('space-y-4', compact ? '' : 'rounded-xl border bg-white p-4 shadow-sm')}>
+      <GoogleOAuthReturnAlert />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold text-foreground">Digital booth contract</h3>

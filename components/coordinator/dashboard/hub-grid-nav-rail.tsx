@@ -8,40 +8,47 @@ import {
   LayoutDashboard,
   Plus,
   Settings,
-  Store,
 } from 'lucide-react'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
 import {
   COORDINATOR_HOME_PATH,
-  COORDINATOR_MARKETS_PATH,
   COORDINATOR_STUDIO_PATH,
+  coordinatorHubGridNavHref,
   isCoordinatorStudioPath,
 } from '@/lib/coordinator/coordinator-routes'
+import { useIsMobileNav } from '@/hooks/use-is-mobile-nav'
 import { cn } from '@/lib/utils'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 
-const RAIL_LINKS = [
+const RAIL_LINKS_BASE = [
   { href: COORDINATOR_HOME_PATH, label: 'Home', icon: Calendar },
-  { href: COORDINATOR_MARKETS_PATH, label: 'Markets', icon: Store },
-  { href: COORDINATOR_STUDIO_PATH, label: 'HubGrid', icon: LayoutDashboard },
+  { href: '_hubgrid', label: 'HubGrid', icon: LayoutDashboard },
   { href: '/coordinator/events/new', label: 'New Event', icon: Plus },
   { href: '/coordinator/payment-methods', label: 'Payments', icon: CreditCard },
-  { href: '/wallet', label: 'Wallet', icon: Settings },
+  { href: '/wallet', label: 'PopupFunds', icon: Settings },
 ] as const
 
-function isActivePath(pathname: string, href: string): boolean {
+function isActivePath(pathname: string, href: string, hubGridHref: string): boolean {
   if (href === COORDINATOR_HOME_PATH) return pathname === COORDINATOR_HOME_PATH
-  if (href === COORDINATOR_STUDIO_PATH) return isCoordinatorStudioPath(pathname)
+  if (href === hubGridHref || href === COORDINATOR_STUDIO_PATH) {
+    return isCoordinatorStudioPath(pathname)
+  }
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
 /** Slim icon rail — replaces global AppNav on HubGrid blueprint. */
 export function HubGridNavRail({ className }: { className?: string }) {
   const pathname = usePathname() ?? ''
+  const mobile = useIsMobileNav()
   const { isBlueprint } = useDashboardWorkspaceView()
+  const hubGridHref = coordinatorHubGridNavHref({ mobile })
 
   if (!isBlueprint) return null
+
+  const railLinks = RAIL_LINKS_BASE.map((link) =>
+    link.href === '_hubgrid' ? { ...link, href: hubGridHref } : link
+  )
 
   return (
     <nav
@@ -58,8 +65,8 @@ export function HubGridNavRail({ className }: { className?: string }) {
       />
 
       <ul className="flex flex-1 flex-col items-center gap-1" role="list">
-        {RAIL_LINKS.map(({ href, label, icon: Icon }) => {
-          const active = isActivePath(pathname, href)
+        {railLinks.map(({ href, label, icon: Icon }) => {
+          const active = isActivePath(pathname, href, hubGridHref)
           return (
             <li key={href}>
               <TooltipWrapper text={label}>

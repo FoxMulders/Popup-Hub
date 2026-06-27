@@ -1,1 +1,1 @@
-feat: ship 24 session updates (Logo revert to attachment artwork + auth logo removal; Auth + native splash cleanup; Header wordmark swap; Popup Hub logo vector recreation; +20 more)
+feat: ship 26 session updates (SEO growth roadmap implementation; QA sprint: navigation, auth, branding; Logo revert to attachment artwork + auth logo removal; Auth + native splash cleanup; +22 more)

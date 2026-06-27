@@ -9,6 +9,7 @@ import {
   INDEXABLE_MARKET_CITY_SLUGS,
   isIndexableMarketCitySlug,
 } from '@/lib/seo/market-city-pages'
+import { listMarketCityIntentPages } from '@/lib/seo/market-city-intents'
 
 export const revalidate = 60
 
@@ -53,5 +54,11 @@ export default async function MarketCityPage({ params }: Props) {
 
   const events = await getCachedDiscoverMarkets()
 
-  return <MarketCityLanding city={city} events={events} />
+  return (
+    <MarketCityLanding
+      city={city}
+      events={events}
+      siblingIntents={listMarketCityIntentPages(city)}
+    />
+  )
 }

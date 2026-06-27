@@ -100,6 +100,11 @@ export function PaymentMethodsForm({
   const [offlineInstructions, setOfflineInstructions] = useState('')
   const [flags, setFlags] = useState({ ...DEFAULT_PAYMENT_FLAGS })
   const userEditedRef = useRef({ etransferEmail: false, offlineInstructions: false })
+  const [etransferSuggestion, setEtransferSuggestion] = useState(false)
+  const [instructionSuggestion, setInstructionSuggestion] = useState(false)
+
+  const ETANSFER_SUGGESTION = '<insert email>'
+  const OFFLINE_TEMPLATE = `Send e-Transfers to <insert email>. Include your booth reference in the memo. Pay cash to the market treasurer at load-in.`
 
   useEffect(() => {
     const stripeParam = searchParams.get('stripe')
@@ -156,13 +161,18 @@ export function PaymentMethodsForm({
 
   function saveSettings() {
     startSave(async () => {
+      const cleanEmail =
+        etransferEmail.trim() === ETANSFER_SUGGESTION ? '' : etransferEmail.trim()
+      const cleanInstructions =
+        offlineInstructions.trim() === OFFLINE_TEMPLATE ? '' : offlineInstructions.trim()
+
       const res = await fetch('/api/coordinator/payment-settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          etransferPaymentEmail: etransferEmail,
-          paymentInstructions: offlineInstructions,
-          offlinePaymentInstructions: offlineInstructions,
+          etransferPaymentEmail: cleanEmail || null,
+          paymentInstructions: cleanInstructions || null,
+          offlinePaymentInstructions: cleanInstructions || null,
           defaultEventPaymentFlags: flags,
         }),
       })
@@ -391,11 +401,25 @@ export function PaymentMethodsForm({
               id="etransfer-email"
               type="email"
               value={etransferEmail ?? ''}
+              placeholder={ETANSFER_SUGGESTION}
+              onFocus={() => {
+                if (!etransferEmail.trim() && !userEditedRef.current.etransferEmail) {
+                  setEtransferEmail(ETANSFER_SUGGESTION)
+                  setEtransferSuggestion(true)
+                }
+              }}
               onChange={(e) => {
                 userEditedRef.current.etransferEmail = true
+                if (etransferSuggestion) {
+                  setEtransferSuggestion(false)
+                  const next = e.target.value
+                  setEtransferEmail(
+                    next === ETANSFER_SUGGESTION ? '' : next.replace(ETANSFER_SUGGESTION, '')
+                  )
+                  return
+                }
                 setEtransferEmail(e.target.value)
               }}
-              placeholder="payments@yourmarket.ca"
             />
           </div>
           <div className="space-y-2">
@@ -404,11 +428,25 @@ export function PaymentMethodsForm({
               id="offline-instructions"
               rows={4}
               value={offlineInstructions ?? ''}
+              placeholder="Payment instructions shown to vendors when they choose e-Transfer or cash."
+              onFocus={() => {
+                if (!offlineInstructions.trim() && !userEditedRef.current.offlineInstructions) {
+                  setOfflineInstructions(OFFLINE_TEMPLATE)
+                  setInstructionSuggestion(true)
+                }
+              }}
               onChange={(e) => {
                 userEditedRef.current.offlineInstructions = true
+                if (instructionSuggestion) {
+                  setInstructionSuggestion(false)
+                  const next = e.target.value
+                  setOfflineInstructions(
+                    next === OFFLINE_TEMPLATE ? '' : next.replace(OFFLINE_TEMPLATE, '')
+                  )
+                  return
+                }
                 setOfflineInstructions(e.target.value)
               }}
-              placeholder="Include where to send e-Transfers, who to pay cash to at load-in, and any memo/reference requirements."
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">

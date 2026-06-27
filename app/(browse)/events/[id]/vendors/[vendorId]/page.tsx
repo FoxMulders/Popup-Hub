@@ -11,6 +11,9 @@ import { patronEventMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import { getVendorLinks } from '@/lib/shopper/vendors'
 import { PassportStoriesPublicStrip } from '@/components/passport/passport-stories-public-strip'
 import { buildVendorProfileHref } from '@/lib/shopper/vendors'
+import { JsonLdScript } from '@/components/seo/json-ld-script'
+import { buildBreadcrumbJsonLd } from '@/lib/seo/breadcrumb-json-ld'
+import { buildVendorProfileJsonLd } from '@/lib/seo/vendor-profile-json-ld'
 
 interface Props {
   params: Promise<{ id: string; vendorId: string }>
@@ -110,7 +113,30 @@ export default async function PublicVendorProfilePage({ params }: Props) {
   }
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-10">
+    <>
+      <JsonLdScript
+        data={[
+          buildBreadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Discover Markets', path: '/discover' },
+            { name: event.name, path: `/events/${eventId}` },
+            { name: businessName, path: buildVendorProfileHref(eventId, vendorId) },
+          ]),
+          buildVendorProfileJsonLd({
+            eventId,
+            vendorId,
+            businessName,
+            description: passport?.bio,
+            logoUrl: passport?.logo_url ?? vendor?.avatar_url,
+            categoryName: category?.name,
+            eventName: event.name,
+            websiteUrl: passport?.website_url,
+            shopUrl: passport?.shop_url,
+            instagramUrl: passport?.instagram_url,
+          }),
+        ]}
+      />
+      <main className="mx-auto max-w-lg px-4 py-10">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {event.name}
       </p>
@@ -186,5 +212,6 @@ export default async function PublicVendorProfilePage({ params }: Props) {
         </p>
       </div>
     </main>
+    </>
   )
 }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 export interface AdminPendingCounts {
   featureRequests: number
   venueSubmissions: number
+  organizerClaims: number
   total: number
 }
 
@@ -12,6 +13,7 @@ export function useAdminPendingCounts(enabled: boolean) {
   const [counts, setCounts] = useState<AdminPendingCounts>({
     featureRequests: 0,
     venueSubmissions: 0,
+    organizerClaims: 0,
     total: 0,
   })
 

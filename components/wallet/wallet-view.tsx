@@ -214,7 +214,7 @@ export function WalletView({
             Add Funds with Card
             <Tooltip>
               <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-              <TooltipContent className="max-w-xs">Add funds to your wallet. Minimum $5. Funds are available immediately.</TooltipContent>
+              <TooltipContent className="max-w-xs">Add funds to PopupFunds. Minimum $5. Funds are available immediately.</TooltipContent>
             </Tooltip>
           </CardTitle>
         </CardHeader>
