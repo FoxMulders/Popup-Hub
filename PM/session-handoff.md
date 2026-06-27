@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Native OAuth callback cookie fix (branch `cursor/critical-bug-investigation-db8b`)
+- **Goal:** Fix native Google OAuth sign-in failing to persist session after deep-link return.
+- **Persona:** All personas · native iOS/Android Google OAuth.
+- **Root cause:** `CapacitorInit` used `router.push('/api/auth/callback?…')` on `ca.popuphub.app://auth/callback` deep links; client-side navigation skips Set-Cookie from the PKCE exchange route (login/signup already use `window.location.replace`).
+- **Shipped:** `apiAuthCallbackHref()` helper in `lib/auth/oauth-callback-url.ts`; `capacitor-init.tsx` uses `window.location.replace`; signup re-registers `onNativeOAuthBrowserFinished` when switching login/signup tabs; unit test `lib/auth/oauth-callback-url.test.ts`.
+- **Verify:** `npx tsx lib/auth/oauth-callback-url.test.ts` passes. Native OAuth E2E: Google sign-in → deep link → session cookie set → redirect to dashboard.
+- **Next:** Merge PR, deploy, native rebuild not required (web bundle fix).
+
 ## Active work — Auth + native splash cleanup (local, not deployed)
 - **Goal:** Remove duplicate branding on signup and skip the native launch splash so only the booth-table web loader animation plays on first open.
 - **Persona:** Guest · signup/login; all personas · native mobile cold launch.
