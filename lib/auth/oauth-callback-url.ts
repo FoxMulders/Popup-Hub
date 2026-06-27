@@ -17,6 +17,20 @@ export function buildNativeOAuthCallbackUrl(
   return query ? `${NATIVE_OAUTH_CALLBACK_URL}?${query}` : NATIVE_OAUTH_CALLBACK_URL
 }
 
+/** In-app path for the server-side PKCE code exchange route. */
+export function oauthCallbackPath(query?: string): string {
+  return query ? `/api/auth/callback?${query}` : '/api/auth/callback'
+}
+
+/**
+ * Navigate to the OAuth callback with a full document load so Set-Cookie headers
+ * from the route handler apply in Capacitor WebViews (client router.push does not).
+ */
+export function navigateToOAuthCallback(query?: string): void {
+  if (typeof window === 'undefined') return
+  window.location.replace(oauthCallbackPath(query))
+}
+
 /** Build the Supabase OAuth return URL (must be allow-listed in Supabase Auth settings). */
 export function buildOAuthCallbackUrl(
   origin: string,
