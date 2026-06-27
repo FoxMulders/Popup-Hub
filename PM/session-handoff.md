@@ -2256,11 +2256,23 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `7114293` (pushed to `origin/master`)
-- Last deploy commit: `7114293` - feat: ship 29 session updates (Chrome audit + HubGuard patron gate; List-mode map previews; HubGuard / global header cleanup; SEO growth roadmap implementation; +25 more)
-- Production: https://popuphub.ca - **v1.172.0 build 1** | commit `e9b2c42` (handoff updated 2026-06-27 16:46)
+- Branch: `cursor/critical-bug-investigation-bf8a` @ `b460e49` (investigation PR open)
+- Production baseline: `master` @ `7114293` — **v1.172.0 build 1** | https://popuphub.ca
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
+
+## Shipped this session (critical bug investigation, 2026-06-27)
+- **HubGuard claim suggestions:** Coordinator home "Submit claim" was POSTing without the required verification note (always 400 after 529d6d9 gate). Fixed by auto-building note from match reasons.
+- **Claim approval race:** `approveOrganizerClaimRequest` now uses `claimed_by IS NULL` conditional update to block concurrent approvals overwriting the claim holder.
+- **Tests:** `lib/organizers/claim-verification.test.ts` (note length + suggestion note builder).
+- **Not fixed (reported):** `AuthSessionGuard` reload path may sign users out on transient `getUser()` network errors — needs auth-error classification before changing.
+
+## Goal
+Critical bug investigation automation — review recent master commits for high-severity regressions.
+
+## Next actions
+- Merge investigation PR after review.
+- Consider hardening `AuthSessionGuard` reload check to ignore retryable fetch errors.
 
 
 ## Shipped this session (dynamic auth redirect base URL, deployed 2026-06-09)
