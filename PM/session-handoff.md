@@ -2,7 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — SEO growth roadmap implementation (local, not deployed)
+## Active work — Critical bug investigation: HubGuard claim bypass (branch `cursor/critical-bug-investigation-07e0`, not deployed)
+- **Goal:** Audit recent master commits for high-severity correctness bugs after push `ed03671`.
+- **Finding:** Migration 127 + pending claim flow gated the claim button, but `syncPublishedEventToTrustDirectory` still upserted organizers on publish/trust-sync with service role — auto-setting `claimed_by` and overwriting unclaimed HubGuard rows on slug collision.
+- **Fix:** `lib/organizers/sync-coordinator-event.ts` — insert-only for new PopUp Hub organizers; skip auto-claim when slug exists unclaimed or owned by another coordinator; unit test `canAutoClaimOrganizerOnPublish`.
+- **Verify:** `npx tsx lib/organizers/sync-coordinator-event.test.ts` PASS.
+- **Next:** Merge PR; deploy; confirm publish no longer claims unapproved HubGuard profiles.
+
 - **Goal:** Implement PopupHub.ca SEO audit plan — technical indexing, local landing pages, schema, guides, embed badges, CRO for organic visitors.
 - **Persona:** Patron discovery · Vendor applications · Coordinator software · HubGuard trust.
 - **Shipped locally:**
