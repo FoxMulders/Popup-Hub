@@ -2444,9 +2444,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `0cce5af9` (pushed to `origin/master`)
-- Last deploy commit: `0cce5af9` - feat: ship 39 session updates (Feature request resolution notes & reopen; Category max-slots input fix; MLM broad category pinned first; Capacity step skip-layout copy; +35 more)
-- Production: https://popuphub.ca - **v1.177.0 build 1** | commit `135034d` (handoff updated 2026-06-28 12:30)
+- Branch: `master` @ `6676a3a0` (pushed to `origin/master`)
+- Last deploy commit: `6676a3a0` - feat: ship 41 session updates (Scenario test markets (`is_test`); Admin market access, publish assist, owner labels; Feature request resolution notes & reopen; Category max-slots input fix; +37 more)
+- Production: https://popuphub.ca - **v1.178.0 build 1** | commit `6a14343a` (handoff updated 2026-06-28 13:01)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2823,7 +2823,7 @@
 
 
 ## Last deploy
-- 2026-06-28 12:30 - Deploy via deploy-popuphub.ps1 - `feat: ship 39 session updates (Feature request resolution notes & reopen; Category max-slots input fix; MLM broad category pinned first; Capacity step skip-layout copy; +35 more)` (0cce5af9)
+- 2026-06-28 13:01 - Deploy via deploy-popuphub.ps1 - `feat: ship 41 session updates (Scenario test markets (`is_test`); Admin market access, publish assist, owner labels; Feature request resolution notes & reopen; Category max-slots input fix; +37 more)` (6676a3a0)
 
 
 ## Goal
