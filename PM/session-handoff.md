@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation: admin grant lockout (PR open)
+- **Goal:** Deep review of recent master commits for high-severity correctness bugs.
+- **Finding:** `setPlatformAdmin` revoked all admins before promoting the target; grant failure could leave zero `is_admin` profiles (platform admin lockout).
+- **Fix (PR #106):** Promote target first, then revoke other admins; `lib/admin/user-admin-actions.grant-order.test.ts` locks order.
+- **Also reviewed:** Ship 39 (feature-request reopen, direct-sales capacity, geocode route) — no additional critical bugs surfaced.
+- **Next:** Merge PR #106; smoke admin grant/revoke in staging.
+
 ## Active work — Feature request resolution notes & reopen (local, not deployed)
 - **Goal:** Admins add user-visible resolution notes; submitters view fixes on My Suggestions and can reopen completed requests; retroactive access to all historical completed items.
 - **Personas:** All portals (submit/view) · platform admin `/admin/feedback`.
