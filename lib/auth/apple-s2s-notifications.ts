@@ -6,7 +6,7 @@ const APPLE_JWKS_URL = new URL(`${APPLE_ISSUER}/auth/keys`)
 const DEFAULT_BUNDLE_ID = 'ca.popuphub.app'
 
 export type AppleS2SEventType =
-  | 'account-delete'
+  | 'account-deleted'
   | 'consent-revoked'
   | 'email-enabled'
   | 'email-disabled'
@@ -32,14 +32,32 @@ function resolveAppleAudiences(): string[] {
   return servicesId ? [bundleId, servicesId] : [bundleId]
 }
 
-/** Parse the `events` claim from a verified Apple S2S JWT payload. */
-export function parseAppleNotificationEvents(claims: JWTPayload): AppleS2SEvent | null {
-  const rawEvents = claims.events
+function normalizeAppleEventsClaim(rawEvents: unknown): Record<string, unknown> | null {
+  if (typeof rawEvents === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(rawEvents)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return null
+      }
+      return parsed as Record<string, unknown>
+    } catch {
+      return null
+    }
+  }
+
   if (!rawEvents || typeof rawEvents !== 'object' || Array.isArray(rawEvents)) {
     return null
   }
 
-  const events = rawEvents as Record<string, unknown>
+  return rawEvents as Record<string, unknown>
+}
+
+/** Parse the `events` claim from a verified Apple S2S JWT payload. */
+export function parseAppleNotificationEvents(claims: JWTPayload): AppleS2SEvent | null {
+  const events = normalizeAppleEventsClaim(claims.events)
+  if (!events) {
+    return null
+  }
   const type = events.type
   const sub = events.sub
 
@@ -48,7 +66,7 @@ export function parseAppleNotificationEvents(claims: JWTPayload): AppleS2SEvent 
   }
 
   if (
-    type !== 'account-delete' &&
+    type !== 'account-deleted' &&
     type !== 'consent-revoked' &&
     type !== 'email-enabled' &&
     type !== 'email-disabled'
@@ -147,7 +165,7 @@ export async function handleAppleS2SNotification(
   }
 
   switch (event.type) {
-    case 'account-delete': {
+    case 'account-deleted': {
       const { error } = await admin.auth.admin.deleteUser(userId)
       if (error) {
         return { ok: false, error: error.message }

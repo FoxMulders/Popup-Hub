@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Apple S2S notification parsing fix (local, not deployed)
+- **Goal:** Critical bug investigation on `12e1cbd3` (Apple S2S notifications) — ensure real Apple webhooks are accepted and processed.
+- **Personas:** All users · Sign in with Apple account lifecycle (delete, consent revoke).
+- **Shipped locally:**
+  - **`lib/auth/apple-s2s-notifications.ts`** — parse `events` when Apple sends it as a JSON string; accept `account-deleted` (Apple's type) instead of wrong `account-delete`.
+  - **`lib/auth/apple-s2s-notifications.test.ts`** — coverage for stringified events and `account-deleted`.
+- **Verify:** `npx tsx lib/auth/apple-s2s-notifications.test.ts` PASS.
+- **Next:** Merge PR; deploy; register S2S endpoint in Apple Developer if not already.
+
 ## Active work — Center loader logo and animation (local, not deployed)
 - **Goal:** Center the worded logo and loader animation as a single vertically-centered group on the full-screen loader overlay, preserving the gap between them.
 - **Personas:** All users · initial page-load loader and replay overlay.

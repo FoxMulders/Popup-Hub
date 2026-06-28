@@ -17,19 +17,33 @@ function test(name: string, fn: () => void) {
 
 console.log('apple-s2s-notifications')
 
-test('parseAppleNotificationEvents extracts account-delete', () => {
+test('parseAppleNotificationEvents extracts account-deleted', () => {
   const event = parseAppleNotificationEvents({
     events: {
-      type: 'account-delete',
+      type: 'account-deleted',
       sub: '001234.abc.def',
       event_time: 1_700_000_000,
     },
   })
 
   assert.ok(event)
-  assert.equal(event.type, 'account-delete')
+  assert.equal(event.type, 'account-deleted')
   assert.equal(event.sub, '001234.abc.def')
   assert.equal(event.email, undefined)
+})
+
+test('parseAppleNotificationEvents parses stringified events claim', () => {
+  const event = parseAppleNotificationEvents({
+    events: JSON.stringify({
+      type: 'consent-revoked',
+      sub: '001234.abc.def',
+      event_time: 1_700_000_000,
+    }),
+  })
+
+  assert.ok(event)
+  assert.equal(event.type, 'consent-revoked')
+  assert.equal(event.sub, '001234.abc.def')
 })
 
 test('parseAppleNotificationEvents extracts consent-revoked with email', () => {
@@ -61,7 +75,8 @@ test('parseAppleNotificationEvents rejects missing or invalid claims', () => {
   assert.equal(parseAppleNotificationEvents({}), null)
   assert.equal(parseAppleNotificationEvents({ events: null }), null)
   assert.equal(parseAppleNotificationEvents({ events: { type: 'unknown', sub: 'x' } }), null)
-  assert.equal(parseAppleNotificationEvents({ events: { type: 'account-delete' } }), null)
+  assert.equal(parseAppleNotificationEvents({ events: { type: 'account-deleted' } }), null)
+  assert.equal(parseAppleNotificationEvents({ events: { type: 'account-delete', sub: 'x' } }), null)
 })
 
 console.log('All apple-s2s-notifications tests passed.')
