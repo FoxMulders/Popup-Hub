@@ -2479,9 +2479,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `ce90eedc` (pushed to `origin/master`)
-- Last deploy commit: `ce90eedc` - feat: ship 43 session updates (Postal code lookup fix; Uniform platform feature cards; Scenario test markets (`is_test`); Admin market access, publish assist, owner labels; +39 more)
-- Production: https://popuphub.ca - **v1.179.0 build 1** | commit `9bbde749` (handoff updated 2026-06-28 14:19)
+- Branch: `master` @ `40a1571a` (pushed to `origin/master`)
+- Last deploy commit: `40a1571a` - feat: ship 44 session updates (Center loader logo and animation; Popup Hub empty-state copy; Uniform platform feature cards; Scenario test markets (`is_test`); +40 more)
+- Production: https://popuphub.ca - **v1.180.0 build 1** | commit `2f8186e3` (handoff updated 2026-06-28 16:52)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2858,7 +2858,7 @@
 
 
 ## Last deploy
-- 2026-06-28 14:19 - Deploy via deploy-popuphub.ps1 - `feat: ship 43 session updates (Postal code lookup fix; Uniform platform feature cards; Scenario test markets (`is_test`); Admin market access, publish assist, owner labels; +39 more)` (ce90eedc)
+- 2026-06-28 16:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 44 session updates (Center loader logo and animation; Popup Hub empty-state copy; Uniform platform feature cards; Scenario test markets (`is_test`); +40 more)` (40a1571a)
 
 
 ## Goal
