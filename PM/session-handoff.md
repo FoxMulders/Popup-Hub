@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fix: publish-assist approval (local, not deployed)
+- **Goal:** Admin publish-assist approve was broken for unverified coordinators.
+- **Bug:** `approvePublishAssistRequest` called `publishCoordinatorEvent`, which re-applied organizer trust-path checks and hit `guard_coordinator_event_publish` DB trigger — approval always failed for the exact blocked coordinators the feature targets.
+- **Fix:** `coordinatorHardPublishBlockReason` + `bypassTrustGate` option; atomic `publish_event_via_publish_assist` RPC (migration `136`) with session-scoped trigger bypass; hard fraud blocks (suspended/banned/rejected/high-risk) still enforced.
+- **Verify:** `npx tsx lib/coordinator/publish-assist-verification.test.ts` PASS. Apply migration `136` before smoke-testing admin approve flow.
+- **Next:** Merge PR; apply `136_publish_assist_publish_bypass.sql`; smoke coordinator blocked → request assist → admin approve → published.
+
 ## Active work — Scenario test markets (`is_test`) (local, not deployed)
 - **Goal:** Seed a catalog of published QA markets (one per product scenario), flagged `is_test` for bulk purge before go-live.
 - **Personas:** Coordinator · Vendor · Patron (`/discover`, `/events/[id]/map`).
