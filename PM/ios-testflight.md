@@ -36,6 +36,19 @@ In Supabase → Authentication → URL configuration, add:
 
 Test sign-in on device after first TestFlight install. If OAuth opens Safari instead of returning to the app, verify `Info.plist` URL scheme and Supabase redirect list.
 
+### Sign in with Apple — server-to-server notifications
+
+After deploying the web app, register Popup Hub’s notification endpoint in Apple Developer:
+
+| Setting | Value |
+|---------|-------|
+| App ID | `ca.popuphub.app` |
+| Sign in with Apple → Configure → **Server-to-Server Notification Endpoint** | `https://popuphub.ca/api/auth/apple/notifications` |
+
+Apple POSTs signed JWTs when users revoke consent, delete their app account, or change private-relay email forwarding. The endpoint verifies Apple’s signature and updates Supabase Auth (delete user, unlink Apple identity, or log email relay changes).
+
+Register the URL **after** production deploy so Apple can reach a live HTTPS endpoint (TLS 1.2+).
+
 ## 4. Build on Mac
 
 ```bash

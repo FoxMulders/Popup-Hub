@@ -8,6 +8,7 @@ export function isPublicPath(pathname: string): boolean {
     '/auth/callback',
     '/auth/confirm',
     '/api/auth/callback',
+    '/api/auth/apple/notifications',
     '/api/geocode',
   ]
 

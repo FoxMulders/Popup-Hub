@@ -60,6 +60,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Apple Sign in with Apple server-to-server notifications (unsigned POST from Apple).
+  if (request.nextUrl.pathname === '/api/auth/apple/notifications') {
+    return NextResponse.next({ request })
+  }
+
   const oauthRedirect = redirectOAuthCodeToCallback(request)
   if (oauthRedirect) return oauthRedirect
 

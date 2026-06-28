@@ -69,16 +69,19 @@ CAPACITOR_SERVER_URL=https://localhost:3000 npm run mobile:sync
 
 Rebuild or re-sync after changing `CAPACITOR_SERVER_URL`.
 
-## OAuth deep link (Supabase)
+## OAuth (Supabase — Google, Apple, Microsoft, Facebook)
+
+Full provider setup checklist: **`PM/oauth-provider-setup.md`**.
 
 Register these redirect URLs in **Supabase Dashboard → Authentication → URL Configuration**:
 
 ```
 ca.popuphub.app://auth/callback
 https://popuphub.ca/api/auth/callback
+https://popuphub.ca/**
 ```
 
-(Add preview/staging origins as needed.) Login and signup use `lib/auth/native-oauth.ts` to open Google OAuth in the system browser on native and redirect back through the custom scheme above.
+(Add preview/staging origins as needed.) Login and signup use `lib/auth/native-oauth.ts` to open OAuth in the **system browser** on native (Google blocks embedded WebViews) and redirect back through the custom scheme above. Email/password sign-in remains available on the same pages.
 
 After the iOS project exists, confirm `ios/App/App/Info.plist` contains the `CFBundleURLTypes` entry from `mobile/ios/url-scheme-snippet.plist` (applied automatically on first `mobile:assets` run when `ios/` is present).
 
