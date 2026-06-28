@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Center loader logo and animation (local, not deployed)
+- **Goal:** Center the worded logo and loader animation as a single vertically-centered group on the full-screen loader overlay, preserving the gap between them.
+- **Personas:** All users · initial page-load loader and replay overlay.
+- **Shipped locally:**
+  - **`components/brand/popup-loader-provider.tsx`** — removed `flex-1` from the animation wrapper so the wordmark + animation stack as a compact group centered by the column's `justify-center`; kept `gap-3` spacing.
+- **Verify:** Static layout check — outer `#loader-screen` flex-centers the column; inner column `justify-center` now applies because both children (`BrandLogoLockup`, `.loader-screen__lottie`) use intrinsic height (`shrink-0`); CSS gives animation `height: min(72vh, 520px)` (mobile `min(60vh, 360px)`). Smoke: fresh tab initial loader + logo replay — wordmark and animation centered together on desktop and mobile.
+- **Next:** User commit + deploy when ready.
+
 ## Shipped this session (Postal code lookup fix, deployed 2026-06-28)
 - **Goal:** Make the public Discover area filter resolve Canadian postal codes with or without a space once the Google Geocoding server key is configured.
 - **Personas:** Patron - Discover map area filter (`/discover`).
@@ -10,6 +18,15 @@
   - **`lib/maps/geocode-query.ts`** - logs Google Geocoding `status` and `error_message` when Google returns a non-OK response.
 - **Verify:** Code-level checks pass: `/api/geocode` is public; `T5Z3X7` and `T5Z 3X7` both normalize to `T5Z 3X7, Canada`; mocked geocode helper returns coordinates for both formats. Full live smoke still needs a working `GOOGLE_MAPS_SERVER_API_KEY`, deploy, then `/discover` postal lookup test logged out and logged in.
 - **Next:** Enable Google Geocoding API / set `GOOGLE_MAPS_SERVER_API_KEY`; commit + deploy; smoke `POST /api/geocode` and the `/discover` address field.
+
+## Active work — Popup Hub empty-state copy (local, not deployed)
+- **Goal:** Clarify that empty discover/vendor lists mean no Popup Hub listings — not zero markets in the area — and encourage platform promotion.
+- **Shipped locally:**
+  - **`lib/copy/popup-hub-discovery.ts`** — shared headlines + promo copy for community markets and quarter auctions.
+  - **`discover-empty-state.tsx`** — Popup Hub-specific headlines, promo paragraph, compact map variant, **Host a market on Popup Hub** link.
+  - **`vendor-market-grid.tsx`**, **`discover-markets.tsx`**, **`market-city-landing.tsx`**, **`lib/widget/feed.ts`** — aligned empty messaging.
+- **Verify:** `npx tsc --noEmit` PASS.
+- **Next:** User commit + deploy when ready.
 
 ## Active work — Uniform platform feature cards (local, not deployed)
 - **Goal:** Remove HubGuard link/CTA from homepage platform features grid so all six cards are uniform height.
@@ -29,8 +46,9 @@
   - **`npm run seed:scenario-markets`**, **`npm run purge:test-markets`** in package.json.
   - Sitemap excludes `is_test`; coordinator markets list **Test** badge; workflow fixture sets `is_test`.
   - **`docs/QA_FULL_WORKFLOW.md`** — scenario market table + commands.
-- **Verify:** `npx tsc --noEmit` PASS; `ReadLints` clean for `lib/qa/seed-scenario-markets.ts`. Migrations `134`/`135` applied by user; earlier seed failed on `booth_layouts_spacing_mode_check`, now fixed locally.
-- **Next:** Re-run `npm run seed:scenario-markets` on production; smoke `/discover` for scenario names; user commit + deploy when ready.
+- **Seed run:** `npm run seed:scenario-markets` → 14/14 upserted (owner `coordinator@me.com`). Fixed two issues: (1) `booth_layouts_spacing_mode_check` — layout upsert now normalizes `spacing_mode` to `standard`/`table_provided`; (2) published markets were dated +30 days and fell outside the default `/discover` "today" window — `scheduleForScenario('future')` now starts today so they show on the default discover load.
+- **Verify:** `npx tsc --noEmit` PASS; `ReadLints` clean. DB confirms 12 visible (10 published + 1 active community + 1 quarter auction) dated today; completed/cancelled dated in the past (correctly excluded from discover). `/discover` caches 60s (`revalidate = 60`).
+- **Next:** Smoke `/discover` (default view shows scenario markets); user commit + deploy when ready.
 
 ## Active work — Admin market access, publish assist, owner labels (local, not deployed)
 - **Goal:** Fix cryptic `Could not save draft: Forbidden` for admins inspecting other coordinators' markets; enforce read-only admin inspection; coordinator publish-assist queue; owner labels on admin market listings.

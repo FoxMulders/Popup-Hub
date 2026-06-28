@@ -28,6 +28,10 @@ import {
 import type { ApplicationStatus, Event } from '@/types/database'
 import { cn } from '@/lib/utils'
 import { Search } from 'lucide-react'
+import {
+  noPopupHubOpenMarketsMessage,
+  popupHubDiscoveryPromo,
+} from '@/lib/copy/popup-hub-discovery'
 
 export type VendorEventApplication = {
   id: string
@@ -65,6 +69,7 @@ function MarketGrid({
   applicationsByEventId,
   capacityByEventId,
   emptyMessage,
+  emptySubtext,
   showDistance,
 }: {
   events: EventWithMeta[]
@@ -72,12 +77,16 @@ function MarketGrid({
   applicationsByEventId: Record<string, VendorEventApplication>
   capacityByEventId: Record<string, EventCapacitySummary>
   emptyMessage: string
+  emptySubtext?: string
   showDistance: boolean
 }) {
   if (events.length === 0) {
     return (
       <div className="rounded-2xl border bg-white py-16 text-center">
         <p className="text-muted-foreground">{emptyMessage}</p>
+        {emptySubtext ? (
+          <p className="mx-auto mt-3 max-w-md px-4 text-sm text-muted-foreground">{emptySubtext}</p>
+        ) : null}
       </div>
     )
   }
@@ -253,8 +262,8 @@ export function VendorMarketGrid({
             <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center">
               <div className="pointer-events-auto rounded-xl border border-stone-200 bg-white/95 px-4 py-2 text-center text-xs font-medium shadow-sm backdrop-blur-sm sm:max-w-md">
                 {search
-                  ? 'No open markets match your search on the map — try widening the radius or clearing search.'
-                  : 'No open markets within this distance — pan the map or widen the radius.'}
+                  ? noPopupHubOpenMarketsMessage('map_search')
+                  : noPopupHubOpenMarketsMessage('map_radius')}
               </div>
             </div>
           ) : null}
@@ -278,9 +287,10 @@ export function VendorMarketGrid({
             capacityByEventId={capacityByEventId}
             emptyMessage={
               search
-                ? 'No open markets match your search.'
-                : 'No open markets match your filters.'
+                ? noPopupHubOpenMarketsMessage('search')
+                : noPopupHubOpenMarketsMessage('filters')
             }
+            emptySubtext={popupHubDiscoveryPromo}
             showDistance
           />
         </TabsContent>

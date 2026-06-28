@@ -15,6 +15,10 @@ import {
   type EventWithMeta,
 } from '@/lib/shopper/events'
 import type { Event } from '@/types/database'
+import {
+  noPopupHubPublishedInCity,
+  popupHubDiscoveryPromo,
+} from '@/lib/copy/popup-hub-discovery'
 
 interface MarketCityLandingProps {
   city: MarketCitySeoPage
@@ -177,9 +181,9 @@ export function MarketCityLanding({
               </div>
             ) : (
               <div className="mt-8 rounded-2xl border bg-white py-14 text-center">
-                <p className="text-muted-foreground">
-                  No published markets in this area yet — browse all of Alberta or check vendor
-                  applications on Popup Hub.
+                <p className="text-muted-foreground">{noPopupHubPublishedInCity}</p>
+                <p className="mx-auto mt-3 max-w-lg px-4 text-sm text-muted-foreground">
+                  {popupHubDiscoveryPromo}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm">
                   <Link href="/discover" className="font-semibold text-forest hover:underline">

@@ -226,8 +226,8 @@ export function scheduleForScenario(kind: ScenarioScheduleKind): {
     }
   }
 
+  // Start today so the markets appear on the default `/discover` view (preset = "today").
   const start = new Date()
-  start.setDate(start.getDate() + 30)
   start.setHours(10, 0, 0, 0)
   const end = new Date(start)
   end.setHours(16, 0, 0, 0)

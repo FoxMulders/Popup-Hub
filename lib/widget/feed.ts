@@ -1,4 +1,5 @@
 import type { WidgetPatronFeed, WidgetVendorFeed, WidgetCoordinatorFeed } from '@/lib/widget/types'
+import { noPopupHubMarketsNearby } from '@/lib/copy/popup-hub-discovery'
 
 /** Format wallet balance for widget display (cents → dollars). */
 export function formatWidgetBalanceCents(cents: number): string {
@@ -20,7 +21,7 @@ export function formatCountdownMs(ms: number | null): string | null {
 /** Small-widget status line for patron persona. */
 export function buildPatronStatusLine(feed: WidgetPatronFeed): string {
   const count = feed.nearbyMarkets.length
-  if (count === 0) return 'No markets nearby'
+  if (count === 0) return noPopupHubMarketsNearby
   const countdown = formatCountdownMs(feed.nextMarketCountdownMs)
   if (countdown) return `${count} market${count === 1 ? '' : 's'} · ${countdown}`
   return `${count} market${count === 1 ? '' : 's'} nearby`

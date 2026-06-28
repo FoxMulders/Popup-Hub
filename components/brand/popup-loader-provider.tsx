@@ -132,7 +132,7 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
     >
       <div className="flex h-full w-full max-w-[min(92vw,520px)] flex-col items-center justify-center gap-3 px-4">
         <BrandLogoLockup className="shrink-0" size="header" />
-        <div className="loader-screen__lottie min-h-0 w-full flex-1">
+        <div className="loader-screen__lottie w-full shrink-0">
           {session.mode === 'initial' ? (
             <InitialLoaderReveal onReadyToDismiss={dismiss} />
           ) : (

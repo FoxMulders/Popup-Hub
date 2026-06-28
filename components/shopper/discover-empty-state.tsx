@@ -4,6 +4,12 @@ import Link from 'next/link'
 import { Bell, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { clampSliderRadiusKm, DISTANCE_RADIUS_MAX_KM } from '@/lib/markets/distance-radius'
+import {
+  noPopupHubCommunityMarketsHeadline,
+  noPopupHubQuarterAuctionsHeadline,
+  popupHubDiscoveryPromo,
+  popupHubDiscoveryPromoCompact,
+} from '@/lib/copy/popup-hub-discovery'
 import type { DateFilterPreset } from '@/lib/shopper/discover-date'
 import { suggestDiscoverFallbackPreset } from '@/lib/shopper/discover-date'
 import { cn } from '@/lib/utils'
@@ -66,12 +72,19 @@ export function DiscoverEmptyState({
     >
       <p className={cn('text-muted-foreground', compact ? 'text-xs font-medium' : 'text-sm')}>
         {liveAuctionsOnly
-          ? 'No quarter auctions match this day and area.'
-          : 'No community markets match this day and area.'}
+          ? noPopupHubQuarterAuctionsHeadline
+          : noPopupHubCommunityMarketsHeadline}
       </p>
+      {!compact ? (
+        <p className="mt-2 text-sm text-muted-foreground">{popupHubDiscoveryPromo}</p>
+      ) : (
+        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+          {popupHubDiscoveryPromoCompact}
+        </p>
+      )}
       {!compact && upcomingInAreaCount > 0 ? (
         <p className="mt-2 text-sm text-foreground">
-          <span className="font-semibold">{upcomingInAreaCount}</span> market
+          <span className="font-semibold">{upcomingInAreaCount}</span> Popup Hub market
           {upcomingInAreaCount === 1 ? '' : 's'} coming up nearby in the next two months — try a
           different date or widen your search.
         </p>
@@ -127,7 +140,7 @@ export function DiscoverEmptyState({
             className="min-h-10 touch-manipulation rounded-full"
             onClick={onShowEverywhere}
           >
-            Show markets everywhere
+            Show Popup Hub markets everywhere
           </Button>
         ) : null}
         {liveAuctionsOnly && onClearLiveAuctionFilter ? (
@@ -162,6 +175,12 @@ export function DiscoverEmptyState({
         )}
       >
         <Link
+          href="/for-organizers"
+          className="font-medium text-forest hover:underline underline-offset-2"
+        >
+          Host a market on Popup Hub
+        </Link>
+        <Link
           href="/for-vendors"
           className="font-medium text-forest hover:underline underline-offset-2"
         >
@@ -182,7 +201,7 @@ export function DiscoverEmptyState({
             className="inline-flex items-center gap-1.5 font-medium text-forest hover:underline underline-offset-2"
           >
             <Bell className="h-3.5 w-3.5" aria-hidden />
-            Get notified when new markets publish near you
+            Get notified when new Popup Hub markets publish near you
           </Link>
         </p>
       ) : null}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useId, useRef, useState } from 'react'
-import { Loader2, MapPin } from 'lucide-react'
+import { Loader2, MapPin, Search } from 'lucide-react'
 import { GoogleMapsProvider } from '@/components/map/google-maps-provider'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'

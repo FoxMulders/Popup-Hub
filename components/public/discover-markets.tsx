@@ -3,6 +3,10 @@ import { EventCard } from '@/components/events/event-card'
 import {
   getCachedDiscoverMarkets,
 } from '@/lib/queries/cached-public-markets'
+import {
+  noPopupHubUpcomingInArea,
+  popupHubDiscoveryPromo,
+} from '@/lib/copy/popup-hub-discovery'
 import type { Event } from '@/types/database'
 
 export async function DiscoverMarketsMap() {
@@ -22,7 +26,10 @@ export async function DiscoverMarketsList({ limit = 20 }: { limit?: number }) {
   if (visible.length === 0) {
     return (
       <div className="rounded-2xl border bg-white py-16 text-center">
-        <p className="text-muted-foreground">No upcoming markets in the area yet. Check back soon!</p>
+        <p className="text-muted-foreground">{noPopupHubUpcomingInArea}</p>
+        <p className="mx-auto mt-3 max-w-lg px-4 text-sm text-muted-foreground">
+          {popupHubDiscoveryPromo}
+        </p>
       </div>
     )
   }
