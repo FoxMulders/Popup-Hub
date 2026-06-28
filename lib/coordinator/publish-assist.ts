@@ -127,23 +127,13 @@ export async function approvePublishAssistRequest(
     return { ok: false, error: 'Event ownership mismatch', status: 409 }
   }
 
-  const publishResult = await publishCoordinatorEvent(admin, admin, event)
+  const publishResult = await publishCoordinatorEvent(admin, admin, event, {
+    bypassVerificationGate: true,
+    assistRequestId: requestId,
+    reviewerId,
+  })
   if (!publishResult.ok) {
     return { ok: false, error: publishResult.error, status: publishResult.status }
-  }
-
-  const { error: updateError } = await admin
-    .from('event_publish_assist_requests')
-    .update({
-      status: 'approved',
-      reviewed_by: reviewerId,
-      reviewed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', requestId)
-
-  if (updateError) {
-    return { ok: false, error: updateError.message, status: 500 }
   }
 
   return { ok: true }
