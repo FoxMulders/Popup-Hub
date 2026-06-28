@@ -12,6 +12,13 @@ export type PublishEventResult =
   | { ok: true }
   | { ok: false; error: string; status: number }
 
+export type PublishCoordinatorEventOptions = {
+  /** Skip coordinator fraud gate — only for admin publish-assist approval. */
+  bypassVerificationGate?: boolean
+  assistRequestId?: string
+  reviewerId?: string
+}
+
 type PublishableEvent = {
   id: string
   status: string
@@ -27,36 +34,41 @@ type PublishableEvent = {
 export async function publishCoordinatorEvent(
   supabase: SupabaseClient,
   service: SupabaseClient,
-  event: PublishableEvent
+  event: PublishableEvent,
+  options?: PublishCoordinatorEventOptions
 ): Promise<PublishEventResult> {
   if (event.status !== 'draft') {
     return { ok: false, error: 'Only draft markets can be published.', status: 409 }
   }
 
-  const { data: ownerProfile, error: ownerError } = await supabase
-    .from('profiles')
-    .select(COORDINATOR_FRAUD_PROFILE_SELECT)
-    .eq('id', event.coordinator_id)
-    .single()
+  const bypassVerificationGate = options?.bypassVerificationGate === true
 
-  if (ownerError || !ownerProfile) {
-    return { ok: false, error: 'Organizer profile not found.', status: 404 }
-  }
+  if (!bypassVerificationGate) {
+    const { data: ownerProfile, error: ownerError } = await supabase
+      .from('profiles')
+      .select(COORDINATOR_FRAUD_PROFILE_SELECT)
+      .eq('id', event.coordinator_id)
+      .single()
 
-  const { data: squareEvent } = await supabase
-    .from('events')
-    .select('id')
-    .eq('coordinator_id', event.coordinator_id)
-    .not('square_merchant_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
+    if (ownerError || !ownerProfile) {
+      return { ok: false, error: 'Organizer profile not found.', status: 404 }
+    }
 
-  const publishBlock = coordinatorPublishBlockReason({
-    ...ownerProfile,
-    has_square_event: !!squareEvent,
-  })
-  if (publishBlock) {
-    return { ok: false, error: publishBlock, status: 403 }
+    const { data: squareEvent } = await supabase
+      .from('events')
+      .select('id')
+      .eq('coordinator_id', event.coordinator_id)
+      .not('square_merchant_id', 'is', null)
+      .limit(1)
+      .maybeSingle()
+
+    const publishBlock = coordinatorPublishBlockReason({
+      ...ownerProfile,
+      has_square_event: !!squareEvent,
+    })
+    if (publishBlock) {
+      return { ok: false, error: publishBlock, status: 403 }
+    }
   }
 
   if (!event.venue_verified && event.venue_verification_status !== 'manual_override') {
@@ -109,13 +121,34 @@ export async function publishCoordinatorEvent(
     }
   }
 
-  const { error: updateError } = await supabase
-    .from('events')
-    .update({ status: 'published' })
-    .eq('id', event.id)
+  if (bypassVerificationGate) {
+    const assistRequestId = options?.assistRequestId?.trim()
+    const reviewerId = options?.reviewerId?.trim()
+    if (!assistRequestId || !reviewerId) {
+      return {
+        ok: false,
+        error: 'Publish assist approval requires request and reviewer identifiers.',
+        status: 500,
+      }
+    }
 
-  if (updateError) {
-    return { ok: false, error: updateError.message, status: 500 }
+    const { error: rpcError } = await service.rpc('admin_publish_assisted_event', {
+      p_request_id: assistRequestId,
+      p_reviewer_id: reviewerId,
+    })
+
+    if (rpcError) {
+      return { ok: false, error: rpcError.message, status: 500 }
+    }
+  } else {
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({ status: 'published' })
+      .eq('id', event.id)
+
+    if (updateError) {
+      return { ok: false, error: updateError.message, status: 500 }
+    }
   }
 
   void dispatchPublishMarketAlerts(service, event.id).catch((err) => {
