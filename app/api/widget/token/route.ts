@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { mintWidgetToken } from '@/lib/widget/token-crypto'
-import { resolveWidgetPersona } from '@/lib/widget/auth'
+import { resolveWidgetPersonaForAccount } from '@/lib/widget/auth'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import type { WidgetSnapshot } from '@/lib/widget/types'
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   const activePortal = resolveActivePortal(undefined, profile as Profile | null)
-  const persona = resolveWidgetPersona(profile?.role ?? 'shopper', activePortal, profile?.is_admin === true)
+  const persona = resolveWidgetPersonaForAccount(profile?.role ?? 'shopper', profile?.is_admin === true)
 
   const snapshot: WidgetSnapshot = {
     userId: user.id,
