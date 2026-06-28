@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fixes (investigation branch, not deployed)
+- **Goal:** Fix high-severity regressions found in ship 33/34 (OAuth, admin console, native widgets).
+- **Branch:** `cursor/critical-bug-investigation-ef26` · commit `e5ced767`
+- **Shipped locally:**
+  - **Native OAuth:** `CapacitorInit` uses `window.location.replace(apiAuthCallbackHref())` so `/api/auth/callback` Set-Cookie persists in WebView.
+  - **Admin grant:** `setPlatformAdmin` grants target before revoking other admins (prevents zero-admin lockout).
+  - **Widget persona:** `resolveWidgetPersonaForAccount()` for native widgets without `active_portal` cookie.
+- **Verify:** `npx tsx lib/auth/oauth-callback-url.test.ts`, `lib/widget/auth.test.ts`, `lib/widget/feed.test.ts` PASS.
+- **Next:** Merge PR; smoke native OAuth on iOS/Android; grant-admin action on staging.
+
 ## Active work — Admin visibility for all markets (local, not deployed)
 - **Goal:** Platform admins can list and inspect every coordinator market, including drafts.
 - **Personas:** Platform operator · Coordinator portal (`/coordinator/markets`, HubGrid, event hubs).
