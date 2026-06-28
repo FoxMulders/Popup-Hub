@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session — Critical bug investigation (2026-06-28)
+- **Goal:** Deep scan of ship 41–43 for high-severity correctness bugs.
+- **Bugs found & fixed (PR pending):**
+  1. **Publish assist approve never worked** — `approvePublishAssistRequest` called `publishCoordinatorEvent` which still enforced coordinator fraud gate + DB trigger `guard_coordinator_event_publish`. Admin Approve always failed for blocked coordinators (the exact users the feature targets).
+     - **Fix:** `bypassVerificationGate` path + migration `136_admin_publish_assist_bypass.sql` (`admin_publish_assisted_event` RPC + trigger session-var bypass tied to pending assist request).
+  2. **`is_test` markets leaked to `/discover` and vendor directory** — sitemap excluded test markets but `cached-public-markets.ts` did not.
+     - **Fix:** `.eq('is_test', false)` on discover, vendor directory, and vendor-count queries.
+- **Tests:** `lib/coordinator/publish-event.test.ts` — bypass RPC path.
+- **Next:** Merge PR; apply migration `136` on Supabase; smoke admin publish-assist approve for blocked coordinator; confirm seeded scenario markets absent from `/discover`.
+
 ## Shipped this session (Postal code lookup fix, deployed 2026-06-28)
 - **Goal:** Make the public Discover area filter resolve Canadian postal codes with or without a space once the Google Geocoding server key is configured.
 - **Personas:** Patron - Discover map area filter (`/discover`).
