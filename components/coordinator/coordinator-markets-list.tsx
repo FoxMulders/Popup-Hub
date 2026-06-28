@@ -22,6 +22,7 @@ export interface CoordinatorMarketSummary {
   name: string
   start_at: string
   status: string
+  is_test?: boolean
   coordinator_name?: string | null
 }
 
@@ -84,11 +85,16 @@ function MarketRow({
             <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{safeFormatMarketDate(market.start_at)}</span>
               {showCoordinatorName && market.coordinator_name ? (
-                <span className="line-clamp-1">{market.coordinator_name}</span>
+                <span className="line-clamp-1">Owner: {market.coordinator_name}</span>
               ) : null}
               <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium">
                 {statusLabel(market.status)}
               </Badge>
+              {market.is_test ? (
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
+                  Test
+                </Badge>
+              ) : null}
             </span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />

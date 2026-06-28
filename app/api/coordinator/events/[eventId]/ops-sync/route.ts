@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
+import {
+  canMutateCoordinatorEvent,
+  COORDINATOR_EVENT_NOT_OWNER_MESSAGE,
+} from '@/lib/events/coordinator-event-ownership'
 import { createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
 
@@ -30,13 +34,23 @@ export async function POST(
 
   const scope = await getCoordinatorScope(supabase, user.id)
   const { data: event, error: eventError } = await applyCoordinatorEventScope(
-    supabase.from('events').select('id').eq('id', eventId),
+    supabase.from('events').select('id, coordinator_id').eq('id', eventId),
     user.id,
     scope.isAdmin
   ).maybeSingle()
 
   if (eventError || !event) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+  }
+
+  if (
+    !canMutateCoordinatorEvent({
+      userId: user.id,
+      isAdmin: scope.isAdmin,
+      eventCoordinatorId: event.coordinator_id,
+    })
+  ) {
+    return NextResponse.json({ error: COORDINATOR_EVENT_NOT_OWNER_MESSAGE }, { status: 403 })
   }
 
   const body = (await request.json()) as { mutations?: PendingCoordinatorMutation[] }

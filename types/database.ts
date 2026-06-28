@@ -266,6 +266,8 @@ export interface Event {
   booking_mode: BookingMode
   listing_type: EventListingType
   status: EventStatus
+  /** QA/scenario markets — purge via scripts/purge-test-markets.ts before go-live. */
+  is_test?: boolean
   cover_image_url: string | null
   square_merchant_id: string | null
   accepts_square?: boolean

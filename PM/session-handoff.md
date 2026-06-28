@@ -2,6 +2,34 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Scenario test markets (`is_test`) (local, not deployed)
+- **Goal:** Seed a catalog of published QA markets (one per product scenario), flagged `is_test` for bulk purge before go-live.
+- **Personas:** Coordinator · Vendor · Patron (`/discover`, `/events/[id]/map`).
+- **Shipped locally:**
+  - **`supabase/migrations/135_events_is_test.sql`** — `events.is_test` + partial index.
+  - **`lib/qa/scenario-market-definitions.ts`** — 14 scenario configs (names = scenario labels).
+  - **`lib/qa/seed-scenario-markets.ts`**, **`scripts/seed-scenario-markets.ts`**, **`scripts/purge-test-markets.ts`** — idempotent seed + dry-run + purge.
+  - **`npm run seed:scenario-markets`**, **`npm run purge:test-markets`** in package.json.
+  - Sitemap excludes `is_test`; coordinator markets list **Test** badge; workflow fixture sets `is_test`.
+  - **`docs/QA_FULL_WORKFLOW.md`** — scenario market table + commands.
+- **Verify:** `npx tsc --noEmit` PASS. Apply migration `135` on Supabase, then `npm run seed:scenario-markets` (prod: confirm `coordinator@me.com` exists).
+- **Next:** User commit + deploy; apply `135_events_is_test.sql`; run seed on production; smoke `/discover` for scenario names.
+
+## Active work — Admin market access, publish assist, owner labels (local, not deployed)
+- **Goal:** Fix cryptic `Could not save draft: Forbidden` for admins inspecting other coordinators' markets; enforce read-only admin inspection; coordinator publish-assist queue; owner labels on admin market listings.
+- **Personas:** Platform admin · Coordinator portal (`/coordinator/markets`, setup wizard, event hub); admin `/admin/publish-assist`.
+- **Shipped locally:**
+  - **`lib/coordinator/coordinator-owner-label.ts`** — `formatCoordinatorOwnerLabel` for admin listings.
+  - **`lib/events/coordinator-event-ownership.ts`** — `canMutateCoordinatorEvent` (owner-only writes); clearer not-owner message on draft save.
+  - **Owner labels:** `/coordinator/markets`, coordinator home, slide-out markets menu (`Owner: …` in admin view).
+  - **Read-only admin:** `AdminReadOnlyMarketBanner`; setup wizard `readOnly` + disabled fieldset; event hub hides edit/mutation controls.
+  - **`supabase/migrations/134_event_publish_assist_requests.sql`** — pending publish-assist queue + RLS.
+  - **`lib/coordinator/publish-event.ts`**, **`publish-assist.ts`** — owner-profile publish gates; admin approve/reject.
+  - **API:** `POST/GET /api/coordinator/events/[eventId]/publish-assist`; `GET /api/admin/publish-assist`; approve/reject routes.
+  - **UI:** `RequestPublishAssistButton` on verification banner, setup wizard, status toggle; `/admin/publish-assist` queue + nav badge.
+- **Verify:** `npx tsc --noEmit` PASS. Apply migration `134` on Supabase. Smoke: admin lists show Owner; admin opens another coordinator's draft → read-only banner, no Forbidden toast; coordinator blocked from publish → request → admin approves → market published.
+- **Next:** User commit + deploy when ready; apply `134_event_publish_assist_requests.sql` remotely.
+
 ## Active work — Feature request resolution notes & reopen (local, not deployed)
 - **Goal:** Admins add user-visible resolution notes; submitters view fixes on My Suggestions and can reopen completed requests; retroactive access to all historical completed items.
 - **Personas:** All portals (submit/view) · platform admin `/admin/feedback`.
@@ -11,8 +39,8 @@
   - **Admin:** `feedback-admin-dashboard.tsx` — Active/Completed tabs, resolution vs internal notes, empty-notes confirm on terminal status.
   - **User:** `/suggestions` + `my-feature-requests.tsx`; menu link "My Suggestions".
   - **Notifications:** `feature_request_resolved`, `feature_request_reopened`; portal filter + deep links.
-- **Verify:** Apply migration 133; admin Complete with notes → submitter notification → `/suggestions`; Completed tab backfill; reopen completed → pending + admin alert. User routes must not return `developer_notes`.
-- **Next:** User commit + deploy when ready; run migration on Supabase before prod smoke.
+- **Verify:** Migrations 126 and 133 applied on Supabase; `resolution_notes`, `resolved_at`, and `reopened_at` now exist on `feature_requests`. Next smoke: admin Complete with notes → submitter notification → `/suggestions`; Completed tab backfill; reopen completed → pending + admin alert. User routes must not return `developer_notes`.
+- **Next:** User commit + deploy when ready; smoke `/admin/feedback` in prod after refresh.
 
 - **Goal:** Simplify coordinator Step 2 direct-sales configuration — plain language, single booth-count control, per-brand caps under Advanced.
 - **Personas:** Coordinator · event setup wizard Step 2 (`/coordinator/events/[id]/setup?step=2`).

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
+import { COORDINATOR_EVENT_NOT_OWNER_MESSAGE } from '@/lib/events/coordinator-event-ownership'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
   coordinatorPublishBlockReason,
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
     }
 
     if (existing.coordinator_id !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: COORDINATOR_EVENT_NOT_OWNER_MESSAGE }, { status: 403 })
     }
 
     wasPublished = existing.status === 'published'

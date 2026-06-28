@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "push_subscriptions: owner all" ON push_subscriptions;
 CREATE POLICY "push_subscriptions: owner all" ON push_subscriptions
   FOR ALL
   USING (auth.uid() = user_id)

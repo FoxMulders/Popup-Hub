@@ -14,6 +14,8 @@ import {
 import { CancelEventDialog } from '@/components/coordinator/cancel-event-dialog'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
+import { RequestPublishAssistButton } from '@/components/coordinator/request-publish-assist-button'
+import { usePublishAssistPending } from '@/hooks/use-publish-assist-pending'
 import { toast } from 'sonner'
 import { ChevronDown, Eye, Globe, Zap, CheckCircle, XCircle } from 'lucide-react'
 import type { Event, EventStatus } from '@/types/database'
@@ -55,6 +57,10 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
   const supabase = createClient()
   const [isPending, startTransition] = useTransition()
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [publishBlocked, setPublishBlocked] = useState(false)
+  const { pending: assistPending, refresh: refreshAssist } = usePublishAssistPending(
+    event.status === 'draft' ? event.id : null
+  )
   const currentStatus = event.status as EventStatus
   const transitions = TRANSITIONS[currentStatus] ?? []
   const statusBadgeClass = STATUS_BADGE[currentStatus] ?? STATUS_BADGE.draft
@@ -73,6 +79,7 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
       const publishBlock = await checkCoordinatorPublishGate()
       if (publishBlock) {
         toast.error(publishBlock)
+        setPublishBlocked(true)
         return
       }
     }
@@ -187,7 +194,8 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex items-center gap-2">
         <Badge className={`capitalize text-sm border ${statusBadgeClass}`}>
           {currentStatus}
         </Badge>
@@ -216,6 +224,17 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        </div>
+        {currentStatus === 'draft' && (publishBlocked || assistPending) ? (
+          <RequestPublishAssistButton
+            eventId={event.id}
+            pending={assistPending}
+            onRequested={() => {
+              setPublishBlocked(false)
+              void refreshAssist()
+            }}
+          />
+        ) : null}
       </div>
 
       <CancelEventDialog

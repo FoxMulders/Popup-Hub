@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
+import {
+  canMutateCoordinatorEvent,
+  COORDINATOR_EVENT_NOT_OWNER_MESSAGE,
+} from '@/lib/events/coordinator-event-ownership'
 import { persistTestSuiteApplications, resolveTestSuiteTargetVendorCount } from '@/lib/booth-planner/persist-test-suite-applications'
 
 /** Kill switch only — coordinator auth + event scope are enforced below. */
@@ -61,6 +65,16 @@ export async function POST(
 
   if (eventError || !event) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+  }
+
+  if (
+    !canMutateCoordinatorEvent({
+      userId: user.id,
+      isAdmin: scope.isAdmin,
+      eventCoordinatorId: event.coordinator_id,
+    })
+  ) {
+    return NextResponse.json({ error: COORDINATOR_EVENT_NOT_OWNER_MESSAGE }, { status: 403 })
   }
 
   const { data: layout } = await adminSupabase

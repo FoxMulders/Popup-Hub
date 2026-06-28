@@ -6,10 +6,22 @@ import {
   CoordinatorMarketsList,
   type CoordinatorMarketSummary,
 } from '@/components/coordinator/coordinator-markets-list'
+import { formatCoordinatorOwnerLabel } from '@/lib/coordinator/coordinator-owner-label'
 import type { Event } from '@/types/database'
 
-type MarketEventRow = Pick<Event, 'id' | 'name' | 'start_at' | 'status'> & {
-  coordinator?: { full_name?: string | null } | { full_name?: string | null }[] | null
+type MarketEventRow = Pick<Event, 'id' | 'name' | 'start_at' | 'status' | 'is_test'> & {
+  coordinator?:
+    | {
+        full_name?: string | null
+        coordinator_organization_name?: string | null
+        email?: string | null
+      }
+    | {
+        full_name?: string | null
+        coordinator_organization_name?: string | null
+        email?: string | null
+      }[]
+    | null
 }
 
 function toMarketSummary(
@@ -22,7 +34,8 @@ function toMarketSummary(
     name: event.name,
     start_at: event.start_at,
     status: event.status,
-    coordinator_name: includeCoordinator ? (coordinator?.full_name ?? null) : undefined,
+    is_test: event.is_test ?? false,
+    coordinator_name: includeCoordinator ? formatCoordinatorOwnerLabel(coordinator) : undefined,
   }
 }
 
@@ -39,12 +52,12 @@ export default async function CoordinatorMarketsPage() {
     ? supabase
         .from('events')
         .select(
-          'id, name, start_at, status, coordinator:profiles!events_coordinator_id_fkey(full_name)'
+          'id, name, start_at, status, is_test, coordinator:profiles!events_coordinator_id_fkey(full_name, coordinator_organization_name, email)'
         )
         .order('start_at', { ascending: false })
     : supabase
         .from('events')
-        .select('id, name, start_at, status')
+        .select('id, name, start_at, status, is_test')
         .eq('coordinator_id', user.id)
         .order('start_at', { ascending: false })
 

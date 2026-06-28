@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS widget_tokens (
 
 ALTER TABLE widget_tokens ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "widget_tokens: owner all" ON widget_tokens;
 CREATE POLICY "widget_tokens: owner all" ON widget_tokens
   FOR ALL
   USING (auth.uid() = user_id)

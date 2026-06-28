@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
+import { formatCoordinatorOwnerLabel } from '@/lib/coordinator/coordinator-owner-label'
 import { MarketSetupWizard } from '@/components/coordinator/market-setup-wizard'
 import { buttonVariants } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
@@ -48,6 +49,18 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
     redirect(`/coordinator/events/${id}`)
   }
 
+  const isEventOwner = event.coordinator_id === user.id
+  const readOnly = scope.isAdmin && !isEventOwner
+  let ownerName: string | null = null
+  if (readOnly) {
+    const { data: owner } = await supabase
+      .from('profiles')
+      .select('full_name, coordinator_organization_name, email')
+      .eq('id', event.coordinator_id)
+      .maybeSingle()
+    ownerName = formatCoordinatorOwnerLabel(owner)
+  }
+
   const { data: applications } = await supabase
     .from('booth_applications')
     .select(`
@@ -90,6 +103,8 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
         applications={(applications ?? []) as unknown as Parameters<typeof MarketSetupWizard>[0]['applications']}
         initialStep={parseSetupWizardStepFromUrl(step, Boolean((event as Event).skip_venue_layout))}
         demoMode={demo === '1'}
+        readOnly={readOnly}
+        ownerName={ownerName}
       />
       </div>
     </div>

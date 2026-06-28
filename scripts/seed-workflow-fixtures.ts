@@ -125,6 +125,7 @@ export async function seedWorkflowDraftEvent(
     allow_mlm: true,
     require_full_attendance: true,
     skip_venue_layout: true,
+    is_test: true,
     market_city: 'edmonton',
     booth_clearance_policy: 'leave_furniture' as const,
     booth_price_cents: 0,

@@ -9,6 +9,34 @@ import {
   isSquareConnectedCoordinator,
 } from '@/lib/coordinator/verification'
 import { CoordinatorHome } from '@/components/coordinator/coordinator-home'
+import { formatCoordinatorOwnerLabel } from '@/lib/coordinator/coordinator-owner-label'
+import type { Event } from '@/types/database'
+
+type HomeEventRow = Pick<Event, 'id' | 'name' | 'start_at' | 'status'> & {
+  coordinator?:
+    | {
+        full_name?: string | null
+        coordinator_organization_name?: string | null
+        email?: string | null
+      }
+    | {
+        full_name?: string | null
+        coordinator_organization_name?: string | null
+        email?: string | null
+      }[]
+    | null
+}
+
+function toHomeMarket(event: HomeEventRow, includeCoordinator: boolean) {
+  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
+  return {
+    id: event.id,
+    name: event.name,
+    start_at: event.start_at,
+    status: event.status,
+    coordinator_name: includeCoordinator ? formatCoordinatorOwnerLabel(coordinator) : undefined,
+  }
+}
 
 export default async function CoordinatorHomePage() {
   const supabase = await createClient()
@@ -44,7 +72,9 @@ export default async function CoordinatorHomePage() {
     scope.isAdmin
       ? supabase
           .from('events')
-          .select('id, name, start_at, status')
+          .select(
+            'id, name, start_at, status, coordinator:profiles!events_coordinator_id_fkey(full_name, coordinator_organization_name, email)'
+          )
           .order('start_at', { ascending: true })
           .limit(6)
       : supabase
@@ -68,12 +98,15 @@ export default async function CoordinatorHomePage() {
     <CoordinatorHome
       displayName={profile?.full_name ?? null}
       marketCount={marketCount}
-      recentMarkets={recentEvents ?? []}
+      recentMarkets={(recentEvents ?? []).map((event) =>
+        toHomeMarket(event as HomeEventRow, scope.isAdmin)
+      )}
       claimSuggestions={claimSuggestions}
       showPaymentReadiness={showPaymentReadiness}
       organizationName={coordProfile?.coordinator_organization_name ?? null}
       squareConnected={isSquareConnectedCoordinator(paymentGate)}
       stripeConnected={coordProfile?.stripe_onboarding_complete === true}
+      isAdminView={scope.isAdmin}
     />
   )
 }

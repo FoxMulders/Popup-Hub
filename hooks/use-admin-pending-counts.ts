@@ -6,6 +6,7 @@ export interface AdminPendingCounts {
   featureRequests: number
   venueSubmissions: number
   organizerClaims: number
+  publishAssist: number
   total: number
 }
 
@@ -14,6 +15,7 @@ export function useAdminPendingCounts(enabled: boolean) {
     featureRequests: 0,
     venueSubmissions: 0,
     organizerClaims: 0,
+    publishAssist: 0,
     total: 0,
   })
 

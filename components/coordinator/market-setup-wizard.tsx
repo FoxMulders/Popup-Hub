@@ -91,6 +91,9 @@ import { WizardContextStrip } from '@/components/coordinator/wizard/wizard-conte
 import { buildWizardScheduleLines } from '@/lib/wizard/wizard-schedule-summary'
 import { useFlyerScan } from '@/hooks/use-flyer-scan'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
+import { AdminReadOnlyMarketBanner } from '@/components/coordinator/admin-read-only-market-banner'
+import { RequestPublishAssistButton } from '@/components/coordinator/request-publish-assist-button'
+import { usePublishAssistPending } from '@/hooks/use-publish-assist-pending'
 import { cn } from '@/lib/utils'
 import { normalizeEventContractClauses } from '@/lib/legal/booth-contract-templates'
 import type {
@@ -134,6 +137,9 @@ export interface MarketSetupWizardProps {
   initialStep?: WizardStep
   /** Show guided copy after creating a demo market draft. */
   demoMode?: boolean
+  /** Platform admin inspecting another coordinator's market. */
+  readOnly?: boolean
+  ownerName?: string | null
 }
 
 function buildCategoryLimitsFromEvent(
@@ -225,6 +231,8 @@ export function MarketSetupWizard({
   applications = [],
   initialStep = 1,
   demoMode = false,
+  readOnly = false,
+  ownerName = null,
 }: MarketSetupWizardProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -243,6 +251,10 @@ export function MarketSetupWizard({
   )
   const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [transitioning, setTransitioning] = useState(false)
+  const [publishAssistPrompt, setPublishAssistPrompt] = useState(false)
+  const { pending: assistPending, refresh: refreshAssist } = usePublishAssistPending(
+    isDraftMode && !readOnly ? eventId : null
+  )
 
   const [name, setName] = useState(existing?.name ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
@@ -554,6 +566,9 @@ export function MarketSetupWizard({
 
   const autosave = useCallback(
     async (opts?: { publish?: boolean }) => {
+      if (readOnly) {
+        return { ok: false as const, reason: 'error' as const, message: 'Read-only view' }
+      }
       const bounds = resolveEventScheduleBounds({
         listingType,
         scheduleType,
@@ -582,6 +597,7 @@ export function MarketSetupWizard({
         const publishBlock = await checkCoordinatorPublishGate()
         if (publishBlock) {
           toast.error(publishBlock)
+          setPublishAssistPrompt(true)
           return { ok: false as const, reason: 'verification' as const }
         }
         if (!pinDropped) {
@@ -779,6 +795,7 @@ export function MarketSetupWizard({
       skipVenueLayout,
       startDate,
       startTime,
+      readOnly,
       supabase,
     ]
   )
@@ -1040,7 +1057,7 @@ export function MarketSetupWizard({
   }
 
   async function goNext() {
-    if (transitioning) return
+    if (transitioning || readOnly) return
     setTransitioning(true)
     try {
       // Step 1 — combined Event & Venue. Validate both halves, autosave,
@@ -1124,6 +1141,13 @@ export function MarketSetupWizard({
   }
 
   async function goToStep(step: WizardStep) {
+    if (readOnly) {
+      if (!isDraftMode || step > maxReachedStep || step === currentStep) return
+      setCurrentStep(step)
+      syncStepInUrl(step)
+      resetWizardScrollAnchor(step)
+      return
+    }
     if (!isDraftMode || step > maxReachedStep || step === currentStep || transitioning) return
     if (skipVenueLayout && step === 3) return
 
@@ -1261,6 +1285,19 @@ export function MarketSetupWizard({
           : 'space-y-6'
       )}
     >
+      {readOnly && ownerName ? <AdminReadOnlyMarketBanner ownerName={ownerName} /> : null}
+
+      {!readOnly && eventId && isDraftMode && (publishAssistPrompt || assistPending) ? (
+        <RequestPublishAssistButton
+          eventId={eventId}
+          pending={assistPending}
+          onRequested={() => {
+            setPublishAssistPrompt(false)
+            void refreshAssist()
+          }}
+        />
+      ) : null}
+
       {!isFloorPlanStep ? (
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -1278,11 +1315,11 @@ export function MarketSetupWizard({
                   : 'Create New Market'}
             </h1>
           </div>
-          {isDraftMode && eventId ? (
+          {isDraftMode && eventId && !readOnly ? (
             <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
           ) : null}
         </header>
-      ) : isDraftMode && eventId ? (
+      ) : isDraftMode && eventId && !readOnly ? (
         <div className="flex justify-end shrink-0 px-0.5">
           <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
         </div>
@@ -1331,18 +1368,17 @@ export function MarketSetupWizard({
           />
         ) : null}
 
+        <fieldset disabled={readOnly} className="contents min-w-0 border-0 p-0 m-0">
         <div
           className={cn(
-            // Workspace column matches the wizard timeline's full horizontal
-            // width — always w-full now that the rail is stacked beneath.
             'w-full min-w-0',
-              isFloorPlanStep
-                ? 'flex flex-1 flex-col gap-2'
-                : cn(
-                    WIZARD_PANEL,
-                    'space-y-3',
-                    currentStep === 3 ? 'p-2 sm:p-3' : isWorkspaceStep ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
-                  )
+            isFloorPlanStep
+              ? 'flex flex-1 flex-col gap-2'
+              : cn(
+                  WIZARD_PANEL,
+                  'space-y-3',
+                  currentStep === 3 ? 'p-2 sm:p-3' : isWorkspaceStep ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
+                )
           )}
         >
           {/*
@@ -1538,8 +1574,9 @@ export function MarketSetupWizard({
             />
           ) : null}
         </div>
+        </fieldset>
 
-        {!isWorkspaceStep ? (
+        {!isWorkspaceStep && !readOnly ? (
           <WizardSummaryRail
             eventName={name.trim() || null}
             scheduleLines={scheduleLines}

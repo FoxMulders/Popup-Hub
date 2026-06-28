@@ -1,6 +1,6 @@
 {
     "name": "popup-hub",
-    "version": "1.177.0",
+    "version": "1.178.0",
     "private": true,
     "license": "UNLICENSED",
     "scripts": {
@@ -50,6 +50,8 @@
         "test:shopper-routing:live": "npx tsx lib/shopper/qa-live-layout.ts",
         "test:rbac-signup": "npx tsx lib/auth/qa-rbac-signup.ts",
         "seed:test-users": "npx tsx scripts/seed-test-users.ts",
+        "seed:scenario-markets": "npx tsx scripts/seed-scenario-markets.ts",
+        "purge:test-markets": "npx tsx scripts/purge-test-markets.ts",
         "test:e2e": "playwright test",
         "test:e2e:workflow": "playwright test tests/e2e/workflow --project=workflow",
         "test:e2e:matrix": "playwright test tests/e2e/device-matrix.spec.ts",

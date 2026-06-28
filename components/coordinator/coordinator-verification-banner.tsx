@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label'
 import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { RequestPublishAssistButton } from '@/components/coordinator/request-publish-assist-button'
+import { usePublishAssistPending } from '@/hooks/use-publish-assist-pending'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
 interface CoordinatorVerificationBannerProps {
@@ -18,6 +20,8 @@ interface CoordinatorVerificationBannerProps {
   squareConnected?: boolean
   stripeConnected?: boolean
   paymentTrustComplete?: boolean
+  /** Draft market id — enables publish assist request when publishing is blocked. */
+  eventId?: string | null
 }
 
 export function CoordinatorVerificationBanner({
@@ -28,10 +32,12 @@ export function CoordinatorVerificationBanner({
   squareConnected = false,
   stripeConnected = false,
   paymentTrustComplete = false,
+  eventId = null,
 }: CoordinatorVerificationBannerProps) {
   const [pending, startTransition] = useTransition()
   const [expanded, setExpanded] = useState(verificationStatus === 'unverified')
   const [orgName, setOrgName] = useState(organizationName ?? '')
+  const { pending: assistPending, refresh: refreshAssist } = usePublishAssistPending(eventId)
 
   if (
     verificationStatus === 'verified' &&
@@ -118,6 +124,14 @@ export function CoordinatorVerificationBanner({
             >
               Connect Square or Stripe
             </Link>
+          ) : null}
+
+          {publishBlockReason && eventId ? (
+            <RequestPublishAssistButton
+              eventId={eventId}
+              pending={assistPending}
+              onRequested={() => void refreshAssist()}
+            />
           ) : null}
 
           {(verificationStatus === 'unverified' ||

@@ -38,6 +38,17 @@ export function AdminQueueNav() {
         ) : null}
       </Link>
       <Link
+        href="/admin/publish-assist"
+        className="relative rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
+      >
+        Publish assist
+        {counts.publishAssist > 0 ? (
+          <Badge className="ml-2 h-5 min-w-5 px-1.5 text-[10px] leading-none">
+            {counts.publishAssist > 9 ? '9+' : counts.publishAssist}
+          </Badge>
+        ) : null}
+      </Link>
+      <Link
         href="/admin/venues"
         className="relative rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
       >

@@ -13,10 +13,56 @@ End-to-end checklist for coordinator, vendor, and patron flows: signup, market c
 | Local full automated suite | `npm run qa:workflow` |
 | Local Playwright workflow only | `npm run test:e2e:workflow` |
 | Seed test accounts + fixtures | `npm run seed:test-users` |
+| Seed scenario test markets | `npm run seed:scenario-markets` |
+| Purge all is_test markets (pre-launch) | `npm run purge:test-markets` |
 | API/DB walkthrough (no browser) | `npx tsx scripts/qa-full-workflow-walkthrough.ts` |
 | Pre-ship regression | `npm run qa:launch` |
 | Staging/prod HTTP smoke | `npm run verify:prod` (set `PLAYWRIGHT_SMOKE_EVENT_ID` for event pages) |
 | Send checklist to QA (Linear) | `npm run qa:handoff` — prod smoke + Linear [POP-5](https://linear.app/popuphub/issue/POP-5) links |
+
+---
+
+## Scenario test markets (`is_test`)
+
+Pre-built published markets for QA. Each market name describes the scenario it exercises. All are flagged `is_test = true` so you can remove them in one step before go-live.
+
+**Seed (local or production):**
+
+```bash
+# Default coordinator: coordinator@me.com
+npm run seed:scenario-markets
+
+# Override coordinator
+COORDINATOR_EMAIL=you@example.com npm run seed:scenario-markets
+
+# Preview without writing
+npm run seed:scenario-markets -- --dry-run
+```
+
+**Purge before launch:**
+
+```bash
+npm run purge:test-markets
+```
+
+| Market name | What to test |
+|-------------|--------------|
+| Community Market — Juried Indoor Layout | Baseline published market, Kilkenny floor plan, patron map |
+| Community Market — Instant Booking | Vendor instant-apply flow |
+| Community Market — Multi-Day Schedule | Multi-day schedule + `event_days` display |
+| Community Market — No Floor Plan | `skip_venue_layout` discovery without map |
+| Community Market — Outdoor Tent Layout | Outdoor venue profile, tent vendor booths on map |
+| Quarter Auction — Single Day | `garage_yard_sale` listing, quarter auction settings |
+| Market Day — Active Status | `status: active` — live ops / market-day surfaces |
+| Past Market — Completed | `status: completed` — archived / event detail |
+| Cancelled Market | `status: cancelled` — coordinator archived list |
+| MLM Vendors Allowed | MLM category slots enabled |
+| Passport Stamp Gamification | `passport_vendors_required` patron stamps |
+| Paid Booth Fees | Non-zero booth pricing |
+| Venue Verification Pending | Readiness checklist / payment gate with pending venue |
+| HubGrid — Seeded Vendors & Layout | Pre-seeded `@popuphub.seed` vendors + approved applications |
+
+Test markets appear on `/discover` for patron QA but are excluded from the sitemap. Coordinator markets list shows a **Test** badge.
 
 ---
 

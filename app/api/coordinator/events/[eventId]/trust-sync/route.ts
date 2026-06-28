@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { getCoordinatorScope, applyCoordinatorEventScope } from '@/lib/events/coordinator-event-query'
+import {
+  canMutateCoordinatorEvent,
+  COORDINATOR_EVENT_NOT_OWNER_MESSAGE,
+} from '@/lib/events/coordinator-event-ownership'
 import { onMarketPublished } from '@/lib/organizers/on-market-published'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
@@ -30,13 +34,23 @@ export async function POST(
 
   const scope = await getCoordinatorScope(supabase, user.id)
   const { data: event, error } = await applyCoordinatorEventScope(
-    supabase.from('events').select('id, status').eq('id', eventId),
+    supabase.from('events').select('id, status, coordinator_id').eq('id', eventId),
     user.id,
     scope.isAdmin
   ).maybeSingle()
 
   if (error || !event) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+  }
+
+  if (
+    !canMutateCoordinatorEvent({
+      userId: user.id,
+      isAdmin: scope.isAdmin,
+      eventCoordinatorId: event.coordinator_id,
+    })
+  ) {
+    return NextResponse.json({ error: COORDINATOR_EVENT_NOT_OWNER_MESSAGE }, { status: 403 })
   }
 
   if (event.status !== 'published') {

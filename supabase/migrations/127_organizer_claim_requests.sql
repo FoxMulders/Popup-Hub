@@ -22,10 +22,12 @@ CREATE INDEX IF NOT EXISTS idx_organizer_claim_requests_status
 
 ALTER TABLE organizer_claim_requests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "organizer_claim_requests: requester read own" ON organizer_claim_requests;
 CREATE POLICY "organizer_claim_requests: requester read own"
   ON organizer_claim_requests FOR SELECT
   USING (auth.uid() = requested_by);
 
+DROP POLICY IF EXISTS "organizer_claim_requests: admin read all" ON organizer_claim_requests;
 CREATE POLICY "organizer_claim_requests: admin read all"
   ON organizer_claim_requests FOR SELECT
   USING (
@@ -35,6 +37,7 @@ CREATE POLICY "organizer_claim_requests: admin read all"
     )
   );
 
+DROP POLICY IF EXISTS "organizer_claim_requests: coordinator insert own pending" ON organizer_claim_requests;
 CREATE POLICY "organizer_claim_requests: coordinator insert own pending"
   ON organizer_claim_requests FOR INSERT
   WITH CHECK (

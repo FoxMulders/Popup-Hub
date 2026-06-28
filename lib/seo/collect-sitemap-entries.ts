@@ -98,6 +98,7 @@ async function appendDynamicEntries(origin: string | undefined, entries: Sitemap
       .from('events')
       .select('id, updated_at, start_at, status')
       .in('status', ['published', 'active'])
+      .eq('is_test', false)
       .order('start_at', { ascending: false })
       .limit(500)
 

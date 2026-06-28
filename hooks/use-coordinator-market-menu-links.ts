@@ -17,13 +17,15 @@ export function useCoordinatorMarketMenuLinks(enabled: boolean): AppMenuLink[] {
 
     void fetch('/api/coordinator/markets-menu')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { markets?: { id: string; name: string }[] } | null) => {
+      .then((data: { markets?: { id: string; name: string; coordinatorName?: string }[] } | null) => {
         if (cancelled || !data?.markets) return
         setLinks(
           data.markets.map((m) => ({
             href: `/coordinator/events/${m.id}`,
-            label: m.name,
-            title: `Open ${m.name} — HubGrid: ${coordinatorStudioHref(m.id)}`,
+            label: m.coordinatorName ? `${m.name} · ${m.coordinatorName}` : m.name,
+            title: m.coordinatorName
+              ? `Open ${m.name} (Owner: ${m.coordinatorName})`
+              : `Open ${m.name} — HubGrid: ${coordinatorStudioHref(m.id)}`,
           }))
         )
       })

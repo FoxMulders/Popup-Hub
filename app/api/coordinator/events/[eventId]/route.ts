@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { getCoordinatorScope, applyCoordinatorEventScope } from '@/lib/events/coordinator-event-query'
 import {
+  canMutateCoordinatorEvent,
+  COORDINATOR_EVENT_NOT_OWNER_MESSAGE,
+} from '@/lib/events/coordinator-event-ownership'
+import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
   coordinatorPublishBlockReason,
 } from '@/lib/coordinator/verification'
-import { assertEventVenueVerifiedForPublish } from '@/lib/venues/persist-event-venue-verification'
-import { onMarketPublished } from '@/lib/organizers/on-market-published'
+import { publishCoordinatorEvent } from '@/lib/coordinator/publish-event'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { dispatchPublishMarketAlerts } from '@/lib/vendor/dispatch-publish-market-alerts'
-import { dispatchCoordinatorFollowerAlerts } from '@/lib/shopper/dispatch-coordinator-follower-alerts'
 
 type PatchBody = {
   status?: 'published'
@@ -70,12 +71,28 @@ export async function PATCH(
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
 
+  if (
+    !canMutateCoordinatorEvent({
+      userId: user.id,
+      isAdmin: scope.isAdmin,
+      eventCoordinatorId: event.coordinator_id,
+    })
+  ) {
+    return NextResponse.json({ error: COORDINATOR_EVENT_NOT_OWNER_MESSAGE }, { status: 403 })
+  }
+
   if (event.status !== 'draft') {
     return NextResponse.json(
       { error: 'Only draft markets can be published from pre-flight review.' },
       { status: 409 }
     )
   }
+
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select(COORDINATOR_FRAUD_PROFILE_SELECT)
+    .eq('id', event.coordinator_id)
+    .single()
 
   const { data: squareEvent } = await supabase
     .from('events')
@@ -86,83 +103,18 @@ export async function PATCH(
     .maybeSingle()
 
   const publishBlock = coordinatorPublishBlockReason({
-    ...profile,
+    ...ownerProfile,
     has_square_event: !!squareEvent,
   })
   if (publishBlock) {
     return NextResponse.json({ error: publishBlock }, { status: 403 })
   }
 
-  if (
-    !event.venue_verified &&
-    event.venue_verification_status !== 'manual_override'
-  ) {
-    const venueGate = await assertEventVenueVerifiedForPublish(supabase, eventId, {
-      latitude: event.latitude,
-      longitude: event.longitude,
-      address: event.address,
-      pinDropped: true,
-    })
-    if (!venueGate.ok) {
-      return NextResponse.json({ error: venueGate.reason }, { status: 400 })
-    }
-  }
-
-  const { data: limits, error: limitsError } = await supabase
-    .from('event_category_limits')
-    .select('price_per_booth, category:categories(name)')
-    .eq('event_id', eventId)
-
-  if (limitsError) {
-    return NextResponse.json({ error: 'Could not verify booth fees before publishing.' }, { status: 500 })
-  }
-
-  type FeeRow = {
-    price_per_booth: number | null
-    category: { name?: string | null } | { name?: string | null }[] | null
-  }
-
-  const rows = (limits ?? []) as FeeRow[]
-  if (rows.length === 0) {
-    return NextResponse.json(
-      { error: 'Add at least one booth category and state its fee before publishing.' },
-      { status: 400 }
-    )
-  }
-
-  const missing = rows.find(
-    (row) =>
-      row.price_per_booth === null ||
-      row.price_per_booth === undefined ||
-      !Number.isFinite(row.price_per_booth) ||
-      row.price_per_booth < 0
-  )
-  if (missing) {
-    return NextResponse.json(
-      { error: 'Set the market-wide booth fee before publishing. Use $0 for free booths.' },
-      { status: 400 }
-    )
-  }
-
-  const { error: updateError } = await supabase
-    .from('events')
-    .update({ status: 'published' })
-    .eq('id', eventId)
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
-  }
-
   const service = await createServiceClient()
-  void dispatchPublishMarketAlerts(service, eventId).catch((err) => {
-    console.error('[publish] nearby vendor alerts failed', err)
-  })
-  void dispatchCoordinatorFollowerAlerts(service, eventId).catch((err) => {
-    console.error('[publish] coordinator follower alerts failed', err)
-  })
-  void onMarketPublished(service, eventId).catch((err) => {
-    console.error('[publish] trust directory sync failed', err)
-  })
+  const publishResult = await publishCoordinatorEvent(supabase, service, event)
+  if (!publishResult.ok) {
+    return NextResponse.json({ error: publishResult.error }, { status: publishResult.status })
+  }
 
   return NextResponse.json({ ok: true, status: 'published' })
 }

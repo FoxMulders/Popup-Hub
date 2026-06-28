@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS coordinator_incidents (
 
 ALTER TABLE coordinator_incidents ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "coordinator_incidents: coordinator manage" ON coordinator_incidents;
 CREATE POLICY "coordinator_incidents: coordinator manage" ON coordinator_incidents
   FOR ALL
   USING (auth.uid() = coordinator_id)
@@ -32,10 +33,12 @@ CREATE TABLE IF NOT EXISTS coordinator_vendor_messages (
 
 ALTER TABLE coordinator_vendor_messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "coordinator_vendor_messages: vendor insert" ON coordinator_vendor_messages;
 CREATE POLICY "coordinator_vendor_messages: vendor insert" ON coordinator_vendor_messages
   FOR INSERT
   WITH CHECK (auth.uid() = vendor_id);
 
+DROP POLICY IF EXISTS "coordinator_vendor_messages: event participants read" ON coordinator_vendor_messages;
 CREATE POLICY "coordinator_vendor_messages: event participants read" ON coordinator_vendor_messages
   FOR SELECT
   USING (
@@ -58,6 +61,7 @@ CREATE TABLE IF NOT EXISTS widget_preferences (
 
 ALTER TABLE widget_preferences ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "widget_preferences: owner all" ON widget_preferences;
 CREATE POLICY "widget_preferences: owner all" ON widget_preferences
   FOR ALL
   USING (auth.uid() = user_id)
@@ -75,6 +79,7 @@ CREATE TABLE IF NOT EXISTS vendor_interest_daily (
 
 ALTER TABLE vendor_interest_daily ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "vendor_interest_daily: vendor read" ON vendor_interest_daily;
 CREATE POLICY "vendor_interest_daily: vendor read" ON vendor_interest_daily
   FOR SELECT
   USING (auth.uid() = vendor_id);
@@ -94,6 +99,7 @@ CREATE TABLE IF NOT EXISTS coordinator_broadcasts (
 
 ALTER TABLE coordinator_broadcasts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "coordinator_broadcasts: coordinator manage" ON coordinator_broadcasts;
 CREATE POLICY "coordinator_broadcasts: coordinator manage" ON coordinator_broadcasts
   FOR ALL
   USING (auth.uid() = coordinator_id)

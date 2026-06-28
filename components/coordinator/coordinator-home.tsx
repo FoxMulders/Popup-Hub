@@ -19,6 +19,7 @@ export interface CoordinatorHomeMarket {
   name: string
   start_at: string
   status: string
+  coordinator_name?: string | null
 }
 
 interface CoordinatorHomeProps {
@@ -30,6 +31,7 @@ interface CoordinatorHomeProps {
   organizationName?: string | null
   squareConnected?: boolean
   stripeConnected?: boolean
+  isAdminView?: boolean
 }
 
 function statusLabel(status: string): string {
@@ -50,6 +52,7 @@ export function CoordinatorHome({
   organizationName = null,
   squareConnected = false,
   stripeConnected = false,
+  isAdminView = false,
 }: CoordinatorHomeProps) {
   const greeting = displayName?.trim() ? `Welcome back, ${displayName.trim()}` : 'Welcome back'
 
@@ -61,7 +64,9 @@ export function CoordinatorHome({
         title={greeting}
         description={
           marketCount > 0
-            ? `You have ${marketCount} market${marketCount === 1 ? '' : 's'}. Open one below or start a new one.`
+            ? isAdminView
+              ? `Platform admin view — ${marketCount} market${marketCount === 1 ? '' : 's'} across all organizers.`
+              : `You have ${marketCount} market${marketCount === 1 ? '' : 's'}. Open one below or start a new one.`
             : 'Create your first market or return here anytime to pick up where you left off.'
         }
         className="-mx-4 sm:-mx-6"
@@ -94,7 +99,7 @@ export function CoordinatorHome({
             id="coordinator-home-markets"
             className="text-sm font-semibold uppercase tracking-wide text-muted-foreground"
           >
-            Your markets
+            {isAdminView ? 'All markets' : 'Your markets'}
           </h2>
           <ul className="flex flex-col gap-2" role="list">
             {recentMarkets.map((market) => (
@@ -113,6 +118,9 @@ export function CoordinatorHome({
                     <span className="line-clamp-1 font-medium text-foreground">{market.name}</span>
                     <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <span>{safeFormatMarketDate(market.start_at)}</span>
+                      {isAdminView && market.coordinator_name ? (
+                        <span className="line-clamp-1">Owner: {market.coordinator_name}</span>
+                      ) : null}
                       <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium">
                         {statusLabel(market.status)}
                       </Badge>
@@ -120,13 +128,15 @@ export function CoordinatorHome({
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                 </Link>
-                <div className="border-t border-stone-200/80 px-4 py-2.5">
-                  <VendorInviteCopyButton
-                    eventId={market.id}
-                    eventName={market.name}
-                    className="w-full sm:w-auto"
-                  />
-                </div>
+                {!isAdminView ? (
+                  <div className="border-t border-stone-200/80 px-4 py-2.5">
+                    <VendorInviteCopyButton
+                      eventId={market.id}
+                      eventName={market.name}
+                      className="w-full sm:w-auto"
+                    />
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

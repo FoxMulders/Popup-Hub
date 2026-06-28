@@ -2,6 +2,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
+import { formatCoordinatorOwnerLabel } from '@/lib/coordinator/coordinator-owner-label'
+import { AdminReadOnlyMarketBanner } from '@/components/coordinator/admin-read-only-market-banner'
 import { ApplicationBoard } from '@/components/coordinator/application-board'
 import { EventInlineEditor } from '@/components/coordinator/event-inline-editor'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
@@ -58,6 +60,18 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
     console.error('[coordinator/event hub] event query failed', eventLoadError.message)
   }
   if (!event) notFound()
+
+  const isEventOwner = event.coordinator_id === user.id
+  const readOnlyAdminView = scope.isAdmin && !isEventOwner
+  let ownerName: string | null = null
+  if (readOnlyAdminView) {
+    const { data: owner } = await supabase
+      .from('profiles')
+      .select('full_name, coordinator_organization_name, email')
+      .eq('id', event.coordinator_id)
+      .maybeSingle()
+    ownerName = formatCoordinatorOwnerLabel(owner)
+  }
 
   const sortedCategoryLimits = [...(event.category_limits ?? [])].sort(
     (a: { category?: { name?: string } }, b: { category?: { name?: string } }) =>
@@ -171,6 +185,10 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         <EventHubLayoutNotice />
       </Suspense>
 
+      {readOnlyAdminView && ownerName ? (
+        <AdminReadOnlyMarketBanner ownerName={ownerName} />
+      ) : null}
+
       {!isCancelled ? (
         <div className="sticky top-16 z-20">
           <EventHubTimeline
@@ -192,13 +210,24 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
       <div className="market-panel p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-          <EventInlineEditor event={event as Event} />
+          {readOnlyAdminView ? (
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Read-only admin inspection</p>
+            </div>
+          ) : (
+            <EventInlineEditor event={event as Event} />
+          )}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <TestSuitePopulateButton eventId={id} compact />
-            {isDraft ? (
+            {!readOnlyAdminView ? (
+              <TestSuitePopulateButton eventId={id} compact />
+            ) : null}
+            {isDraft && !readOnlyAdminView ? (
               <DeleteDraftMarketDialog eventId={id} eventName={event.name} />
             ) : null}
-            {!isCancelled && !isDraft ? <CloneMarketButton eventId={id} /> : null}
+            {!isCancelled && !isDraft && !readOnlyAdminView ? (
+              <CloneMarketButton eventId={id} />
+            ) : null}
             {!isCancelled && (
               <>
                 <Link
@@ -224,11 +253,13 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
                   <Printer className="h-4 w-4" />
                   Print Roster
                 </Link>
-                <VendorAnnouncement
-                  eventId={id}
-                  eventName={event.name}
-                  approvedVendorIds={approvedVendorIds}
-                />
+                {!readOnlyAdminView ? (
+                  <VendorAnnouncement
+                    eventId={id}
+                    eventName={event.name}
+                    approvedVendorIds={approvedVendorIds}
+                  />
+                ) : null}
                 {!event.skip_venue_layout ? (
                   <Link
                     href={`/coordinator/events/${id}/layout`}
@@ -290,7 +321,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
           <CategoryCapacityMatrix rows={categoryCapacityRows} applications={applications ?? []} />
         )}
 
-        {!isCancelled ? (
+        {!isCancelled && !readOnlyAdminView ? (
           <EventPaymentDeadlineEditor event={event as Event} disabled={isCancelled} />
         ) : null}
 
@@ -309,7 +340,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
           </div>
         ) : null}
 
-        {!isCancelled ? (
+        {!isCancelled && !readOnlyAdminView ? (
           <div className="mt-4">
             <SaveVenuePrompt
             coordinatorId={event.coordinator_id}
@@ -327,14 +358,14 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
       {!isCancelled && <MarketFeedbackAdminPanel marketId={id} variant="page" />}
 
-      {!isCancelled && <EventLogisticsEditor event={event as Event} />}
+      {!isCancelled && !readOnlyAdminView ? <EventLogisticsEditor event={event as Event} /> : null}
 
-      {!isCancelled && (
+      {!isCancelled && !readOnlyAdminView ? (
         <EventScheduleEditor
           event={event as Event}
           items={(scheduleItems ?? []) as EventScheduleItem[]}
         />
-      )}
+      ) : null}
 
       {!isCancelled && isQuarterAuction && (
         <div className="market-panel p-6">

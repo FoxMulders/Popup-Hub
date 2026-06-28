@@ -144,6 +144,7 @@ export function MarketDashboardClient({
                     squareConnected={squareConnected}
                     stripeConnected={stripeConnected}
                     paymentTrustComplete={paymentTrustComplete}
+                    eventId={initialEventId ?? eventQuery}
                   />
                 )}
               </div>
