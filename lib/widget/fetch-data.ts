@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { isApplicationAwaitingBoothPayment, isApplicationPaid } from '@/lib/applications/payment-fields'
+import { PUBLIC_MARKET_CATALOG_EXCLUDE_TEST } from '@/lib/queries/public-market-catalog'
 import { ensureVendorInterestDaily } from '@/lib/widget/interest-daily'
 import type {
   WidgetCoordinatorEventPulse,
@@ -104,6 +105,7 @@ async function fetchOpenMarkets(supabase: SupabaseClient): Promise<Event[]> {
     .from('events')
     .select('id, name, status, start_at, end_at, location_name, latitude, longitude')
     .in('status', [...OPEN_STATUSES])
+    .eq('is_test', PUBLIC_MARKET_CATALOG_EXCLUDE_TEST)
     .order('start_at', { ascending: true })
     .limit(20)
   return (data ?? []) as Event[]
