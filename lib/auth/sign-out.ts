@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { revokeNativeWidgetSession } from '@/lib/mobile/widget-sync'
 
 export const INTENTIONAL_SIGNOUT_KEY = 'popup-hub:intentional-signout'
 
@@ -7,6 +8,8 @@ export async function signOutAndRedirectToLogin(supabase: SupabaseClient): Promi
   if (typeof window !== 'undefined') {
     sessionStorage.setItem(INTENTIONAL_SIGNOUT_KEY, '1')
   }
+
+  await revokeNativeWidgetSession()
 
   const { error } = await supabase.auth.signOut()
   if (error) {

@@ -2,12 +2,20 @@
 
 import { Share, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { PushNotificationSettings } from '@/components/profile/push-notification-settings'
+import { NotificationPreferencesGrid } from '@/components/profile/notification-preferences-grid'
 import { useInstallPrompt } from '@/hooks/use-install-prompt'
 import { isStandaloneDisplayMode } from '@/lib/pwa/platform'
 import { isNativeApp } from '@/lib/mobile/native-app'
 
-export function NotificationDeliverySettings() {
+interface NotificationDeliverySettingsProps {
+  userId: string
+  hasPhone: boolean
+}
+
+export function NotificationDeliverySettings({
+  userId,
+  hasPhone,
+}: NotificationDeliverySettingsProps) {
   const {
     showAndroidPrompt,
     showIosCoach,
@@ -29,11 +37,11 @@ export function NotificationDeliverySettings() {
     (showAndroidPrompt || showIosCoach || showIosOpenInSafariCoach || !isDismissed)
 
   return (
-    <div className="space-y-4">
-      <PushNotificationSettings />
+    <div className="min-w-0 space-y-4">
+      <NotificationPreferencesGrid userId={userId} hasPhone={hasPhone} />
 
       {showInstallBlock ? (
-        <div className="rounded-2xl border bg-white p-6 space-y-3">
+        <div className="rounded-2xl border bg-white p-4 space-y-3 sm:p-6">
           <div className="flex items-start gap-3">
             <Smartphone className="h-5 w-5 text-forest shrink-0 mt-0.5" aria-hidden />
             <div className="min-w-0 space-y-2">
@@ -58,7 +66,7 @@ export function NotificationDeliverySettings() {
                 <Button
                   type="button"
                   size="sm"
-                  className="min-h-10"
+                  className="min-h-11 w-full sm:w-auto"
                   onClick={() => void triggerInstall()}
                 >
                   Install app
@@ -72,11 +80,6 @@ export function NotificationDeliverySettings() {
           App installed — push alerts work best from your home screen icon.
         </div>
       ) : null}
-
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        SMS alerts are configured in Profile settings. Email notifications follow your account
-        address.
-      </p>
     </div>
   )
 }

@@ -40,6 +40,19 @@
 
         </activity>
 
+        <receiver
+            android:name=".widget.PopupHubWidgetProvider"
+            android:exported="false"
+            android:label="Popup Hub">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ca.popuphub.app.widget.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/popup_hub_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

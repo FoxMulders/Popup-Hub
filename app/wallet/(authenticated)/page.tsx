@@ -1,7 +1,8 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { WalletView } from '@/components/wallet/wallet-view'
-import { PopupFundsWordmark } from '@/components/brand/popup-funds-logo'
+import Link from 'next/link'
+import { PopupFundsWordmark, PopupFundsLogoMark } from '@/components/brand/popup-funds-logo'
 import { BoothCheckout } from '@/components/wallet/booth-checkout'
 import { ensureWallet } from '@/lib/wallet/credit-deposit'
 import type { Wallet, WalletTransaction } from '@/types/database'
@@ -44,7 +45,7 @@ export default async function WalletPage() {
   return (
     <div className="wallet-page mx-auto min-w-0 w-full max-w-2xl overflow-x-hidden px-3 pt-4 pb-6 sm:px-4 sm:py-8 sm:pb-8">
       <div className="mb-4 flex flex-col gap-2 sm:mb-6">
-        <PopupFundsWordmark priority />
+        <PopupFundsWordmark priority size="wallet" />
         <p className="text-sm text-muted-foreground">
           Top up, bid, and reclaim market-day balance in one place.
         </p>
@@ -58,6 +59,9 @@ export default async function WalletPage() {
           userEmail={user.email ?? ''}
         />
         <BoothCheckout balance={walletRow?.balance ?? 0} userId={user.id} />
+      </div>
+      <div className="mt-8 flex justify-center pb-2" aria-hidden>
+        <PopupFundsLogoMark size="xl" />
       </div>
     </div>
   )

@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
 
 # playwright
 /test-results/

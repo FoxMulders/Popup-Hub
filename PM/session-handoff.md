@@ -2,6 +2,57 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Admin console user management (local, not deployed)
+- **Goal:** Search-driven user management in Platform Admin console — roles, flags, coordinator moderation, auth controls.
+- **Personas:** Platform operator · `/admin/users`.
+- **Shipped locally:**
+  - **`lib/admin/user-search.ts`**, **`lib/admin/user-detail.ts`**, **`lib/admin/user-admin-actions.ts`** — search, detail fetch, action dispatcher with sole-admin and self-revoke guards.
+  - **`GET /api/admin/users?q=`**, **`GET /api/admin/users/[id]`**, **`POST /api/admin/users/[id]/actions`** — admin-gated service-role routes.
+  - **`components/admin/user-management-panel.tsx`**, **`app/admin/users/page.tsx`** — debounced search, detail panel, confirm dialogs for destructive actions.
+  - **`components/admin/admin-queue-nav.tsx`** — Users tab added.
+  - Coordinator moderation reuses existing **`POST /api/admin/coordinator-verification`** from detail panel.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke (as `is_admin`): search by email → select user → detail loads wallet/auth; toggle beta tester; coordinator approve/suspend; send password reset; grant admin clears prior sole admin.
+- **Blockers:** None.
+- **Next:** User commit + deploy when ready.
+
+## Active work — OAuth sign-up: Apple, Microsoft, Facebook (local, not deployed)
+- **Goal:** Offer Apple, Microsoft, and Facebook alongside Google on login and signup.
+- **Personas:** Patron · Vendor · Coordinator · `/login`, `/signup`.
+- **Shipped locally:**
+  - **`lib/auth/oauth-providers.ts`** — provider registry (Google, Apple, Azure/Microsoft, Facebook).
+  - **`lib/auth/native-oauth.ts`** — generalized `signInWithOAuth()`; Google wrapper retained.
+  - **`components/auth/oauth-provider-buttons.tsx`** — shared Continue-with buttons + icons.
+  - **`Login_qa.tsx`**, **`signup/page.tsx`** — four OAuth providers on login and signup (signup still requires terms acceptance).
+  - **`capacitor.config.ts`** — Facebook domains in `allowNavigation`.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: `/login` and `/signup` show Google, Apple, Microsoft, Facebook; each opens provider OAuth when enabled in Supabase.
+- **Blockers:** Enable providers in **Supabase Dashboard → Authentication → Providers** (Apple, Azure, Facebook) with client IDs/secrets; add redirect URLs `https://popuphub.ca/api/auth/callback` and `ca.popuphub.app://auth/callback` if not already listed.
+- **Next:** User commit + deploy when ready.
+
+## Active work — Native home-screen widgets (local, not deployed)
+- **Goal:** Role-aware iOS WidgetKit + Android home widgets — funds, application/payment status, notifications; patron discovery + coordinator command center.
+- **Personas:** Patron · Vendor · Coordinator · native Capacitor shell.
+- **Shipped locally:**
+  - **Backend:** Migrations `130_widget_tokens.sql`, `131_widget_backfill.sql`; `/api/widget/token`, `/api/widget/feed`, `/api/widget/action`; `lib/widget/*` feed builders + tests.
+  - **Bridge:** `WidgetBridge` Capacitor plugin (iOS App Group + Android SharedPreferences); `syncNativeWidgetSession` on auth; revoke on sign-out.
+  - **iOS:** `ios/PopupHubWidget/` extension (small/medium/large, dynamic background, App Intents); `scripts/mobile/patch-ios-widget.mjs`.
+  - **Android:** `PopupHubWidgetProvider` + WorkManager refresh + Glance stub; manifest receiver.
+  - **Docs:** `PM/mobile-native-widgets.md`; AASA paths expanded for wallet/coordinator/vendor deep links.
+- **Verify:** `npx tsx lib/widget/feed.test.ts` PASS. Apply DB: `npm run db:push`. iOS: Mac archive after `npm run mobile:sync:ios`. Android: add widget from launcher after debug build.
+- **Blockers:** iOS widget requires Mac/Xcode + App Group capability in Apple Developer portal. Android App Links need release SHA256 in `assetlinks.json`.
+- **Next:** User commit + deploy when ready.
+
+## Active work — Mobile QA: notifications, profile email, Popup Funds branding (local, not deployed)
+- **Goal:** Close mobile QA feedback — SMS/push notification toggles, profile email editing, Popup Funds wordmark + coin logo on wallet.
+- **Personas:** Vendor/Patron · `/notifications`, `/profile`, `/wallet`.
+- **Shipped locally:**
+  - **`notification-preferences-grid.tsx`** — mobile card layout with 44px tap targets; push prefs no longer blocked when browser lacks Push API; live phone lookup for SMS enablement.
+  - **`notifications/page.tsx`** — preferences grid on page (top on mobile); `min-w-0 overflow-x-hidden` fixes horizontal scroll.
+  - **`notification-delivery-settings.tsx`** — wires full preferences grid + install coach (replaces push-only card).
+  - **`profile-form.tsx`** — inline Change email button + dialog; Account Security expanded by default.
+  - **`popup-funds-logo.tsx`** — `wallet`/`nav` wordmark sizes + `xl` coin mark; wallet page larger header wordmark + footer coin logo; `/wallet` nav shows Popup Funds wordmark; cash-at-door coin enlarged.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: `/notifications` mobile — toggle SMS/push per event; `/profile` — Change email visible; `/wallet` — large wordmark header, coin logo at bottom + QR section.
+- **Next:** User commit + deploy when ready.
+
 ## Active work — Chrome audit + HubGuard patron gate (local, not deployed)
 - **Goal:** Fix header/footer/bottom-nav sizing and spacing across surfaces; remove HubGuard from logged-in patron ribbon.
 - **Personas:** All personas · sticky headers + global footer + mobile bottom navs; Patron browse shell · HubGuard nav gate.
@@ -221,6 +272,15 @@
 - **Fallbacks if export still fails:** (1) `Cloud signing permission error` → key is not Admin or secrets stale; (2) `No profiles` at archive → key inactive or lacks Certificates/Profiles access; (3) upload rejected → version/build conflict or missing App Store Connect app record for `ca.popuphub.app`.
 - **Verify:** Push to `master` → watch GitHub Action. Paste archive/export logs if failure persists.
 - **Next:** User updates Admin ASC API key secrets → commit/push when ready → monitor run #62+.
+
+- **Attempt #58 root cause (cert-quota exhaustion):** Archive failed with `error: Choose a certificate to revoke. Your account has reached the maximum number of certificates.` + downstream `No profiles for 'ca.popuphub.app' were found ... iOS App Development provisioning profiles`. Path A (pure cloud-managed signing) mints a **new Apple Distribution cert every run** (fresh runner = empty keychain), so the account hit the Distribution-cert cap; once minting fails, automatic signing falls back to hunting a Development profile (the second error is a symptom, not the cause). App Groups entitlement (new widget) is not the blocker.
+- **Attempt #58 fix — `.github/workflows/deploy.yml` (local, not committed):** Renamed `Prepare signing keychain for cloud-managed distribution` → `Prepare signing keychain` (no behaviour change beyond comments). Added **`Import Apple Distribution certificate`** step: decodes `BUILD_CERTIFICATE_BASE64` → `.p12`, `security import ... -A -t cert -f pkcs12 -k $KEYCHAIN_PATH`, `set-key-partition-list`, prints `find-identity`. Archive stays Automatic + `-allowProvisioningUpdates` + ASC key, so the profile auto-generates to match the imported cert (no #42-style mismatch) and **no new cert is minted per run**. Fails fast with an actionable `::error::` if `BUILD_CERTIFICATE_BASE64` is empty.
+- **Attempt #58 user actions (required before re-run):**
+  1. developer.apple.com → Certificates → **revoke** the surplus/duplicate Apple Distribution certs to get back under the cap (CI-minted ones accumulate here).
+  2. Export ONE valid (non-revoked) Apple Distribution cert + key as `.p12`; set GitHub secrets `BUILD_CERTIFICATE_BASE64` (base64 of the `.p12`) and `P12_PASSWORD`.
+  3. Commit/push `deploy.yml` → re-run **Deploy to TestFlight** → expect `** ARCHIVE SUCCEEDED **` then export/upload.
+- **Attempt #58 secret hygiene cleanup (local, not committed):** Added `*.key` and `*.p12` to `.gitignore`; ran `git rm --cached ios.key popuphub-dist.p12` so the leaked signing key/package are removed from git tracking while staying on local disk. Because they were already tracked in history, rotate/revoke that older cert if repo access is not fully trusted; do not commit new signing assets.
+- **Next:** User revokes certs + sets `BUILD_CERTIFICATE_BASE64`/`P12_PASSWORD` → commit/push when ready → monitor run #62+.
 
 - **App Store Connect processing rejections (post-upload) — FIXED in repo, not yet committed/pushed:** A build uploaded successfully (signing/export work) but was rejected during ASC processing:
   - **ITMS-90717 (alpha channel):** All `AppIcon-*.png` in `ios/App/App/Assets.xcassets/AppIcon.appiconset/` had an alpha channel. Flattened every icon onto white + `removeAlpha()` via `sharp` (1024 marketing icon + all sizes now `channels=3, alpha=false`). Visuals unchanged (logo already sat on white).

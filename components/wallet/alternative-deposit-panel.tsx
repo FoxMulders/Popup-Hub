@@ -93,7 +93,7 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
             if you don&apos;t have your phone.
           </p>
           <div className="flex justify-center py-2">
-            <PopupFundsLogoMark size="lg" />
+            <PopupFundsLogoMark size="xl" className="mx-auto" />
           </div>
           <WalletQrPanel
             title="Show this QR at the door"

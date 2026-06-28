@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { markNativeAppCookie, isNativeApp } from '@/lib/mobile/native-app'
 import { closeNativeOAuthBrowser, markNativeOAuthDeepLinkReturn } from '@/lib/auth/native-oauth'
 import { NativePushRegister } from '@/components/mobile/native-push-register'
+import { syncNativeWidgetSession } from '@/lib/mobile/widget-sync'
 
 function resolveNativeLaunchPath(input: {
   role: string
@@ -83,6 +84,7 @@ export function CapacitorInit() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { authenticated?: boolean; role?: string; activePortal?: string | null } | null) => {
         if (!data?.authenticated || !data.role) return
+        void syncNativeWidgetSession()
         const next = resolveNativeLaunchPath({
           role: data.role,
           activePortal: data.activePortal ?? null,

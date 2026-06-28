@@ -40,25 +40,51 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Prepare signing keychain for cloud-managed distribution
+      - name: Prepare signing keychain
         run: |
-          # Pure cloud-managed signing via Admin ASC API key + -allowProvisioningUpdates.
-          # No local .p12 import — Xcode mints the distribution cert/profile in the cloud and
-          # stores the generated private key in this transient, unlocked keychain.
+          # Transient, unlocked keychain that holds the imported Apple Distribution identity
+          # (see next step). Reusing one stored cert avoids the certificate-quota exhaustion
+          # that pure cloud minting hits (a fresh runner mints a NEW cert every run until the
+          # account's Distribution-cert cap is reached).
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
           security delete-keychain $KEYCHAIN_PATH 2>/dev/null || true
           security create-keychain -p "" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "" $KEYCHAIN_PATH
-          # No keys exist yet (cloud signing mints the private key during archive), so a
-          # partition-list set here would fail with "item could not be found". Tolerate it;
-          # the keychain is unlocked with no timeout so codesign can use the minted key.
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH 2>/dev/null || true
           security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Import Apple Distribution certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Import ONE persistent Apple Distribution cert + private key into the keychain the
+          # archive uses. With this identity present, automatic signing + -allowProvisioningUpdates
+          # reuses it (and auto-generates a matching App Store profile) instead of asking Apple to
+          # mint a brand-new distribution certificate on every CI run.
+          if [ -z "${BUILD_CERTIFICATE_BASE64:-}" ]; then
+            echo "::error::BUILD_CERTIFICATE_BASE64 secret is not set. Export a valid (non-revoked) Apple Distribution certificate as a .p12, base64-encode it, and store it as BUILD_CERTIFICATE_BASE64 (with P12_PASSWORD). This lets CI reuse one certificate instead of exhausting the Apple certificate quota."
+            exit 1
+          fi
+
+          CERT_PATH="$RUNNER_TEMP/build_certificate.p12"
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+
+          # Apple-recommended import flags (see Apple's "Installing an Apple certificate on macOS
+          # runners" docs). -A grants keychain access to all tools; the partition-list call then
+          # lets codesign/xcodebuild use the key without an interactive prompt.
+          security import "$CERT_PATH" -P "${P12_PASSWORD:-}" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN_PATH" >/dev/null
+
+          rm -f "$CERT_PATH"
+
+          echo "Code-signing identities available to the archive:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Prepare App Store Connect API key
         env:
@@ -84,9 +110,9 @@ jobs:
 
       - name: Build and Archive Xcode Project
         run: |
-          # Cloud-managed automatic signing for a Release archive. Admin ASC API key +
-          # -allowProvisioningUpdates mints distribution cert + App Store profile. Entitlements
-          # are empty (no aps-environment), so signing won't drift toward Development.
+          # Automatic signing for a Release archive against the imported Apple Distribution
+          # identity. -allowProvisioningUpdates + the Admin ASC API key generate/refresh the
+          # matching App Store profile (and register the App Group) without minting a new cert.
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -sdk iphoneos \

@@ -4,4 +4,5 @@
     <string name="title_activity_main">Popup Hub</string>
     <string name="package_name">ca.popuphub.app</string>
     <string name="custom_url_scheme">ca.popuphub.app</string>
+    <string name="widget_description">Popup Hub markets, funds, and notifications at a glance.</string>
 </resources>

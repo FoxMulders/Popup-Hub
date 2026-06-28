@@ -28,6 +28,9 @@ try {
     npx cap sync ios
     if ($LASTEXITCODE -ne 0) { throw 'cap sync ios failed' }
 
+    node scripts/mobile/patch-ios-widget.mjs
+    if ($LASTEXITCODE -ne 0) { throw 'patch-ios-widget.mjs failed' }
+
     Write-Host 'Capacitor iOS sync complete.'
     Write-Host 'On macOS: npm run mobile:ios:open'
 }

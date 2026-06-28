@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { useProfileSettings } from '@/hooks/use-profile-settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowRight, IdCard, Loader2, User } from 'lucide-react'
+import { ChangeEmailDialog } from '@/components/profile/change-email-dialog'
+import { ArrowRight, IdCard, Loader2, Mail, User } from 'lucide-react'
 import type { Profile } from '@/types/database'
 import { passportPathForProfile } from '@/lib/passport/requirements'
 
@@ -17,6 +19,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile, passportComplete = true }: ProfileFormProps) {
   const { state, loading, updateField, save } = useProfileSettings(profile)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -60,18 +63,30 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <Label htmlFor="email" className="text-sm font-medium">
-            Private Email
+            Email
           </Label>
-          <Input
-            id="email"
-            value={profile.email}
-            disabled
-            className="h-11 bg-canvas text-muted-foreground"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              id="email"
+              type="email"
+              value={profile.email}
+              readOnly
+              className="h-11 flex-1 bg-canvas text-foreground"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 shrink-0 gap-2 w-full sm:w-auto"
+              onClick={() => setEmailDialogOpen(true)}
+            >
+              <Mail className="h-4 w-4" aria-hidden />
+              Change email
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
-            Change your email under Account Security below.
+            We&apos;ll send a confirmation link to your new address before updating sign-in.
           </p>
         </div>
 
@@ -191,6 +206,11 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
           )}
         </Button>
       </div>
+      <ChangeEmailDialog
+        currentEmail={profile.email}
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+      />
     </form>
   )
 }

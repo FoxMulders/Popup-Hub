@@ -54,6 +54,7 @@ export default async function NotificationsPage() {
   let userId: string | null = null
   let initialNotifications: Notification[] = []
   let activePortal = resolveActivePortal(undefined, null)
+  let profilePhone: string | null = null
   try {
     const supabase = await createClient()
     const {
@@ -64,9 +65,11 @@ export default async function NotificationsPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, phone')
       .eq('id', user.id)
       .single()
+
+    profilePhone = (profile as { phone?: string | null } | null)?.phone ?? null
 
     const cookieStore = await cookies()
     const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
@@ -116,20 +119,27 @@ export default async function NotificationsPage() {
     redirect('/login')
   }
 
+  const hasPhone = Boolean(profilePhone?.trim())
+
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 xl:px-16">
+    <div className="mx-auto w-full min-w-0 max-w-[1400px] overflow-x-hidden px-4 py-8 sm:px-6 xl:px-16">
       <NotificationPageHeader userId={userId} activePortal={activePortal} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8">
-        <NotificationList
-          initialNotifications={initialNotifications}
-          userId={userId}
-          activePortal={activePortal}
-        />
+      <div className="grid min-w-0 grid-cols-1 gap-8 xl:grid-cols-[1fr_360px]">
+        <div className="min-w-0 space-y-6 xl:order-1">
+          <div className="xl:hidden">
+            <NotificationDeliverySettings userId={userId} hasPhone={hasPhone} />
+          </div>
+          <NotificationList
+            initialNotifications={initialNotifications}
+            userId={userId}
+            activePortal={activePortal}
+          />
+        </div>
 
-        <aside className="space-y-6">
-          <div className="xl:sticky xl:top-24">
-            <NotificationDeliverySettings />
+        <aside className="min-w-0 space-y-6 xl:order-2">
+          <div className="hidden xl:sticky xl:top-24 xl:block">
+            <NotificationDeliverySettings userId={userId} hasPhone={hasPhone} />
           </div>
 
           <div className="rounded-2xl border bg-white p-6 hidden xl:block">

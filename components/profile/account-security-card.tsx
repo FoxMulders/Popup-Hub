@@ -12,7 +12,7 @@ interface AccountSecurityCardProps {
 }
 
 export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [emailDialogOpen, setEmailDialogOpen] = useState(false)
 

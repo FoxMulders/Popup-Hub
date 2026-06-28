@@ -7,28 +7,48 @@ import {
   popupFundsWordmarkSrc,
 } from '@/lib/brand/popup-funds-paths'
 
+type PopupFundsWordmarkSize = 'default' | 'wallet' | 'nav'
+
+const WORDMARK_HEIGHTS: Record<PopupFundsWordmarkSize, string> = {
+  default: 'h-10 w-auto max-w-full sm:h-12',
+  wallet: 'h-14 w-auto max-w-full sm:h-16 md:h-[4.5rem]',
+  nav: 'h-9 w-auto max-w-[11rem] sm:h-10',
+}
+
 export function PopupFundsWordmark({
   className,
   priority = false,
+  size = 'default',
 }: {
   className?: string
   priority?: boolean
+  size?: PopupFundsWordmarkSize
 }) {
   return (
     <Image
       src={popupFundsWordmarkSrc()}
-      alt="PopupFunds"
+      alt="Popup Funds"
       width={POPUP_FUNDS_WORDMARK.width}
       height={POPUP_FUNDS_WORDMARK.height}
       unoptimized
       priority={priority}
       draggable={false}
       className={cn(
-        'pointer-events-none h-10 w-auto max-w-full select-none object-contain object-left sm:h-12',
+        'pointer-events-none select-none object-contain object-left',
+        WORDMARK_HEIGHTS[size],
         className
       )}
     />
   )
+}
+
+type PopupFundsLogoMarkSize = 'sm' | 'md' | 'lg' | 'xl'
+
+const LOGO_MARK_HEIGHTS: Record<PopupFundsLogoMarkSize, string> = {
+  sm: 'h-10',
+  md: 'h-14',
+  lg: 'h-24 sm:h-28',
+  xl: 'h-28 sm:h-36',
 }
 
 export function PopupFundsLogoMark({
@@ -36,18 +56,17 @@ export function PopupFundsLogoMark({
   size = 'md',
 }: {
   className?: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: PopupFundsLogoMarkSize
 }) {
-  const heights = { sm: 'h-10', md: 'h-14', lg: 'h-20 sm:h-24' }
   return (
     <Image
       src={popupFundsLogoSrc()}
-      alt="PopupFunds"
+      alt="Popup Funds"
       width={POPUP_FUNDS_LOGO.width}
       height={POPUP_FUNDS_LOGO.height}
       unoptimized
       draggable={false}
-      className={cn('w-auto object-contain', heights[size], className)}
+      className={cn('w-auto object-contain', LOGO_MARK_HEIGHTS[size], className)}
     />
   )
 }

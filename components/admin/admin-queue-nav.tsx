@@ -10,6 +10,12 @@ export function AdminQueueNav() {
   return (
     <nav className="flex flex-wrap items-center gap-2 text-sm">
       <Link
+        href="/admin/users"
+        className="relative rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
+      >
+        Users
+      </Link>
+      <Link
         href="/admin/feedback"
         className="relative rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
       >

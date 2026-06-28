@@ -8,6 +8,7 @@ import { AppAccountMenuTrigger } from '@/components/nav/app-account-menu-trigger
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
+import { PopupFundsWordmark } from '@/components/brand/popup-funds-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
@@ -158,6 +159,15 @@ export function AppNav({
     navRole === 'coordinator' && isCoordinatorLayoutHelpNavRoute(pathname)
   const homeHref = SITE_HOME_PATH
   const stackedHeader = availablePortals.length > 1
+  const onWalletRoute = pathname === '/wallet' || pathname.startsWith('/wallet/')
+
+  const brandLogo = onWalletRoute ? (
+    <Link href="/wallet" className="inline-flex min-w-0 shrink items-center rounded-md" aria-label="Popup Funds">
+      <PopupFundsWordmark size="nav" priority />
+    </Link>
+  ) : (
+    <BrandLogoLockup className="shrink-0" href={homeHref} />
+  )
 
   async function handleSignOut() {
     await signOutAndRedirectToLogin(supabase)
@@ -237,7 +247,7 @@ export function AppNav({
         {stackedHeader ? (
           <>
             <div className="flex w-full min-w-0 items-center justify-between gap-2">
-              <BrandLogoLockup className="min-w-0 shrink" href={homeHref} />
+              <div className="min-w-0 shrink">{brandLogo}</div>
               <div className="flex shrink-0 items-center justify-end gap-2 overflow-x-hidden">
                 {rightActions}
               </div>
@@ -257,7 +267,7 @@ export function AppNav({
         ) : (
           <div className="grid w-full min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 overflow-x-hidden sm:gap-3">
             <div className="justify-self-start shrink-0">
-              <BrandLogoLockup className="shrink-0" href={homeHref} />
+              {brandLogo}
             </div>
             <div className="flex min-w-0 items-center justify-start gap-2 overflow-x-hidden sm:gap-3">
               <DesktopNavLinks links={links} pathname={pathname} />

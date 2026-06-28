@@ -15,6 +15,12 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
+		W1DGE0021FED796500168601 /* WidgetBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0011FED796500168601 /* WidgetBridgePlugin.swift */; };
+		W1DGE0091FED796500168601 /* PopupHubWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0041FED796500168601 /* PopupHubWidget.swift */; };
+		W1DGE00A1FED796500168601 /* WidgetFeedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0051FED796500168601 /* WidgetFeedClient.swift */; };
+		W1DGE00B1FED796500168601 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0061FED796500168601 /* WidgetIntents.swift */; };
+		W1DGE00C1FED796500168601 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = W1DGE0071FED796500168601 /* Info.plist */; };
+		W1DGE0131FED796500168601 /* PopupHubWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = W1DGE00D1FED796500168601 /* PopupHubWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +37,13 @@
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
+		W1DGE0011FED796500168601 /* WidgetBridgePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBridge/WidgetBridgePlugin.swift; sourceTree = "<group>"; };
+		W1DGE0041FED796500168601 /* PopupHubWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopupHubWidget.swift; sourceTree = "<group>"; };
+		W1DGE0051FED796500168601 /* WidgetFeedClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetFeedClient.swift; sourceTree = "<group>"; };
+		W1DGE0061FED796500168601 /* WidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
+		W1DGE0071FED796500168601 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		W1DGE0081FED796500168601 /* PopupHubWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PopupHubWidget.entitlements; sourceTree = "<group>"; };
+		W1DGE00D1FED796500168601 /* PopupHubWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PopupHubWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +52,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		W1DGE0111FED796500168601 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				W1DGE00D1FED796500168601 /* PopupHubWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -96,6 +117,18 @@
 			name = Pods;
 			sourceTree = "<group>";
 		};
+		W1DGE0031FED796500168601 /* PopupHubWidget */ = {
+			isa = PBXGroup;
+			children = (
+				W1DGE0041FED796500168601 /* PopupHubWidget.swift */,
+				W1DGE0051FED796500168601 /* WidgetFeedClient.swift */,
+				W1DGE0061FED796500168601 /* WidgetIntents.swift */,
+				W1DGE0071FED796500168601 /* Info.plist */,
+				W1DGE0081FED796500168601 /* PopupHubWidget.entitlements */,
+			);
+			path = ../PopupHubWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -108,15 +141,34 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				9592DBEFFC6D2A0C8D5DEB22 /* [CP] Embed Pods Frameworks */,
+				W1DGE0121FED796500168601 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				W1DGE0141FED796500168601 /* PBXTargetDependency */,
 			);
 			name = App;
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		W1DGE00E1FED796500168601 /* PopupHubWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = W1DGE0181FED796500168601 /* Build configuration list for PBXNativeTarget "PopupHubWidgetExtension" */;
+			buildPhases = (
+				W1DGE00F1FED796500168601 /* Sources */,
+				W1DGE0111FED796500168601 /* Frameworks */,
+				W1DGE0101FED796500168601 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PopupHubWidgetExtension;
+			productName = PopupHubWidgetExtension;
+			productReference = W1DGE00D1FED796500168601 /* PopupHubWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -150,6 +202,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				W1DGE00E1FED796500168601 /* PopupHubWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -165,6 +218,14 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		W1DGE0101FED796500168601 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				W1DGE00C1FED796500168601 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -204,6 +265,17 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-App/Pods-App-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		W1DGE0121FED796500168601 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				W1DGE0131FED796500168601 /* PopupHubWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -212,6 +284,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				W1DGE0021FED796500168601 /* WidgetBridgePlugin.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		W1DGE00F1FED796500168601 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				W1DGE0091FED796500168601 /* PopupHubWidget.swift in Sources */,
+				W1DGE00A1FED796500168601 /* WidgetFeedClient.swift in Sources */,
+				W1DGE00B1FED796500168601 /* WidgetIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,6 +472,44 @@
 			};
 			name = Release;
 		};
+		W1DGE0161FED796500168601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ../PopupHubWidget/PopupHubWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 6ACBDTX7T7;
+				INFOPLIST_FILE = ../PopupHubWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.120.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ca.popuphub.app.PopupHubWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		W1DGE0171FED796500168601 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ../PopupHubWidget/PopupHubWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 6ACBDTX7T7;
+				INFOPLIST_FILE = ../PopupHubWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.120.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ca.popuphub.app.PopupHubWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -406,6 +527,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		W1DGE0181FED796500168601 /* Build configuration list for PBXNativeTarget "PopupHubWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				W1DGE0161FED796500168601 /* Debug */,
+				W1DGE0171FED796500168601 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

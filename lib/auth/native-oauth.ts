@@ -1,13 +1,24 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Provider, SupabaseClient } from '@supabase/supabase-js'
+import {
+  type OAuthProviderId,
+  OAUTH_PROVIDERS,
+  oauthProviderLabel,
+} from '@/lib/auth/oauth-providers'
 import { buildNativeOAuthCallbackUrl, buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { isNativeApp } from '@/lib/mobile/native-app'
 
-export type GoogleOAuthParams = Record<string, string | null | undefined>
+export type OAuthParams = Record<string, string | null | undefined>
 
-export type GoogleOAuthResult =
+export type OAuthResult =
   | { mode: 'redirect' }
   | { mode: 'browser'; opened: true }
   | { mode: 'error'; message: string }
+
+/** @deprecated Use OAuthParams */
+export type GoogleOAuthParams = OAuthParams
+
+/** @deprecated Use OAuthResult */
+export type GoogleOAuthResult = OAuthResult
 
 type BrowserFinishedReason = 'cancelled' | 'completed'
 type BrowserFinishedListener = (reason: BrowserFinishedReason) => void
@@ -60,25 +71,34 @@ export async function closeNativeOAuthBrowser(): Promise<void> {
   }
 }
 
-/** Google OAuth — system browser on native, default redirect on web. */
-export async function signInWithGoogleOAuth(
+function oauthQueryParams(provider: Provider): Record<string, string> {
+  if (provider === 'google' || provider === 'azure') {
+    return { prompt: 'select_account' }
+  }
+  return {}
+}
+
+/** OAuth sign-in — system browser on native, default redirect on web. */
+export async function signInWithOAuth(
   supabase: SupabaseClient,
-  params?: GoogleOAuthParams,
-): Promise<GoogleOAuthResult> {
+  providerId: OAuthProviderId,
+  params?: OAuthParams,
+): Promise<OAuthResult> {
+  const { supabaseProvider } = OAUTH_PROVIDERS[providerId]
+  const providerLabel = oauthProviderLabel(providerId)
+
   const redirectTo = isNativeApp()
     ? buildNativeOAuthCallbackUrl(params)
     : buildOAuthCallbackUrl(getOAuthOrigin(), params)
 
   const oauthOptions = {
     redirectTo,
-    queryParams: {
-      prompt: 'select_account',
-    },
+    queryParams: oauthQueryParams(supabaseProvider),
   }
 
   if (!isNativeApp()) {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: supabaseProvider,
       options: oauthOptions,
     })
     if (error) return { mode: 'error', message: error.message }
@@ -88,7 +108,7 @@ export async function signInWithGoogleOAuth(
   await ensureBrowserFinishedListener()
 
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+    provider: supabaseProvider,
     options: {
       ...oauthOptions,
       skipBrowserRedirect: true,
@@ -99,7 +119,10 @@ export async function signInWithGoogleOAuth(
 
   const url = data?.url
   if (!url) {
-    return { mode: 'error', message: 'Google sign-in could not be started. Please try again.' }
+    return {
+      mode: 'error',
+      message: `${providerLabel} sign-in could not be started. Please try again.`,
+    }
   }
 
   try {
@@ -110,4 +133,12 @@ export async function signInWithGoogleOAuth(
     const message = err instanceof Error ? err.message : 'Could not open the sign-in browser.'
     return { mode: 'error', message }
   }
+}
+
+/** Google OAuth — system browser on native, default redirect on web. */
+export async function signInWithGoogleOAuth(
+  supabase: SupabaseClient,
+  params?: OAuthParams,
+): Promise<OAuthResult> {
+  return signInWithOAuth(supabase, 'google', params)
 }
