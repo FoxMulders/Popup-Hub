@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { markNativeAppCookie, isNativeApp } from '@/lib/mobile/native-app'
+import { apiAuthCallbackHref } from '@/lib/auth/oauth-callback-url'
 import { closeNativeOAuthBrowser, markNativeOAuthDeepLinkReturn } from '@/lib/auth/native-oauth'
 import { NativePushRegister } from '@/components/mobile/native-push-register'
 import { syncNativeWidgetSession } from '@/lib/mobile/widget-sync'
@@ -53,7 +54,8 @@ export function CapacitorInit() {
               const query = params.toString()
               markNativeOAuthDeepLinkReturn()
               void closeNativeOAuthBrowser()
-              router.push(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
+              // Full navigation so /api/auth/callback Set-Cookie headers persist in the WebView.
+              window.location.replace(apiAuthCallbackHref(query))
               return
             }
             const path = `${url.pathname}${url.search}${url.hash}`
