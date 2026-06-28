@@ -8,12 +8,21 @@ import {
 } from '@/components/coordinator/coordinator-markets-list'
 import type { Event } from '@/types/database'
 
-function toMarketSummary(event: Pick<Event, 'id' | 'name' | 'start_at' | 'status'>): CoordinatorMarketSummary {
+type MarketEventRow = Pick<Event, 'id' | 'name' | 'start_at' | 'status'> & {
+  coordinator?: { full_name?: string | null } | { full_name?: string | null }[] | null
+}
+
+function toMarketSummary(
+  event: MarketEventRow,
+  includeCoordinator: boolean
+): CoordinatorMarketSummary {
+  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   return {
     id: event.id,
     name: event.name,
     start_at: event.start_at,
     status: event.status,
+    coordinator_name: includeCoordinator ? (coordinator?.full_name ?? null) : undefined,
   }
 }
 
@@ -26,10 +35,18 @@ export default async function CoordinatorMarketsPage() {
 
   const scope = await getCoordinatorScope(supabase, user.id)
 
-  const eventsQuery = supabase
-    .from('events')
-    .select('id, name, start_at, status')
-    .order('start_at', { ascending: false })
+  const eventsPromise = scope.isAdmin
+    ? supabase
+        .from('events')
+        .select(
+          'id, name, start_at, status, coordinator:profiles!events_coordinator_id_fkey(full_name)'
+        )
+        .order('start_at', { ascending: false })
+    : supabase
+        .from('events')
+        .select('id, name, start_at, status')
+        .eq('coordinator_id', user.id)
+        .order('start_at', { ascending: false })
 
   const [{ data: profile }, eventsResult, revenueResult] = await Promise.all([
     supabase
@@ -39,17 +56,17 @@ export default async function CoordinatorMarketsPage() {
       )
       .eq('id', user.id)
       .maybeSingle(),
-    scope.isAdmin ? eventsQuery : eventsQuery.eq('coordinator_id', user.id),
-    (scope.isAdmin
+    eventsPromise,
+    scope.isAdmin
       ? supabase.from('platform_transactions').select('organizer_payout_amount').eq('status', 'completed')
       : supabase
           .from('platform_transactions')
           .select('organizer_payout_amount')
           .eq('status', 'completed')
-          .eq('coordinator_id', user.id)),
+          .eq('coordinator_id', user.id),
   ])
 
-  const eventRows = eventsResult.data ?? []
+  const eventRows = (eventsResult.data ?? []) as unknown as MarketEventRow[]
   if (eventsResult.error) {
     console.error('[coordinator/markets] events query failed', eventsResult.error.message)
   }
@@ -57,9 +74,13 @@ export default async function CoordinatorMarketsPage() {
     console.error('[coordinator/markets] revenue query failed', revenueResult.error.message)
   }
 
-  const { active, archived } = partitionEventsByPhase((eventRows ?? []) as Event[])
-  const activeMarkets = sortEventsByStartAsc(active).map(toMarketSummary)
-  const archivedMarkets = sortEventsByStartDesc(archived).map(toMarketSummary)
+  const { active, archived } = partitionEventsByPhase(eventRows as Event[])
+  const activeMarkets = sortEventsByStartAsc(active).map((event) =>
+    toMarketSummary(event as MarketEventRow, scope.isAdmin)
+  )
+  const archivedMarkets = sortEventsByStartDesc(archived).map((event) =>
+    toMarketSummary(event as MarketEventRow, scope.isAdmin)
+  )
 
   const totalRevenueCents =
     revenueResult.data?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
@@ -76,6 +97,7 @@ export default async function CoordinatorMarketsPage() {
       totalRevenueCents={totalRevenueCents}
       squareConnected={squareConnected}
       stripeConnected={stripeConnected}
+      isAdminView={scope.isAdmin}
     />
   )
 }

@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Admin visibility for all markets (local, not deployed)
+- **Goal:** Platform admins can list and inspect every coordinator market, including drafts.
+- **Personas:** Platform operator · Coordinator portal (`/coordinator/markets`, HubGrid, event hubs).
+- **Shipped locally:**
+  - **`supabase/migrations/132_admin_event_read.sql`** — `is_platform_admin()` helper + SELECT policies on `events`, `event_category_limits`, `event_days`, `event_schedule_items`, `booth_layouts`, `booth_applications`, `platform_transactions`, `vendor_passports`.
+  - **`app/coordinator/markets/page.tsx`** — admin query includes coordinator name; passes `isAdminView`.
+  - **`components/coordinator/coordinator-markets-list.tsx`** — "All markets" title/copy for admins; coordinator name on rows; hides vendor-invite links in admin view.
+- **Verify:** `npx tsc --noEmit` PASS. Apply migration: `npm run db:push` (blocked at `126_push_subscriptions.sql` duplicate policy on remote — resolve or apply `132` manually). Smoke (as `is_admin`): `/coordinator/markets` shows other coordinators' drafts with Draft badge + organizer name; open draft hub, setup wizard, and HubGrid.
+- **Blockers:** Remote DB push stalled on pre-existing `126_push_subscriptions` policy conflict — migration `132` not yet applied remotely.
+- **Next:** User commit + deploy when ready; fix `126` push conflict or run `132_admin_event_read.sql` in Supabase SQL editor.
+
 ## Active work — Admin console user management (local, not deployed)
 - **Goal:** Search-driven user management in Platform Admin console — roles, flags, coordinator moderation, auth controls.
 - **Personas:** Platform operator · `/admin/users`.

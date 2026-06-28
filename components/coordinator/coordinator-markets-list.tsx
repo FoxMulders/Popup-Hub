@@ -22,6 +22,7 @@ export interface CoordinatorMarketSummary {
   name: string
   start_at: string
   status: string
+  coordinator_name?: string | null
 }
 
 interface CoordinatorMarketsListProps {
@@ -30,6 +31,8 @@ interface CoordinatorMarketsListProps {
   totalRevenueCents: number
   squareConnected: boolean
   stripeConnected: boolean
+  /** Platform admin viewing all coordinators' markets. */
+  isAdminView?: boolean
   /** Shorter intro copy for phones on the dashboard fallback. */
   mobileIntro?: boolean
 }
@@ -59,10 +62,12 @@ function MarketRow({
   market,
   showCommandCenterLink,
   showInviteLink,
+  showCoordinatorName,
 }: {
   market: CoordinatorMarketSummary
   showCommandCenterLink: boolean
   showInviteLink?: boolean
+  showCoordinatorName?: boolean
 }) {
   return (
     <li className="marketing-glass-card transition-colors hover:border-forest/30 hover:shadow-[var(--shadow-market-md)]">
@@ -78,6 +83,9 @@ function MarketRow({
             <span className="line-clamp-1 font-medium text-foreground">{market.name}</span>
             <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{safeFormatMarketDate(market.start_at)}</span>
+              {showCoordinatorName && market.coordinator_name ? (
+                <span className="line-clamp-1">{market.coordinator_name}</span>
+              ) : null}
               <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium">
                 {statusLabel(market.status)}
               </Badge>
@@ -126,11 +134,13 @@ function MarketSection({
   markets,
   showCommandCenterLink,
   showInviteLinks,
+  showCoordinatorName,
 }: {
   title: string
   markets: CoordinatorMarketSummary[]
   showCommandCenterLink: boolean
   showInviteLinks?: boolean
+  showCoordinatorName?: boolean
 }) {
   if (markets.length === 0) return null
 
@@ -146,6 +156,7 @@ function MarketSection({
             market={market}
             showCommandCenterLink={showCommandCenterLink}
             showInviteLink={showInviteLinks}
+            showCoordinatorName={showCoordinatorName}
           />
         ))}
       </ul>
@@ -159,6 +170,7 @@ export function CoordinatorMarketsList({
   totalRevenueCents,
   squareConnected,
   stripeConnected,
+  isAdminView = false,
   mobileIntro = false,
 }: CoordinatorMarketsListProps) {
   const totalCount = activeMarkets.length + archivedMarkets.length
@@ -167,11 +179,13 @@ export function CoordinatorMarketsList({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <PageIntro
         eyebrow="Coordinator portal"
-        title="Your markets"
+        title={isAdminView ? 'All markets' : 'Your markets'}
         description={
           mobileIntro
             ? 'Use a tablet or desktop for the full booth layout designer. On this device you can review events, applications, and day-of operations.'
-            : 'Browse every market, open event hubs, or jump into HubGrid for a specific market.'
+            : isAdminView
+              ? 'Platform admin view — every coordinator market including drafts. Open event hubs or HubGrid for any market.'
+              : 'Browse every market, open event hubs, or jump into HubGrid for a specific market.'
         }
         actions={<PortalRoleBadge portal="coordinator" />}
       />
@@ -218,12 +232,14 @@ export function CoordinatorMarketsList({
             title={`Upcoming & active (${activeMarkets.length})`}
             markets={activeMarkets}
             showCommandCenterLink
-            showInviteLinks
+            showInviteLinks={!isAdminView}
+            showCoordinatorName={isAdminView}
           />
           <MarketSection
             title={`Past markets (${archivedMarkets.length})`}
             markets={archivedMarkets}
             showCommandCenterLink={false}
+            showCoordinatorName={isAdminView}
           />
         </div>
       )}
