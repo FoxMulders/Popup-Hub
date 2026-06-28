@@ -2416,8 +2416,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `135034d` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.176.0 build 1** | commit `807dd19` (handoff updated 2026-06-28 12:00)
+- Branch: `master` @ `0cce5af9` (pushed to `origin/master`)
+- Last deploy commit: `0cce5af9` - feat: ship 39 session updates (Feature request resolution notes & reopen; Category max-slots input fix; MLM broad category pinned first; Capacity step skip-layout copy; +35 more)
+- Production: https://popuphub.ca - **v1.177.0 build 1** | commit `135034d` (handoff updated 2026-06-28 12:30)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2794,7 +2795,7 @@
 
 
 ## Last deploy
-- 2026-06-28 10:28 - Deploy via deploy-popuphub.ps1 - `feat: ship 34 session updates (Admin visibility for all markets; Admin console user management; OAuth sign-up: Apple, Microsoft, Facebook; Native home-screen widgets; +30 more)` (57f6644)
+- 2026-06-28 12:30 - Deploy via deploy-popuphub.ps1 - `feat: ship 39 session updates (Feature request resolution notes & reopen; Category max-slots input fix; MLM broad category pinned first; Capacity step skip-layout copy; +35 more)` (0cce5af9)
 
 
 ## Goal
