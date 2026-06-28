@@ -53,6 +53,11 @@ export async function geocodeAddressQuery(query: string): Promise<GeocodeResult 
   const data = (await res.json()) as GeocodeApiResponse
 
   if (data.status !== 'OK' || !data.results?.length) {
+    console.warn('[geocode] Google Geocoding API failed', {
+      status: data.status ?? 'unknown',
+      errorMessage: data.error_message,
+      query: address,
+    })
     return null
   }
 

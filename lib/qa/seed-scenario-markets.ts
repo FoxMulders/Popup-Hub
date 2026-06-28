@@ -162,7 +162,14 @@ async function upsertLayout(
   const activeRoomId = rooms[0]!.id
   const payload = layoutPayloadFromRooms(eventId, rooms, activeRoomId)
 
-  const { error } = await supabase.from('booth_layouts').upsert(payload, { onConflict: 'event_id' })
+  const normalizedPayload = {
+    ...payload,
+    spacing_mode: payload.spacing_mode === 'table_provided' ? 'table_provided' : 'standard',
+  }
+
+  const { error } = await supabase
+    .from('booth_layouts')
+    .upsert(normalizedPayload, { onConflict: 'event_id' })
   if (error) throw new Error(`booth layout for ${scenario.name}: ${error.message}`)
 }
 

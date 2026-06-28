@@ -2,18 +2,35 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Postal code lookup fix (local, not deployed)
+- **Goal:** Make the public Discover area filter resolve Canadian postal codes with or without a space once the Google Geocoding server key is configured.
+- **Personas:** Patron - Discover map area filter (`/discover`).
+- **Shipped locally:**
+  - **`lib/auth/public-paths.ts`** - added `/api/geocode` to public paths so logged-out Discover users are not blocked by middleware before lookup.
+  - **`lib/maps/geocode-query.ts`** - logs Google Geocoding `status` and `error_message` when Google returns a non-OK response.
+- **Verify:** Code-level checks pass: `/api/geocode` is public; `T5Z3X7` and `T5Z 3X7` both normalize to `T5Z 3X7, Canada`; mocked geocode helper returns coordinates for both formats. Full live smoke still needs a working `GOOGLE_MAPS_SERVER_API_KEY`, deploy, then `/discover` postal lookup test logged out and logged in.
+- **Next:** Enable Google Geocoding API / set `GOOGLE_MAPS_SERVER_API_KEY`; commit + deploy; smoke `POST /api/geocode` and the `/discover` address field.
+
+## Active work — Uniform platform feature cards (local, not deployed)
+- **Goal:** Remove HubGuard link/CTA from homepage platform features grid so all six cards are uniform height.
+- **Personas:** Public marketing · homepage `/`.
+- **Shipped locally:**
+  - **`components/public/marketing/marketing-features.tsx`** — dropped `href` on HubGuard card, removed `Link` wrapper and "HubGuard →" CTA; all cards render as plain `marketing-glass-card` divs.
+- **Verify:** Homepage platform section — six equal-height bubbles, no HubGuard link line.
+- **Next:** User commit + deploy when ready.
+
 ## Active work — Scenario test markets (`is_test`) (local, not deployed)
 - **Goal:** Seed a catalog of published QA markets (one per product scenario), flagged `is_test` for bulk purge before go-live.
 - **Personas:** Coordinator · Vendor · Patron (`/discover`, `/events/[id]/map`).
 - **Shipped locally:**
   - **`supabase/migrations/135_events_is_test.sql`** — `events.is_test` + partial index.
   - **`lib/qa/scenario-market-definitions.ts`** — 14 scenario configs (names = scenario labels).
-  - **`lib/qa/seed-scenario-markets.ts`**, **`scripts/seed-scenario-markets.ts`**, **`scripts/purge-test-markets.ts`** — idempotent seed + dry-run + purge.
+  - **`lib/qa/seed-scenario-markets.ts`**, **`scripts/seed-scenario-markets.ts`**, **`scripts/purge-test-markets.ts`** — idempotent seed + dry-run + purge; layout upsert normalizes `spacing_mode` to DB-safe values (`standard` / `table_provided`).
   - **`npm run seed:scenario-markets`**, **`npm run purge:test-markets`** in package.json.
   - Sitemap excludes `is_test`; coordinator markets list **Test** badge; workflow fixture sets `is_test`.
   - **`docs/QA_FULL_WORKFLOW.md`** — scenario market table + commands.
-- **Verify:** `npx tsc --noEmit` PASS. Apply migration `135` on Supabase, then `npm run seed:scenario-markets` (prod: confirm `coordinator@me.com` exists).
-- **Next:** User commit + deploy; apply `135_events_is_test.sql`; run seed on production; smoke `/discover` for scenario names.
+- **Verify:** `npx tsc --noEmit` PASS; `ReadLints` clean for `lib/qa/seed-scenario-markets.ts`. Migrations `134`/`135` applied by user; earlier seed failed on `booth_layouts_spacing_mode_check`, now fixed locally.
+- **Next:** Re-run `npm run seed:scenario-markets` on production; smoke `/discover` for scenario names; user commit + deploy when ready.
 
 ## Active work — Admin market access, publish assist, owner labels (local, not deployed)
 - **Goal:** Fix cryptic `Could not save draft: Forbidden` for admins inspecting other coordinators' markets; enforce read-only admin inspection; coordinator publish-assist queue; owner labels on admin market listings.
