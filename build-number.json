@@ -1,8 +1,8 @@
 {
-  "version": "1.175.0",
+  "version": "1.176.0",
   "major": 1,
-  "minor": 175,
+  "minor": 176,
   "patch": 0,
   "build": 1,
-  "commit": "bfcfacc"
+  "commit": "807dd19"
 }
