@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Loader wordmark below animation (local, not deployed)
+- **Goal:** Full-screen Popup Hub loader shows the market animation centered on screen with the horizontal wordmark beneath it (not above).
+- **Personas:** All · first-paint loader + logo-click replay overlay.
+- **Shipped locally:**
+  - **`components/brand/popup-loader-provider.tsx`** — reordered stack (animation → `BrandLogoLockup`); column shrinks to content so `#loader-screen` flex centering places both at mid viewport.
+  - **`app/globals.css`** — slightly reduced `.loader-screen__lottie` height so animation + wordmark fit centered on mobile/desktop.
+- **Verify:** Hard-refresh (or clear `popup-hub-initial-loader-shown` sessionStorage); loader animation centered with "Popup Hub" wordmark below; logo-click replay matches.
+- **Next:** Commit + deploy when ready.
+
 ## Active work — Feature request resolution notes & reopen (local, not deployed)
 - **Goal:** Admins add user-visible resolution notes; submitters view fixes on My Suggestions and can reopen completed requests; retroactive access to all historical completed items.
 - **Personas:** All portals (submit/view) · platform admin `/admin/feedback`.
