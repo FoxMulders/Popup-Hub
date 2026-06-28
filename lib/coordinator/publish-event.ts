@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
   coordinatorPublishBlockReason,
+  type CoordinatorFraudGate,
 } from '@/lib/coordinator/verification'
 import { assertEventVenueVerifiedForPublish } from '@/lib/venues/persist-event-venue-verification'
 import { onMarketPublished } from '@/lib/organizers/on-market-published'
@@ -11,6 +12,20 @@ import { dispatchCoordinatorFollowerAlerts } from '@/lib/shopper/dispatch-coordi
 export type PublishEventResult =
   | { ok: true }
   | { ok: false; error: string; status: number }
+
+export type PublishCoordinatorEventOptions = {
+  /** Admin publish-assist approval — skip organizer trust-path gate only. */
+  bypassPublishGate?: boolean
+}
+
+/** Organizer trust-path gate used by coordinator publish and admin assist approval. */
+export function resolvePublishGateBlockReason(
+  profile: CoordinatorFraudGate | null | undefined,
+  options?: PublishCoordinatorEventOptions
+): string | null {
+  if (options?.bypassPublishGate) return null
+  return coordinatorPublishBlockReason(profile)
+}
 
 type PublishableEvent = {
   id: string
@@ -27,7 +42,8 @@ type PublishableEvent = {
 export async function publishCoordinatorEvent(
   supabase: SupabaseClient,
   service: SupabaseClient,
-  event: PublishableEvent
+  event: PublishableEvent,
+  options?: PublishCoordinatorEventOptions
 ): Promise<PublishEventResult> {
   if (event.status !== 'draft') {
     return { ok: false, error: 'Only draft markets can be published.', status: 409 }
@@ -51,10 +67,13 @@ export async function publishCoordinatorEvent(
     .limit(1)
     .maybeSingle()
 
-  const publishBlock = coordinatorPublishBlockReason({
-    ...ownerProfile,
-    has_square_event: !!squareEvent,
-  })
+  const publishBlock = resolvePublishGateBlockReason(
+    {
+      ...ownerProfile,
+      has_square_event: !!squareEvent,
+    },
+    options
+  )
   if (publishBlock) {
     return { ok: false, error: publishBlock, status: 403 }
   }
