@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session — Exclude `is_test` from public discover (critical bug fix, local)
+- **Goal:** Prevent QA scenario markets (`is_test = true`) from appearing on patron/vendor discover surfaces.
+- **Bug:** `getCachedDiscoverMarkets`, vendor directory queries, and widget patron feed did not filter `is_test`; ship 44 scheduling scenario markets for "today" made them visible on default `/discover`.
+- **Fix:** `lib/queries/public-market-catalog.ts` shared filter; applied in `cached-public-markets.ts` and `lib/widget/fetch-data.ts`; unit test added.
+- **Next:** Merge PR, deploy, smoke `/discover` with seeded scenario markets (should not list them).
+
 ## Active work — Center loader logo and animation (local, not deployed)
 - **Goal:** Center the worded logo and loader animation as a single vertically-centered group on the full-screen loader overlay, preserving the gap between them.
 - **Personas:** All users · initial page-load loader and replay overlay.
