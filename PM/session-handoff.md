@@ -2327,9 +2327,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `7114293` (pushed to `origin/master`)
-- Last deploy commit: `7114293` - feat: ship 29 session updates (Chrome audit + HubGuard patron gate; List-mode map previews; HubGuard / global header cleanup; SEO growth roadmap implementation; +25 more)
-- Production: https://popuphub.ca - **v1.172.0 build 1** | commit `e9b2c42` (handoff updated 2026-06-27 16:46)
+- Branch: `master` @ `57f6644` (pushed to `origin/master`)
+- Last deploy commit: `57f6644` - feat: ship 34 session updates (Admin visibility for all markets; Admin console user management; OAuth sign-up: Apple, Microsoft, Facebook; Native home-screen widgets; +30 more)
+- Production: https://popuphub.ca - **v1.175.0 build 1** | commit `bfcfacc` (handoff updated 2026-06-28 10:28)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2706,7 +2706,7 @@
 
 
 ## Last deploy
-- 2026-06-27 16:46 - Deploy via deploy-popuphub.ps1 - `feat: ship 29 session updates (Chrome audit + HubGuard patron gate; List-mode map previews; HubGuard / global header cleanup; SEO growth roadmap implementation; +25 more)` (7114293)
+- 2026-06-28 10:28 - Deploy via deploy-popuphub.ps1 - `feat: ship 34 session updates (Admin visibility for all markets; Admin console user management; OAuth sign-up: Apple, Microsoft, Facebook; Native home-screen widgets; +30 more)` (57f6644)
 
 
 ## Goal
