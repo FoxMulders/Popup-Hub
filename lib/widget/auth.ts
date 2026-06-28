@@ -22,6 +22,20 @@ function resolveWidgetPersona(
   return 'patron'
 }
 
+/** Persona for native widgets — no active_portal cookie, derive from account role. */
+export function resolveWidgetPersonaForAccount(
+  role: Role | string | null | undefined,
+  isAdmin?: boolean
+): WidgetPersona {
+  if (isAdmin === true || role === 'coordinator') {
+    return 'coordinator'
+  }
+  if (role === 'vendor') {
+    return 'vendor'
+  }
+  return 'patron'
+}
+
 export function extractBearerToken(request: Request): string | null {
   const header = request.headers.get('authorization') ?? request.headers.get('Authorization')
   if (!header?.startsWith('Bearer ')) return null
@@ -62,7 +76,7 @@ export async function authenticateWidgetRequest(
 
   const role = (profile?.role ?? 'shopper') as Role
   const activePortal = resolveActivePortal(undefined, profile as Profile | null)
-  const persona = resolveWidgetPersona(role, activePortal, profile?.is_admin === true)
+  const persona = resolveWidgetPersonaForAccount(role, profile?.is_admin === true)
 
   void service
     .from('widget_tokens')

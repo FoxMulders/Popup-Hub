@@ -165,8 +165,6 @@ async function setPlatformAdmin(
     return { ok: true, message: 'Platform admin access revoked' }
   }
 
-  await db.from('profiles').update({ is_admin: false }).eq('is_admin', true)
-
   const { data: passport } = await db
     .from('vendor_passports')
     .select('id')
@@ -186,6 +184,16 @@ async function setPlatformAdmin(
 
   if (profileError) {
     return { ok: false, error: profileError.message, status: 500 }
+  }
+
+  const { error: revokeError } = await db
+    .from('profiles')
+    .update({ is_admin: false })
+    .eq('is_admin', true)
+    .neq('id', targetUserId)
+
+  if (revokeError) {
+    return { ok: false, error: revokeError.message, status: 500 }
   }
 
   const { error: authError } = await db.auth.admin.updateUserById(targetUserId, {
