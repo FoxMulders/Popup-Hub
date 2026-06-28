@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fixes (PR #105, branch `cursor/critical-bug-investigation-17c1`)
+- **Goal:** Fix three high-severity bugs found during ship 34 push review (`77bd2d38`).
+- **Shipped locally (commit `e7d794c5`):**
+  - **Admin grant lockout** — `setPlatformAdmin` grants target before revoking other admins.
+  - **Native OAuth session** — `CapacitorInit` uses `window.location.replace(apiAuthCallbackHref())` for deep-link callback.
+  - **Widget persona** — `resolveWidgetPersonaForAccount` for native widgets without `active_portal` cookie.
+- **Verify:** `npx tsx lib/auth/oauth-callback-url.test.ts` PASS; `npx tsx lib/widget/auth.test.ts` PASS.
+- **Blockers:** PR #105 not merged/deployed yet.
+- **Next:** Merge PR #105; deploy; smoke native OAuth sign-up and admin grant flow.
+
 ## Active work — Admin visibility for all markets (local, not deployed)
 - **Goal:** Platform admins can list and inspect every coordinator market, including drafts.
 - **Personas:** Platform operator · Coordinator portal (`/coordinator/markets`, HubGrid, event hubs).
