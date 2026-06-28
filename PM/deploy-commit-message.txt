@@ -1,1 +1,1 @@
-feat: ship 43 session updates (Postal code lookup fix; Uniform platform feature cards; Scenario test markets (`is_test`); Admin market access, publish assist, owner labels; +39 more)
+feat: ship 42 session updates (Uniform platform feature cards; Scenario test markets (`is_test`); Admin market access, publish assist, owner labels; Feature request resolution notes & reopen; +38 more)
