@@ -69,6 +69,8 @@ export function EventHubTimeline({
         ? 'Categories, venue, and layout configured'
         : 'Finish categories, venue, and HubGrid layout',
       state: setupComplete ? (isPublished ? 'complete' : 'current') : 'current',
+      href: '#event-setup-checklist',
+      cta: setupComplete ? 'Review setup checklist' : 'Continue setup',
     },
     {
       id: 'publish',

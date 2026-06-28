@@ -319,7 +319,7 @@ export function EventReadinessChecklist({
   }
 
   return (
-    <MarketPanel className="p-0 overflow-hidden" id="event-setup-checklist">
+    <MarketPanel className="scroll-mt-24 p-0 overflow-hidden" id="event-setup-checklist">
       <MarketPanelHeader>
         <div>
           <MarketPanelTitle>Event Setup</MarketPanelTitle>
