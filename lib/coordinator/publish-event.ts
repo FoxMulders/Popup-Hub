@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
+  coordinatorHardPublishBlockReason,
   coordinatorPublishBlockReason,
 } from '@/lib/coordinator/verification'
 import { assertEventVenueVerifiedForPublish } from '@/lib/venues/persist-event-venue-verification'
@@ -23,11 +24,19 @@ type PublishableEvent = {
   venue_verification_status: string | null
 }
 
+export type PublishCoordinatorEventOptions = {
+  /** Skip Stripe/Square/offline trust-path checks (admin publish assist only). */
+  bypassTrustGate?: boolean
+  assistRequestId?: string
+  reviewerId?: string
+}
+
 /** Publish a draft market using the event owner's verification profile. */
 export async function publishCoordinatorEvent(
   supabase: SupabaseClient,
   service: SupabaseClient,
-  event: PublishableEvent
+  event: PublishableEvent,
+  options?: PublishCoordinatorEventOptions
 ): Promise<PublishEventResult> {
   if (event.status !== 'draft') {
     return { ok: false, error: 'Only draft markets can be published.', status: 409 }
@@ -51,10 +60,13 @@ export async function publishCoordinatorEvent(
     .limit(1)
     .maybeSingle()
 
-  const publishBlock = coordinatorPublishBlockReason({
+  const gateProfile = {
     ...ownerProfile,
     has_square_event: !!squareEvent,
-  })
+  }
+  const publishBlock = options?.bypassTrustGate
+    ? coordinatorHardPublishBlockReason(gateProfile)
+    : coordinatorPublishBlockReason(gateProfile)
   if (publishBlock) {
     return { ok: false, error: publishBlock, status: 403 }
   }
@@ -109,13 +121,28 @@ export async function publishCoordinatorEvent(
     }
   }
 
-  const { error: updateError } = await supabase
-    .from('events')
-    .update({ status: 'published' })
-    .eq('id', event.id)
+  if (options?.bypassTrustGate) {
+    if (!options.assistRequestId || !options.reviewerId) {
+      return { ok: false, error: 'Publish assist request context missing.', status: 500 }
+    }
 
-  if (updateError) {
-    return { ok: false, error: updateError.message, status: 500 }
+    const { error: assistError } = await service.rpc('publish_event_via_publish_assist', {
+      p_request_id: options.assistRequestId,
+      p_reviewer_id: options.reviewerId,
+    })
+
+    if (assistError) {
+      return { ok: false, error: assistError.message, status: 500 }
+    }
+  } else {
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({ status: 'published' })
+      .eq('id', event.id)
+
+    if (updateError) {
+      return { ok: false, error: updateError.message, status: 500 }
+    }
   }
 
   void dispatchPublishMarketAlerts(service, event.id).catch((err) => {
