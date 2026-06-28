@@ -127,7 +127,9 @@ export async function approvePublishAssistRequest(
     return { ok: false, error: 'Event ownership mismatch', status: 409 }
   }
 
-  const publishResult = await publishCoordinatorEvent(admin, admin, event)
+  const publishResult = await publishCoordinatorEvent(admin, admin, event, {
+    bypassPublishGate: true,
+  })
   if (!publishResult.ok) {
     return { ok: false, error: publishResult.error, status: publishResult.status }
   }

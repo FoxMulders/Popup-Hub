@@ -38,6 +38,7 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
     `)
     .eq('id', eventId)
     .in('status', ['published', 'active', 'completed'])
+    .eq('is_test', false)
     .single()
 
   if (!event) notFound()
