@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (PR #103, not deployed)
+- **Goal:** Deep review of commit `bfcfacce` (33 session updates) for high-severity correctness bugs.
+- **Shipped on branch `cursor/critical-bug-investigation-57b6` (commit `06d96710`):**
+  - **Native OAuth:** `CapacitorInit` deep-link callback now uses `window.location.replace(apiAuthCallbackHref(...))` so session cookies persist after Apple/Microsoft/Facebook/Google sign-in on native.
+  - **Admin grant lockout:** `setPlatformAdmin` grants target admin before revoking others — prevents zero-admin state when grant step fails.
+  - **Widget persona:** `resolveWidgetPersonaForAccount()` derives vendor/coordinator persona from role when no `active_portal` cookie (native widgets were patron-only).
+  - Tests: `lib/widget/auth.test.ts`, `lib/auth/oauth-callback-url.test.ts`.
+- **Verify:** `npx tsx lib/widget/auth.test.ts`, `lib/auth/oauth-callback-url.test.ts`, `lib/widget/feed.test.ts` PASS.
+- **Next:** Merge PR #103 and deploy.
+
 ## Active work — Admin console user management (local, not deployed)
 - **Goal:** Search-driven user management in Platform Admin console — roles, flags, coordinator moderation, auth controls.
 - **Personas:** Platform operator · `/admin/users`.
