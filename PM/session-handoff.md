@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fix: publish-assist approval + is_test discover leak (local, not deployed)
+- **Goal:** Automation found ship-41 regressions — admin publish-assist approve always failed for blocked organizers; `is_test` markets could appear on `/discover` after scenario seed on prod.
+- **Shipped locally:**
+  - **`lib/coordinator/publish-event.ts`** — `resolvePublishGateBlockReason` + `bypassPublishGate` option for admin assist approval (venue/fee gates unchanged).
+  - **`lib/coordinator/publish-assist.ts`** — approve path passes `bypassPublishGate: true`.
+  - **`lib/queries/cached-public-markets.ts`**, **`components/public/public-event-detail.tsx`** — exclude `is_test` from public discovery/detail.
+  - **`lib/coordinator/publish-event.test.ts`** — unit test for bypass behavior; wired into `test:unit`.
+- **Verify:** `npx tsx lib/coordinator/publish-event.test.ts` PASS.
+- **Next:** Commit + PR; smoke admin publish-assist approve on blocked coordinator draft.
+
 ## Active work — Scenario test markets (`is_test`) (local, not deployed)
 - **Goal:** Seed a catalog of published QA markets (one per product scenario), flagged `is_test` for bulk purge before go-live.
 - **Personas:** Coordinator · Vendor · Patron (`/discover`, `/events/[id]/map`).
