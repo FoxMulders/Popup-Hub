@@ -74,7 +74,7 @@ export function isCoordinatorAccountBlocked(profile: CoordinatorFraudGate | null
   return status === 'suspended' || status === 'banned'
 }
 
-export function coordinatorPublishBlockReason(
+export function coordinatorHardPublishBlockReason(
   profile: CoordinatorFraudGate | null | undefined
 ): string | null {
   if (!profile) {
@@ -88,6 +88,16 @@ export function coordinatorPublishBlockReason(
   }
   if (isHighRiskCoordinator(profile)) {
     return 'Your organizer account requires additional verification before publishing markets.'
+  }
+  return null
+}
+
+export function coordinatorPublishBlockReason(
+  profile: CoordinatorFraudGate | null | undefined
+): string | null {
+  const hardBlock = coordinatorHardPublishBlockReason(profile)
+  if (hardBlock) {
+    return hardBlock
   }
   if (coordinatorHasPublishTrustPath(profile)) {
     return null
