@@ -2,6 +2,82 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Feature request resolution notes & reopen (local, not deployed)
+- **Goal:** Admins add user-visible resolution notes; submitters view fixes on My Suggestions and can reopen completed requests; retroactive access to all historical completed items.
+- **Personas:** All portals (submit/view) · platform admin `/admin/feedback`.
+- **Shipped locally:**
+  - **`supabase/migrations/133_feature_request_resolution.sql`** — `resolution_notes`, `resolved_at`, `reopened_at`; backfill `resolved_at` on completed rows; notification enum values.
+  - **API:** `PATCH /api/feedback/update` (resolution notes + notify on resolve); `GET /api/feedback/my-requests`; `POST /api/feedback/[id]/reopen`.
+  - **Admin:** `feedback-admin-dashboard.tsx` — Active/Completed tabs, resolution vs internal notes, empty-notes confirm on terminal status.
+  - **User:** `/suggestions` + `my-feature-requests.tsx`; menu link "My Suggestions".
+  - **Notifications:** `feature_request_resolved`, `feature_request_reopened`; portal filter + deep links.
+- **Verify:** Apply migration 133; admin Complete with notes → submitter notification → `/suggestions`; Completed tab backfill; reopen completed → pending + admin alert. User routes must not return `developer_notes`.
+- **Next:** User commit + deploy when ready; run migration on Supabase before prod smoke.
+
+- **Goal:** Simplify coordinator Step 2 direct-sales configuration — plain language, single booth-count control, per-brand caps under Advanced.
+- **Personas:** Coordinator · event setup wizard Step 2 (`/coordinator/events/[id]/setup?step=2`).
+- **Shipped locally:**
+  - **`lib/categories/mlm-constraints.ts`** — `readDirectSalesBoothCount`, `applyDirectSalesBoothCount`, `hasPerBrandDirectSalesLimits`, `coordinatorCategoryDisplayName`.
+  - **`components/coordinator/direct-sales-capacity-card.tsx`** — primary "Direct sales booths" control (0–50 presets + input); disabled state links to Vendor rules; approval cap when per-brand rows exist.
+  - **`components/coordinator/category-limit-editor.tsx`** — "Direct sales" labels; broad category hidden from manual picker/list; per-brand quick-add under collapsible Advanced.
+  - **`components/coordinator/wizard/wizard-step-capacity.tsx`**, **`market-setup-wizard.tsx`** — wire card + `openVendorRulesForDirectSales`.
+  - **Copy pass:** `wizard-step-event-details.tsx`, `event-form.tsx`, `category-buckets.ts`, `smart-populate-booth-caps.ts`.
+- **Verify:** `npx tsc --noEmit` — only pre-existing `.next/types/validator.ts` errors. Smoke: Step 1 toggle off → Step 2 disabled card; set booths to 3 → broad row + cap; set 0 → row removed; Advanced → add brand → approval cap appears.
+- **Next:** User commit + deploy when ready.
+
+- **Goal:** Clarify that "Total caps" is a read-only summary stat, not a button — fix misleading pill styling on wizard Step 2.
+- **Personas:** Coordinator · event setup wizard Step 2 (`/coordinator/events/[id]/setup?step=2`).
+- **Shipped locally:**
+  - **`components/coordinator/wizard/wizard-ui.tsx`** — `WizardStatChip` (label above value, `role="status"`, `cursor-default`, native `title` tooltip).
+  - **`components/coordinator/wizard/wizard-step-capacity.tsx`** — Floor / Max booths / Configured limits chips; Inventory subtitle branches on `skipVenueLayout`; empty-state helper copy; quarter-auction Total spots chip.
+- **Verify:** Step 2 with floor plan → three stat chips in Physical zone + SmartPopulateBoothCaps in Inventory. Step 2 without floor plan → Configured limits chip shows "None yet" + helper text; subtitle omits floor suggestion. Chips are not clickable.
+- **Next:** User commit + deploy when ready.
+
+## Active work — Category max-slots input fix (local, not deployed)
+- **Goal:** Coordinators can clear and retype max slot counts (e.g. change `1` to `4`) without the leading digit snapping back and appending (`14`).
+- **Personas:** Coordinator · event setup wizard Step 2 (`CategoryLimitEditor` on `/coordinator/events/[id]/setup`).
+- **Shipped locally:**
+  - **`components/coordinator/category-limit-editor.tsx`** — `SlotCountInput` uses draft string while editing and commits on blur; row max-slots and add-category slots inputs updated.
+- **Verify:** Smoke: edit broad MLM or any category slot from `1` → clear → type `4` → blur shows `4`; per-brand MLM rows stay read-only at `1`; empty blur falls back to `1`.
+- **Next:** User commit + deploy when ready.
+
+## Active work — MLM broad category pinned first (local, not deployed)
+- **Goal:** Move **Multi Level Marketer (MLM)** to the top of coordinator MLM lists so coordinators can set broad MLM slot caps without scrolling past brand names.
+- **Personas:** Coordinator · market setup wizard Step 2 (`CategoryLimitEditor`, Commercial / MLMs accordion).
+- **Shipped locally:**
+  - **`lib/categories.ts`** — `compareCategoryNamesWithMlmBroadFirst` pins `PASSPORT_MLM_BROAD_CATEGORY_NAME` first, then A→Z.
+  - **`components/coordinator/category-limit-editor.tsx`** — commercial accordion bucket, Add category dropdown, and broad quick-start list use the new comparator when `allowMlm`; flat/non-grouped lists stay plain alphabetical.
+  - **`lib/categories/display-sort.test.ts`** — unit tests for compare helper.
+- **Verify:** `npx tsc --noEmit` PASS; `npx tsx lib/categories/display-sort.test.ts` PASS. Smoke: wizard Step 2 with MLM allowed → Commercial / MLMs accordion shows broad parent first; Add category dropdown lists it before brands.
+- **Next:** User commit + deploy when ready.
+
+## Active work — Capacity step skip-layout copy (local, not deployed)
+- **Goal:** Clarify Step 2 info box when coordinators skip venue space planning — avoid "CAD layout" confusion next to CAD currency fields.
+- **Personas:** Coordinator · event setup wizard Step 2 (`/coordinator/events/[id]/setup?step=2`).
+- **Shipped locally:**
+  - **`components/coordinator/wizard/wizard-step-capacity.tsx`** — replaced "No CAD layout for this market…" with "No need to upload a floor plan, this section will help you set limits on vendor types and help ensure variety." when `skipVenueLayout` is true.
+- **Verify:** Enable "No venue space planning required" on Step 1 → Step 2 shows new grey info box under Physical & pricing setup; normal markets still show floor dimension stats (no info box).
+- **Next:** User commit + deploy when ready.
+
+## Active work — Vendor teardown copy clarity (local, not deployed)
+- **Goal:** First-time coordinators understand the "Clean up and/or tear down" policy selector in event setup.
+- **Personas:** Coordinator · event setup wizard + event form.
+- **Shipped locally:**
+  - **`lib/booth-clearance-policy.ts`** — clearer option labels and descriptions (checkout photo + furniture expectations).
+  - **`components/coordinator/wizard/wizard-step-event-details.tsx`** — selected-policy helper text below select; improved tooltip.
+  - **`src/qa_review/components/coordinator/wizard/wizard-step-event-details_step1_qa.tsx`** — QA snapshot aligned.
+- **Verify:** Open community market setup wizard step 1; dropdown shows descriptive labels; helper text updates when selection changes; tooltip explains photo + furniture rules.
+- **Next:** User commit + deploy when ready.
+
+## Shipped — Market readiness setup link (135034d, prod)
+- **Goal:** Market setup phase on the event hub timeline links back to the Event Setup checklist below.
+- **Personas:** Coordinator · Event hub (`/coordinator/events/[id]`).
+- **Shipped:**
+  - **`components/coordinator/event-hub-timeline.tsx`** — setup phase `href` + CTA (`Continue setup` / `Review setup checklist`) scrolls to `#event-setup-checklist`.
+  - **`components/coordinator/event-readiness-checklist.tsx`** — `scroll-mt-24` on checklist anchor for sticky header offset.
+- **Verify:** Open draft event hub on https://popuphub.ca; Market readiness "Market setup" row shows link; click scrolls to Event Setup checklist.
+- **Prod:** https://popuphub.ca (build v1.176.0, commit `135034d`).
+
 ## Active work — Admin visibility for all markets (local, not deployed)
 - **Goal:** Platform admins can list and inspect every coordinator market, including drafts.
 - **Personas:** Platform operator · Coordinator portal (`/coordinator/markets`, HubGrid, event hubs).
@@ -75,16 +151,29 @@
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: logged-in patron ribbon has no HubGuard; guest/vendor/footer still link to `/check`; mobile footer readable; header height steady guest ↔ patron.
 - **Next:** User commit + deploy when ready.
 
-## Active work — List-mode map previews (local, not deployed)
+## Active work — Patron postal-code search + list-view maps (local, not deployed)
+- **Goal:** Fix postal-code/address search on Discover and show inline Google maps on list cards without requiring Maps Static API.
+- **Personas:** Patron · `/discover` list view + area filter.
+- **Shipped locally:**
+  - **`lib/maps/geocode-query.ts`** — server geocode helper with Canadian postal-code normalization (`T5E 5R1` → `T5E 5R1, Canada`); uses `GOOGLE_MAPS_SERVER_API_KEY` → `GOOGLE_MAPS_API_KEY` → public key.
+  - **`POST /api/geocode`** — patron address/postal-code lookup (no client key exposure).
+  - **`components/location/home-address-picker.tsx`** — `geocodeManual()` calls `/api/geocode` first; browser `Geocoder` remains fallback.
+  - **`components/map/card-location-map.tsx`** — IntersectionObserver-gated interactive mini-map per card (`gestureHandling="none"`, tap-to-directions); uses Maps JavaScript API (already enabled).
+  - **`components/events/event-card.tsx`** — `showLocationMap` now renders `CardLocationMap` instead of `StaticEventMap`.
+- **Verify:** `npx tsc --noEmit` — only pre-existing `.next/types/validator.ts` errors. Smoke: `/discover` → enter `T5E 5R1` + Enter recenters list/map; list tab shows inline map per card as you scroll; tap map or Directions opens Google Maps.
+- **Blockers:** None for maps (JS API already works). Postal search needs `GOOGLE_MAPS_SERVER_API_KEY` (or fallback keys) with Geocoding API enabled on Vercel.
+- **Next:** User commit + deploy when ready.
+
+## Active work — List-mode map previews (superseded by CardLocationMap, local, not deployed)
 - **Goal:** Show Google map location thumbnails on event cards in list mode for patron Discover and vendor market browse.
 - **Personas:** Patron · `/discover` list view · Vendor · `/vendor/events` list view.
 - **Shipped locally:**
-  - **`lib/maps/static-map.ts`** — `buildStaticMapUrl()` for Google Static Maps API thumbnails.
-  - **`components/map/static-event-map.tsx`** — lazy-loaded thumbnail with `onError` fallback + tap-to-directions.
-  - **`components/events/event-card.tsx`** — `showLocationMap` prop renders compact map row below event details.
+  - **`lib/maps/static-map.ts`** — `buildStaticMapUrl()` for Google Static Maps API thumbnails (legacy; no longer used on cards).
+  - **`components/map/static-event-map.tsx`** — legacy static thumbnail (replaced by `card-location-map.tsx` on event cards).
+  - **`components/events/event-card.tsx`** — `showLocationMap` prop renders `CardLocationMap` below event details.
   - **`discover-event-cards.tsx`**, **`vendor-market-grid.tsx`** — enable `showLocationMap` on list cards.
-- **Verify:** `npx tsc --noEmit` PASS. Smoke: `/discover` list tab shows map thumbnail per card; `/vendor/events` list tab same; tap opens Google directions.
-- **Blockers:** Enable **Maps Static API** on `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` in Google Cloud (referrer: popuphub.ca + localhost). Without it, cards show pin placeholder fallback.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: `/discover` list tab shows interactive map per card; `/vendor/events` list tab same; tap opens Google directions.
+- **Blockers:** ~~Enable Maps Static API~~ — resolved by switching to interactive Maps JS mini-maps.
 - **Next:** User commit + deploy when ready.
 
 - **Goal:** Close user QA list — per-market invite links, Google OAuth exit trap, PopupFunds logos, mobile profile/passport, profile email + optional fields, HubGuard claim verification, stale-session reload sign-out, help@popuphub.ca, loader linen match.
@@ -2327,9 +2416,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `57f6644` (pushed to `origin/master`)
-- Last deploy commit: `57f6644` - feat: ship 34 session updates (Admin visibility for all markets; Admin console user management; OAuth sign-up: Apple, Microsoft, Facebook; Native home-screen widgets; +30 more)
-- Production: https://popuphub.ca - **v1.175.0 build 1** | commit `bfcfacc` (handoff updated 2026-06-28 10:28)
+- Branch: `master` @ `135034d` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.176.0 build 1** | commit `807dd19` (handoff updated 2026-06-28 12:00)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 

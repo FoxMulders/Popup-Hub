@@ -8,24 +8,24 @@ export const CLEARANCE_POLICY_OPTIONS: {
 }[] = [
   {
     value: 'not_required',
-    label: 'Not required for this event',
+    label: 'No checkout photos or teardown required',
     shortLabel: 'Not required',
     description:
-      'Skip photo verification. You can still mark booths cleared manually if you want a simple checklist.',
+      'Vendors can leave without submitting a checkout photo. You can still mark booths cleared manually on market day.',
   },
   {
     value: 'leave_furniture',
-    label: 'Leave venue tables & chairs',
+    label: 'Vendors clear items; leave venue tables/chairs',
     shortLabel: 'Leave furniture',
     description:
-      'Vendors remove personal banners, stock, and trash. Venue-provided tables and chairs stay in place. Photo proof required.',
+      'Vendors remove banners, stock, and trash, then submit a checkout photo. Host-provided tables and chairs stay in place.',
   },
   {
     value: 'pack_furniture',
-    label: 'Pack away all tables & chairs',
+    label: 'Vendors clear items and pack tables/chairs',
     shortLabel: 'Pack everything',
     description:
-      'Vendors must break down and remove all tables, chairs, and personal items before leaving. Photo proof required.',
+      'Vendors remove all personal items, pack away every table and chair, and submit a checkout photo before leaving.',
   },
 ]
 

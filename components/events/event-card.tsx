@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { getEventDateLabel } from '@/lib/shopper/events'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { CoordinatorTrustChip } from '@/components/coordinator/coordinator-reliability-badge'
-import { StaticEventMap } from '@/components/map/static-event-map'
+import { CardLocationMap } from '@/components/map/card-location-map'
 import { vendorApplicationCardBadgeLabel } from '@/lib/vendor/application-status-ui'
 import type { ApplicationStatus, Event } from '@/types/database'
 import type { EventDisplayStatus } from '@/lib/queries/events'
@@ -188,7 +188,7 @@ export function EventCard({
         Number.isFinite(event.latitude) &&
         Number.isFinite(event.longitude) ? (
           <div className="px-4 pb-3">
-            <StaticEventMap
+            <CardLocationMap
               lat={event.latitude}
               lng={event.longitude}
               locationName={event.location_name}

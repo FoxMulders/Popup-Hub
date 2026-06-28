@@ -1,1 +1,1 @@
-feat: ship 34 session updates (Admin visibility for all markets; Admin console user management; OAuth sign-up: Apple, Microsoft, Facebook; Native home-screen widgets; +30 more)
+feat: ship 39 session updates (Feature request resolution notes & reopen; Category max-slots input fix; MLM broad category pinned first; Capacity step skip-layout copy; +35 more)

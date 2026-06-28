@@ -4,6 +4,7 @@ import type { Notification, NotificationType } from '@/types/database'
 /** Platform-admin alerts — shown in every portal feed (only admins receive these rows). */
 const PLATFORM_ADMIN_TYPES = new Set<NotificationType>([
   'feature_request_submitted',
+  'feature_request_reopened',
   'venue_submission_pending',
 ])
 
@@ -18,6 +19,7 @@ const PATRON_TYPES = new Set<NotificationType>([
   'coordinator_market_published',
   'auction_won',
   'auction_starting',
+  'feature_request_resolved',
   ...PLATFORM_ADMIN_TYPES,
 ])
 
@@ -37,6 +39,7 @@ const VENDOR_TYPES = new Set<NotificationType>([
   'coordinator_announcement',
   'nearby_market_published',
   'hubguard_review_response',
+  'feature_request_resolved',
   ...PLATFORM_ADMIN_TYPES,
 ])
 
@@ -50,6 +53,7 @@ const COORDINATOR_TYPES = new Set<NotificationType>([
   'payment_received',
   'payment_overdue_released',
   'hubguard_vendor_review',
+  'feature_request_resolved',
   ...PLATFORM_ADMIN_TYPES,
 ])
 

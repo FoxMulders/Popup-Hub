@@ -1,5 +1,6 @@
 'use client'
 
+/** @deprecated Use DirectSalesCapacityCard instead. */
 interface MlmTierGuardProps {
   globalMlmCap: number
   onGlobalMlmCapChange: (cap: number) => void

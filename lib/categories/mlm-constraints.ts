@@ -1,6 +1,8 @@
 import type { Category } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 
+const BROAD_DIRECT_SALES_CATEGORY_NAME = 'Multi Level Marketer (MLM)'
+
 /** Known direct-sales brands — each is capped at one booth slot per event. */
 export const SINGLE_SLOT_MLM_BRAND_NAMES = [
   '4Life',
@@ -103,4 +105,74 @@ export function hydrateMlmCategoryLimits(
     return { ...limit, maxSlots: 1 }
   })
   return applyMlmLimitRules(withSingleSlot, categories, globalMlmCap)
+}
+
+/** Broad direct-sales category (any brand) in the catalog. */
+export function findBroadDirectSalesCategory(categories: Category[]): Category | undefined {
+  return categories.find(
+    (c) =>
+      c.is_broad === true &&
+      (c.name === BROAD_DIRECT_SALES_CATEGORY_NAME || (c.is_mlm === true && c.is_broad === true))
+  )
+}
+
+export function isBroadDirectSalesCategory(
+  category: Pick<Category, 'name' | 'is_broad' | 'is_mlm'> | undefined
+): boolean {
+  if (!category || category.is_broad !== true) return false
+  return category.name === BROAD_DIRECT_SALES_CATEGORY_NAME || category.is_mlm === true
+}
+
+export function readDirectSalesBoothCount(
+  limits: CategoryLimit[],
+  categories: Category[]
+): number {
+  const broad = findBroadDirectSalesCategory(categories)
+  if (!broad) return 0
+  const row = limits.find((l) => l.categoryId === broad.id)
+  return row?.maxSlots ?? 0
+}
+
+export function applyDirectSalesBoothCount(
+  limits: CategoryLimit[],
+  categories: Category[],
+  count: number,
+  feeCents: number = 0
+): CategoryLimit[] {
+  const broad = findBroadDirectSalesCategory(categories)
+  if (!broad) return limits
+
+  const nextCount = Math.max(0, Math.min(50, Math.round(count)))
+  const withoutBroad = limits.filter((l) => l.categoryId !== broad.id)
+
+  if (nextCount === 0) return withoutBroad
+
+  const existing = limits.find((l) => l.categoryId === broad.id)
+  return [
+    ...withoutBroad,
+    {
+      categoryId: broad.id,
+      categoryName: broad.name,
+      maxSlots: nextCount,
+      pricePerBooth: existing?.pricePerBooth ?? feeCents,
+      tableLengthFt: existing?.tableLengthFt ?? null,
+    },
+  ]
+}
+
+export function hasPerBrandDirectSalesLimits(
+  limits: CategoryLimit[],
+  categories: Category[]
+): boolean {
+  const byId = new Map(categories.map((c) => [c.id, c]))
+  return limits.some((limit) => {
+    const cat = byId.get(limit.categoryId)
+    return cat ? isPerBrandMlmSlotLimit(cat) : false
+  })
+}
+
+/** Coordinator-facing label; vendor passport keeps the DB category name. */
+export function coordinatorCategoryDisplayName(name: string): string {
+  if (name === BROAD_DIRECT_SALES_CATEGORY_NAME) return 'Direct sales (any brand)'
+  return name
 }

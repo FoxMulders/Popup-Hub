@@ -446,7 +446,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs whitespace-normal break-words">
-                Whether vendors must submit a photo when leaving and whether tables stay in place.
+                Sets vendor checkout rules: whether a photo is required when leaving, and whether host-provided tables and chairs stay in place or must be packed away.
               </TooltipContent>
             </Tooltip>
           </div>
@@ -471,6 +471,9 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            {CLEARANCE_POLICY_OPTIONS.find((o) => o.value === props.boothClearancePolicy)?.description}
+          </p>
         </div>
         ) : null}
       </div>
@@ -483,7 +486,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         subtitle={
           isQuarterAuction
             ? 'Optional insurance and booking settings vendors will see when they apply.'
-            : 'Insurance, MLM policy, and checkout options vendors will see.'
+            : 'Insurance, direct sales policy, and checkout options vendors will see.'
         }
         variant="wide"
       >
@@ -504,8 +507,8 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             <>
               <WizardSwitchRow
                 id="wizard-allow-mlm"
-                label="Allow direct sales / MLM vendors"
-                description="Recommended for most community markets — enables MLM categories in step 2."
+                label="Allow direct sales vendors"
+                description="Catalog and party-plan companies (e.g. Scentsy, doTERRA). When off, direct sales categories stay hidden in step 2."
                 control={
                   <Switch
                     id="wizard-allow-mlm"

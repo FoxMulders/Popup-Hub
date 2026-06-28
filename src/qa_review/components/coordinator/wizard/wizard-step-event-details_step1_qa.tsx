@@ -446,7 +446,7 @@ export function WizardStepEventDetailsQa(props: WizardStepEventDetailsProps) {
                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs whitespace-normal break-words">
-                Whether vendors must submit a photo when leaving and whether tables stay in place.
+                Sets vendor checkout rules: whether a photo is required when leaving, and whether host-provided tables and chairs stay in place or must be packed away.
               </TooltipContent>
             </Tooltip>
           </div>
@@ -471,6 +471,9 @@ export function WizardStepEventDetailsQa(props: WizardStepEventDetailsProps) {
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            {CLEARANCE_POLICY_OPTIONS.find((o) => o.value === props.boothClearancePolicy)?.description}
+          </p>
         </div>
         ) : null}
       </div>

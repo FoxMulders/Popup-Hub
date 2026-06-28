@@ -15,7 +15,7 @@ export const CATEGORY_BUCKET_DISPLAY_LABELS: Record<CategoryBucketKey, string> =
   art: 'Art & Prints',
   food: 'Food & Beverage',
   apparel: 'Apparel',
-  commercial: 'Commercial / MLMs',
+  commercial: 'Direct sales',
 }
 
 const FOOD_MATCHERS = [

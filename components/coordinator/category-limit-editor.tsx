@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { compareCategoryNames } from '@/lib/categories'
+import { useEffect, useMemo, useState } from 'react'
+import { compareCategoryNames, compareCategoryNamesWithMlmBroadFirst } from '@/lib/categories'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +19,10 @@ import { toast } from 'sonner'
 import {
   applyMlmLimitRules,
   clampMlmMaxSlots,
+  coordinatorCategoryDisplayName,
   DEFAULT_GLOBAL_MLM_CAP,
+  hasPerBrandDirectSalesLimits,
+  isBroadDirectSalesCategory,
   isMlmCategory,
   isPerBrandMlmSlotLimit,
   isSingleSlotMlmLimit,
@@ -61,7 +64,7 @@ const ACCORDION_BUCKETS: { key: DistributionBucketKey; label: string }[] = [
   { key: 'art', label: 'Art & Prints' },
   { key: 'food', label: 'Food & Beverage' },
   { key: 'apparel', label: 'Apparel' },
-  { key: 'commercial', label: 'Commercial / MLMs' },
+  { key: 'commercial', label: 'Direct sales' },
 ]
 
 function resolveCategoryName(limit: CategoryLimit, categories: Category[]): string {
@@ -77,6 +80,72 @@ function limitRowGridClass(useUnifiedFee: boolean) {
     useUnifiedFee
       ? 'grid-cols-[minmax(0,1fr)_5.5rem_2rem]'
       : 'grid-cols-[minmax(0,1fr)_5.5rem_6.5rem_2rem]'
+  )
+}
+
+function SlotCountInput({
+  value,
+  disabled = false,
+  readOnly = false,
+  min,
+  max,
+  onCommit,
+  className,
+  title,
+  'aria-label': ariaLabel,
+}: {
+  value: number
+  disabled?: boolean
+  readOnly?: boolean
+  min?: number
+  max?: number
+  onCommit: (n: number) => void
+  className?: string
+  title?: string
+  'aria-label'?: string
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+
+  useEffect(() => {
+    setDraft(null)
+  }, [value])
+
+  const display = draft ?? String(value)
+
+  function commit() {
+    const parsed = parseInt(draft ?? String(value), 10)
+    onCommit(Number.isFinite(parsed) ? parsed : value)
+    setDraft(null)
+  }
+
+  return (
+    <Input
+      type="number"
+      min={min}
+      max={max}
+      value={display}
+      disabled={disabled}
+      readOnly={readOnly}
+      onFocus={(e) => {
+        if (disabled || readOnly) return
+        setDraft(String(value))
+        e.currentTarget.select()
+      }}
+      onChange={(e) => {
+        if (disabled || readOnly) return
+        setDraft(e.target.value)
+      }}
+      onBlur={() => {
+        if (disabled || readOnly) return
+        commit()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+      }}
+      className={className}
+      title={title}
+      aria-label={ariaLabel}
+    />
   )
 }
 
@@ -105,6 +174,9 @@ export function CategoryLimitEditor({
       return cat ? cat.is_broad !== true : false
     })
   )
+  const [showBrandCaps, setShowBrandCaps] = useState(() =>
+    hasPerBrandDirectSalesLimits(value, categories)
+  )
 
   const usedCategoryIds = new Set(value.map((v) => v.categoryId))
   const availableCategories = useMemo(
@@ -114,9 +186,12 @@ export function CategoryLimitEditor({
           (c) =>
             !usedCategoryIds.has(c.id) &&
             (allowMlm || !c.is_mlm) &&
+            !(allowMlm && isBroadDirectSalesCategory(c)) &&
             (showNicheCaps || c.is_broad === true || (allowMlm && c.is_mlm === true))
         )
-        .sort((a, b) => compareCategoryNames(a.name, b.name)),
+        .sort((a, b) =>
+          (allowMlm ? compareCategoryNamesWithMlmBroadFirst : compareCategoryNames)(a.name, b.name)
+        ),
     [categories, value, allowMlm, showNicheCaps]
   )
 
@@ -126,7 +201,9 @@ export function CategoryLimitEditor({
         .filter(
           (c) => !usedCategoryIds.has(c.id) && (allowMlm || !c.is_mlm) && c.is_broad === true
         )
-        .sort((a, b) => compareCategoryNames(a.name, b.name)),
+        .sort((a, b) =>
+          (allowMlm ? compareCategoryNamesWithMlmBroadFirst : compareCategoryNames)(a.name, b.name)
+        ),
     [categories, value, allowMlm]
   )
 
@@ -167,6 +244,14 @@ export function CategoryLimitEditor({
     [limitsWithNames]
   )
 
+  const displayLimits = useMemo(() => {
+    if (!allowMlm) return sortedLimits
+    return sortedLimits.filter((limit) => {
+      const cat = categories.find((c) => c.id === limit.categoryId)
+      return !isBroadDirectSalesCategory(cat)
+    })
+  }, [sortedLimits, categories, allowMlm])
+
   const groupedLimits = useMemo(() => {
     if (!grouped) return null
 
@@ -175,7 +260,7 @@ export function CategoryLimitEditor({
       byBucket.set(bucket.key, [])
     }
 
-    for (const limit of sortedLimits) {
+    for (const limit of displayLimits) {
       const cat = categories.find((c) => c.id === limit.categoryId)
       const key = classifyCategory(
         cat ?? {
@@ -188,11 +273,17 @@ export function CategoryLimitEditor({
     }
 
     return ACCORDION_BUCKETS.map((bucket) => {
-      const limits = byBucket.get(bucket.key) ?? []
+      const rawLimits = byBucket.get(bucket.key) ?? []
+      const limits =
+        bucket.key === 'commercial' && allowMlm
+          ? [...rawLimits].sort((a, b) =>
+              compareCategoryNamesWithMlmBroadFirst(a.categoryName, b.categoryName)
+            )
+          : rawLimits
       const slotSum = limits.reduce((sum, l) => sum + l.maxSlots, 0)
       return { ...bucket, limits, slotSum }
     }).filter((g) => g.limits.length > 0)
-  }, [grouped, sortedLimits, categories, allowMlm, mlmCategoryIds])
+  }, [grouped, displayLimits, categories, allowMlm, mlmCategoryIds])
 
   function commitLimits(next: CategoryLimit[]) {
     onChange(allowMlm ? applyMlmLimitRules(next, categories, globalMlmCap) : next)
@@ -247,7 +338,7 @@ export function CategoryLimitEditor({
 
   function addAllMlmBrands() {
     if (mlmBrandCategories.length === 0) {
-      toast.error('All MLM brands are already added')
+      toast.error('All direct-sales brands are already added')
       return
     }
 
@@ -259,8 +350,8 @@ export function CategoryLimitEditor({
     if (remainingCapacity <= 0) {
       toast.error(
         maxTotalSlots != null
-          ? `Cannot add MLM brands — total caps already at the floor maximum (${maxTotalSlots}).`
-          : 'Cannot add more MLM brands.'
+          ? `Cannot add direct-sales brands — total caps already at the floor maximum (${maxTotalSlots}).`
+          : 'Cannot add more direct-sales brands.'
       )
       return
     }
@@ -273,6 +364,7 @@ export function CategoryLimitEditor({
       tableLengthFt: null,
     }))
     commitLimits([...value, ...additions])
+    setShowBrandCaps(true)
   }
 
   function removeLimit(categoryId: string) {
@@ -306,9 +398,10 @@ export function CategoryLimitEditor({
     broadCategories.length === 0 ||
     (maxTotalSlots != null && maxTotalSlots > 0 && totalSlots >= maxTotalSlots)
 
-  function renderLimitRow(limit: (typeof sortedLimits)[number], index: number) {
+  function renderLimitRow(limit: (typeof displayLimits)[number], index: number) {
     const singleSlotLocked = allowMlm && isSingleSlotMlmLimit(limit, categories)
     const isMlmRow = mlmCategoryIds.has(limit.categoryId)
+    const displayName = coordinatorCategoryDisplayName(limit.categoryName)
 
     return (
       <div
@@ -321,21 +414,21 @@ export function CategoryLimitEditor({
         <div className="min-w-0">
           <span className="inline-flex flex-wrap items-center gap-1.5">
             <Badge variant="outline" className="max-w-full truncate font-medium">
-              {limit.categoryName}
+              {displayName}
             </Badge>
             {isMlmRow ? (
               <Tooltip>
                 <TooltipTrigger type="button">
                   <span
                     className="rounded bg-terracotta-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta-800 ring-1 ring-terracotta-200/80"
-                    aria-label="Multi-Level Marketing category"
+                    aria-label="Direct sales brand"
                   >
-                    MLM
+                    Direct sales
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  Multi-Level Marketing brand — booth approval is capped globally to keep the market
-                  diverse.
+                  Multi-level marketing / catalog sales company — each brand is limited to one booth
+                  slot unless you set a collective approval cap.
                 </TooltipContent>
               </Tooltip>
             ) : null}
@@ -354,20 +447,19 @@ export function CategoryLimitEditor({
             )}
           </span>
         </div>
-        <Input
-          type="number"
+        <SlotCountInput
           min={singleSlotLocked ? 1 : 0}
           max={singleSlotLocked ? 1 : 100}
           value={limit.maxSlots}
           disabled={singleSlotLocked}
           readOnly={singleSlotLocked}
-          onChange={(e) => updateSlots(limit.categoryId, parseInt(e.target.value) || 1)}
+          onCommit={(n) => updateSlots(limit.categoryId, n)}
           className={cn(
             'h-8 w-full text-center tabular-nums',
             singleSlotLocked && 'cursor-not-allowed bg-muted text-muted-foreground opacity-70'
           )}
-          title={singleSlotLocked ? 'Each MLM brand is limited to 1 booth slot' : undefined}
-          aria-label={`${slotsLabel} for ${limit.categoryName}`}
+          title={singleSlotLocked ? 'Each direct-sales brand is limited to 1 booth slot' : undefined}
+          aria-label={`${slotsLabel} for ${displayName}`}
         />
         {useUnifiedFee ? null : (
           <div className="relative w-full">
@@ -382,7 +474,7 @@ export function CategoryLimitEditor({
               key={`${limit.categoryId}-${limit.pricePerBooth}`}
               onBlur={(e) => updatePriceDollars(limit.categoryId, parseFloat(e.target.value))}
               className="h-8 w-full pl-5 text-right tabular-nums"
-              aria-label={`Booth fee for ${limit.categoryName}`}
+              aria-label={`Booth fee for ${displayName}`}
             />
           </div>
         )}
@@ -392,7 +484,7 @@ export function CategoryLimitEditor({
           size="icon"
           className="h-7 w-7 justify-self-end text-muted-foreground hover:text-red-500"
           onClick={() => removeLimit(limit.categoryId)}
-          aria-label={`Remove ${limit.categoryName}`}
+          aria-label={`Remove ${displayName}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -446,7 +538,7 @@ export function CategoryLimitEditor({
   }
 
   function renderLimitsBody() {
-    if (value.length === 0) return null
+    if (displayLimits.length === 0) return null
 
     if (grouped && groupedLimits) {
       return (
@@ -483,7 +575,7 @@ export function CategoryLimitEditor({
           ))}
           <div className="flex items-center justify-between rounded-lg border border-stone-200 bg-canvas px-3 py-2 text-xs">
             <span className="text-muted-foreground">
-              {value.length} {value.length === 1 ? 'category' : 'categories'}
+              {displayLimits.length} {displayLimits.length === 1 ? 'category' : 'categories'}
             </span>
             <span className="font-bold tabular-nums text-foreground">
               {totalSlots} total {isQuarterAuction ? 'spots' : 'slots'}
@@ -497,7 +589,7 @@ export function CategoryLimitEditor({
       <div className="overflow-hidden rounded-xl border border-stone-200">
         {renderLimitsHeader()}
         <div className="divide-y divide-stone-200/60">
-          {sortedLimits.map((limit, index) => renderLimitRow(limit, index))}
+          {displayLimits.map((limit, index) => renderLimitRow(limit, index))}
         </div>
         <div
           className={cn(
@@ -506,7 +598,7 @@ export function CategoryLimitEditor({
           )}
         >
           <span className="font-medium text-muted-foreground">
-            {value.length} {value.length === 1 ? 'category' : 'categories'}
+            {displayLimits.length} {displayLimits.length === 1 ? 'category' : 'categories'}
           </span>
           <span className="text-center font-bold tabular-nums text-foreground">{totalSlots} total</span>
           <span className={useUnifiedFee ? 'hidden' : undefined} />
@@ -542,26 +634,60 @@ export function CategoryLimitEditor({
         </div>
       ) : null}
 
-      {allowMlm && mlmBrandCategories.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-purple-200/80 bg-purple-50/40 px-3 py-2">
-          <p className="text-xs text-muted-foreground">
-            <strong className="font-semibold text-foreground">MLM brands:</strong> add each direct-sales
-            brand at 1 booth slot (approval cap applies separately).
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="shrink-0 gap-1.5 border-purple-300"
-            onClick={addAllMlmBrands}
-            disabled={
-              maxTotalSlots != null && maxTotalSlots > 0 && totalSlots >= maxTotalSlots
-            }
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Add all MLM brands ({mlmBrandCategories.length})
-          </Button>
-        </div>
+      {allowMlm ? (
+        <details
+          className="group overflow-hidden rounded-lg border border-dashed border-purple-200/80 bg-card"
+          open={showBrandCaps}
+          onToggle={(e) => setShowBrandCaps((e.currentTarget as HTMLDetailsElement).open)}
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 marker:content-none hover:bg-canvas/50 [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-1.5">
+              <ChevronDown
+                className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                aria-hidden
+              />
+              <Label className="cursor-pointer text-xs font-medium text-foreground">
+                Advanced: cap specific brands
+              </Label>
+              <Tooltip>
+                <TooltipTrigger type="button">
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Limit individual catalog-sales brands (e.g. only one Scentsy booth). Each brand is
+                  capped at one slot. Use the direct sales booths control above for a generic count
+                  across any brand.
+                </TooltipContent>
+              </Tooltip>
+            </span>
+          </summary>
+          {mlmBrandCategories.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-purple-200/60 bg-purple-50/40 px-3 py-2">
+              <p className="text-xs text-muted-foreground">
+                <strong className="font-semibold text-foreground">Specific brands:</strong> add each
+                direct-sales brand at 1 booth slot.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0 gap-1.5 border-purple-300"
+                onClick={addAllMlmBrands}
+                disabled={
+                  maxTotalSlots != null && maxTotalSlots > 0 && totalSlots >= maxTotalSlots
+                }
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Add all brands ({mlmBrandCategories.length})
+              </Button>
+            </div>
+          ) : (
+            <p className="border-t border-purple-200/60 px-3 py-2 text-xs text-muted-foreground">
+              All direct-sales brands are already listed below, or add them one at a time in the
+              category slot form.
+            </p>
+          )}
+        </details>
       ) : null}
 
       <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-stone-200 bg-card px-3 py-2">
@@ -631,18 +757,22 @@ export function CategoryLimitEditor({
                     {(value) => {
                       if (!value) return 'Select…'
                       const cat = categories.find((c) => c.id === value)
-                      return cat?.name ?? 'Select…'
+                      return cat ? coordinatorCategoryDisplayName(cat.name) : 'Select…'
                     }}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {availableCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id} label={cat.name}>
+                    <SelectItem
+                      key={cat.id}
+                      value={cat.id}
+                      label={coordinatorCategoryDisplayName(cat.name)}
+                    >
                       <span className="flex items-center gap-2">
-                        {cat.name}
+                        {coordinatorCategoryDisplayName(cat.name)}
                         {cat.is_mlm ? (
                           <span className="rounded bg-purple-100 px-1 text-[10px] font-medium text-purple-700">
-                            MLM
+                            Direct sales
                           </span>
                         ) : null}
                       </span>
@@ -653,19 +783,18 @@ export function CategoryLimitEditor({
             </div>
             <div className="space-y-1">
               <Label className="text-xs">{slotsLabel}</Label>
-              <Input
-                type="number"
+              <SlotCountInput
                 min={1}
                 max={addingMlmLocked ? 1 : 100}
                 value={addingMlmLocked ? 1 : slots}
                 disabled={addingMlmLocked}
                 readOnly={addingMlmLocked}
-                onChange={(e) => setSlots(parseInt(e.target.value) || 1)}
+                onCommit={setSlots}
                 className={cn(
                   'h-9 tabular-nums',
                   addingMlmLocked && 'cursor-not-allowed bg-muted text-muted-foreground opacity-70'
                 )}
-                title={addingMlmLocked ? 'Each MLM brand is limited to 1 booth slot' : undefined}
+                title={addingMlmLocked ? 'Each direct-sales brand is limited to 1 booth slot' : undefined}
               />
             </div>
             {useUnifiedFee ? null : (

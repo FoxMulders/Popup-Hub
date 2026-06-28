@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { Bell, Lightbulb, LogOut, X } from 'lucide-react'
+import { Bell, Lightbulb, ListChecks, LogOut, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { UserAvatar } from '@/components/profile/user-avatar'
@@ -280,6 +280,11 @@ export function AppMenuSheet({
                 }}
               />
             ) : null}
+            <MenuButtonItem
+              label="My Suggestions"
+              icon={<ListChecks className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
+              onClick={() => closeAndNavigate('/suggestions')}
+            />
             <MenuButtonItem
               label="Notifications"
               icon={<Bell className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}

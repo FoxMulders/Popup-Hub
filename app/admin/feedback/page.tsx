@@ -25,7 +25,7 @@ export default async function AdminFeedbackPage() {
   const { data, error } = await adminContext.db
     .from('feature_requests')
     .select(
-      'id, user_id, session_role, submitter_role, title, target_component, problem, dream_solution, impact_level, screenshot_url, page_path, status, developer_notes, created_at, updated_at'
+      'id, user_id, session_role, submitter_role, title, target_component, problem, dream_solution, impact_level, screenshot_url, page_path, status, developer_notes, resolution_notes, resolved_at, reopened_at, created_at, updated_at'
     )
     .order('created_at', { ascending: false })
 

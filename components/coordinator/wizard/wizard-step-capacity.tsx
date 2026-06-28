@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CategoryLimitEditor, type CategoryLimit } from '@/components/coordinator/category-limit-editor'
-import { MlmTierGuard } from '@/components/coordinator/mlm-tier-guard'
+import { DirectSalesCapacityCard } from '@/components/coordinator/direct-sales-capacity-card'
 import { SmartPopulateBoothCaps } from '@/components/coordinator/smart-populate-booth-caps'
-import { WizardZone } from '@/components/coordinator/wizard/wizard-ui'
+import { WizardZone, WizardStatChip } from '@/components/coordinator/wizard/wizard-ui'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import { WIZARD_DRAFT_BADGE, WIZARD_INFO_BOX } from '@/lib/wizard/wizard-panel-styles'
 import {
@@ -53,6 +53,7 @@ export interface WizardStepCapacityProps {
   venueSubmissionPending?: boolean
   venueProfile?: VenueProfile
   onVenueProfileChange?: (profile: VenueProfile) => void
+  onOpenVendorRules?: () => void
 }
 
 export function WizardStepCapacity({
@@ -89,10 +90,14 @@ export function WizardStepCapacity({
   venueSubmissionPending = false,
   venueProfile = 'indoor',
   onVenueProfileChange,
+  onOpenVendorRules,
 }: WizardStepCapacityProps) {
   const [totalSpotsInput, setTotalSpotsInput] = useState('')
 
   const totalCaps = categoryLimits.reduce((sum, cl) => sum + (cl.maxSlots ?? 0), 0)
+  const configuredLimitsLabel = totalCaps > 0 ? totalCaps : 'None yet'
+  const configuredLimitsTooltip =
+    "Total booth limits you've set across all vendor categories. Configure limits in the list below."
 
   function applyCommonVendorTypes() {
     const preset = buildQuarterAuctionVendorPreset(categories, allowMlm)
@@ -181,11 +186,22 @@ export function WizardStepCapacity({
               </div>
             </div>
 
-            <span className="wizard-glass-inset inline-flex rounded-md border-harvest-200/80 px-2.5 py-1 text-xs tabular-nums">
-              Total spots <strong className="text-foreground">{totalCaps || '—'}</strong>
-            </span>
+            <WizardStatChip
+              label="Total spots"
+              value={configuredLimitsLabel}
+              tooltip="Total vendor spots configured across all categories. Set limits in the list below."
+            />
 
             <div className="space-y-3 border-t border-stone-200/80 pt-4">
+              <DirectSalesCapacityCard
+                allowMlm={allowMlm}
+                categories={categories}
+                categoryLimits={categoryLimits}
+                onCategoryLimitsChange={onCategoryLimitsChange}
+                globalMlmCap={globalMlmCap}
+                onGlobalMlmCapChange={onGlobalMlmCapChange}
+                onOpenVendorRules={onOpenVendorRules}
+              />
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Tags className="h-3.5 w-3.5 shrink-0 text-forest" aria-hidden />
                 <span>
@@ -239,19 +255,19 @@ export function WizardStepCapacity({
         >
           {!skipVenueLayout ? (
             <>
-              <div className="wizard-step2-section1 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                <span className="wizard-glass-inset rounded-md px-2.5 py-1 tabular-nums">
-                  Floor <strong className="text-foreground">{venueWidth}×{venueLength} ft</strong>
-                </span>
-                <span
-                  className="wizard-glass-inset rounded-md border-sage-200/80 px-2.5 py-1 tabular-nums"
-                  title="Accounts for walking aisles and emergency fire paths."
-                >
-                  Max booths <strong className="text-foreground">{layoutCapacity}</strong>
-                </span>
-                <span className="wizard-glass-inset col-span-2 rounded-md border-harvest-200/80 px-2.5 py-1 tabular-nums sm:col-span-1">
-                  Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
-                </span>
+              <div className="wizard-step2-section1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <WizardStatChip label="Floor" value={`${venueWidth}×${venueLength} ft`} />
+                <WizardStatChip
+                  label="Max booths"
+                  value={layoutCapacity}
+                  tooltip="Accounts for walking aisles and emergency fire paths."
+                />
+                <WizardStatChip
+                  label="Configured limits"
+                  value={configuredLimitsLabel}
+                  tooltip={configuredLimitsTooltip}
+                  className="col-span-2 sm:col-span-1"
+                />
               </div>
               {onVenueProfileChange ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -290,8 +306,8 @@ export function WizardStepCapacity({
             </>
           ) : (
             <p className="wizard-glass-inset px-3 py-2 text-xs text-muted-foreground">
-              No CAD layout for this market. Caps you set here control how many vendors can apply per
-              category.
+              No need to upload a floor plan, this section will help you set limits on vendor types
+              and help ensure variety.
             </p>
           )}
 
@@ -331,7 +347,11 @@ export function WizardStepCapacity({
         <WizardZone
           id="wizard-zone-capacity-categories"
           title="Inventory &amp; category limits"
-          subtitle="Apply suggested caps from your floor, then assign booth limits by vendor type."
+          subtitle={
+            skipVenueLayout
+              ? 'Set how many vendors can apply in each category.'
+              : 'Apply suggested caps from your floor, then assign booth limits by vendor type.'
+          }
           className="mx-auto w-full max-w-4xl"
         >
           {!skipVenueLayout ? (
@@ -356,18 +376,29 @@ export function WizardStepCapacity({
               hideTableSizeSelector
             />
           ) : (
-            <span className="wizard-glass-inset inline-flex rounded-md border-harvest-200/80 px-2.5 py-1 text-xs tabular-nums">
-              Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
-            </span>
+            <div className="space-y-1">
+              <WizardStatChip
+                label="Configured limits"
+                value={configuredLimitsLabel}
+                tooltip={configuredLimitsTooltip}
+              />
+              {totalCaps === 0 ? (
+                <p className="text-xs text-muted-foreground">Add booth limits per category below.</p>
+              ) : null}
+            </div>
           )}
 
           <div className="space-y-3 border-t border-stone-200/80 pt-4">
-            {allowMlm ? (
-              <MlmTierGuard
-                globalMlmCap={globalMlmCap}
-                onGlobalMlmCapChange={onGlobalMlmCapChange}
-              />
-            ) : null}
+            <DirectSalesCapacityCard
+              allowMlm={allowMlm}
+              categories={categories}
+              categoryLimits={categoryLimits}
+              onCategoryLimitsChange={onCategoryLimitsChange}
+              globalMlmCap={globalMlmCap}
+              onGlobalMlmCapChange={onGlobalMlmCapChange}
+              unifiedBoothFeeCents={onBoothPriceCentsChange ? boothPriceCents : undefined}
+              onOpenVendorRules={onOpenVendorRules}
+            />
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Tags className="h-3.5 w-3.5 shrink-0 text-forest" aria-hidden />
               <span>
@@ -398,7 +429,7 @@ export function WizardStepCapacity({
         >
           <Calculator className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <span>
-            Total caps ({totalCaps}) exceed the max booths your floor can hold ({layoutCapacity}). You
+            Configured limits ({totalCaps}) exceed the max booths your floor can hold ({layoutCapacity}). You
             can still proceed — the floor plan step will warn if placement runs out of room.
           </span>
         </p>

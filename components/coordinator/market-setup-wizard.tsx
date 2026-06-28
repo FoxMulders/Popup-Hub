@@ -1142,6 +1142,19 @@ export function MarketSetupWizard({
     }
   }
 
+  async function openVendorRulesForDirectSales() {
+    if (currentStep === 1) {
+      document.getElementById('wizard-zone-rules')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      document.getElementById('wizard-allow-mlm')?.focus()
+      return
+    }
+    await goToStep(1)
+    requestAnimationFrame(() => {
+      document.getElementById('wizard-zone-rules')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      document.getElementById('wizard-allow-mlm')?.focus()
+    })
+  }
+
   useEffect(() => {
     const cap = skipVenueLayout ? 2 : 3
     setMaxReachedStep((prev) => Math.min(prev, cap) as WizardStep)
@@ -1467,6 +1480,7 @@ export function MarketSetupWizard({
                 }
                 suggestCommunityLeagueDiscount={isCommunityLeagueVenueName(locationName)}
                 venueSubmissionPending={venueSubmissionPending}
+                onOpenVendorRules={() => void openVendorRulesForDirectSales()}
               />
               <WizardNav
                 step={2}

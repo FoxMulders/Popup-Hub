@@ -74,6 +74,8 @@ export type NotificationType =
   | 'market_feedback'
   | 'feedback_addressed'
   | 'feature_request_submitted'
+  | 'feature_request_resolved'
+  | 'feature_request_reopened'
   | 'venue_submission_pending'
   | 'priority_booth_invite'
   | 'nearby_market_published'
@@ -1003,9 +1005,15 @@ export interface FeatureRequest {
   page_path: string | null
   status: FeatureRequestStatus
   developer_notes: string | null
+  resolution_notes: string | null
+  resolved_at: string | null
+  reopened_at: string | null
   created_at: string
   updated_at: string
 }
+
+/** Submitter-safe projection — excludes developer_notes. */
+export type UserFeatureRequest = Omit<FeatureRequest, 'developer_notes' | 'user_id' | 'session_role'>
 
 export type MarketFeedMediaType = 'image' | 'video'
 

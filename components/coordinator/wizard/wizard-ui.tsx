@@ -124,6 +124,43 @@ export function WizardZone({
   )
 }
 
+/** Read-only wizard stat — label above value; not styled as a button. */
+export function WizardStatChip({
+  label,
+  value,
+  tooltip,
+  className,
+}: {
+  label: string
+  value: ReactNode
+  tooltip?: string
+  className?: string
+}) {
+  const valueText =
+    typeof value === 'string' || typeof value === 'number' ? String(value) : null
+  const ariaLabel = valueText ? `${label}: ${valueText}` : label
+
+  const chipBody = (
+    <>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-semibold text-foreground tabular-nums">{value}</p>
+    </>
+  )
+
+  const chipClassName = cn(
+    'wizard-glass-inset cursor-default px-3 py-2 min-w-[88px]',
+    className
+  )
+
+  return (
+    <div role="status" aria-label={ariaLabel} title={tooltip} className={chipClassName}>
+      {chipBody}
+    </div>
+  )
+}
+
 export function WizardSectionTitle({
   children,
   className,

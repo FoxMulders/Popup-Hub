@@ -248,7 +248,7 @@ export const CATEGORY_DISTRIBUTION_BUCKETS: CategoryDistributionBucket[] = [
   { key: 'art', label: 'Art', share: 0.15 },
   { key: 'food', label: 'Food', share: 0.15 },
   { key: 'apparel', label: 'Apparel', share: 0.1 },
-  { key: 'commercial', label: 'Commercial / MLMs', share: 0.1 },
+  { key: 'commercial', label: 'Direct sales', share: 0.1 },
 ]
 
 export interface BucketSlotAllocation {

@@ -70,6 +70,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   hubguard_vendor_review: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-forest bg-sage-50' },
   hubguard_review_response: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-harvest-700 bg-harvest-50' },
   feature_request_submitted: { icon: <Lightbulb className="h-4 w-4" />, color: 'text-amber-700 bg-amber-50' },
+  feature_request_resolved: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
+  feature_request_reopened: { icon: <Lightbulb className="h-4 w-4" />, color: 'text-amber-700 bg-amber-50' },
   venue_submission_pending: { icon: <MapPin className="h-4 w-4" />, color: 'text-violet-700 bg-violet-50' },
   feedback_addressed: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   application_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-500 bg-sage-50' },
@@ -215,7 +217,11 @@ export function NotificationList({
 
       const metadata =
         notification.metadata && typeof notification.metadata === 'object'
-          ? (notification.metadata as { event_id?: unknown; deep_link?: unknown })
+          ? (notification.metadata as {
+              event_id?: unknown
+              deep_link?: unknown
+              feature_request_id?: unknown
+            })
           : null
       const eventId =
         metadata && typeof metadata.event_id === 'string'
@@ -244,6 +250,22 @@ export function NotificationList({
       }
       if (notification.type === 'feature_request_submitted') {
         router.push('/admin/feedback')
+        return
+      }
+
+      if (notification.type === 'feature_request_reopened') {
+        router.push('/admin/feedback')
+        return
+      }
+
+      if (notification.type === 'feature_request_resolved') {
+        const featureRequestId =
+          metadata && typeof metadata.feature_request_id === 'string'
+            ? metadata.feature_request_id
+            : null
+        router.push(
+          featureRequestId ? `/suggestions?highlight=${featureRequestId}` : '/suggestions'
+        )
         return
       }
 

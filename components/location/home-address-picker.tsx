@@ -54,6 +54,29 @@ function geocodeAddressFallback(address: string): Promise<HomeAddressSelection |
   })
 }
 
+async function geocodeViaServer(query: string): Promise<HomeAddressSelection | null> {
+  try {
+    const res = await fetch('/api/geocode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as { lat?: number; lng?: number; label?: string }
+    if (
+      data.lat == null ||
+      data.lng == null ||
+      !Number.isFinite(data.lat) ||
+      !Number.isFinite(data.lng)
+    ) {
+      return null
+    }
+    return { lat: data.lat, lng: data.lng, label: data.label ?? query }
+  } catch {
+    return null
+  }
+}
+
 function HomeAddressPickerInner({
   id,
   label = 'Home address',
@@ -118,7 +141,7 @@ function HomeAddressPickerInner({
     }
     setError(null)
     setGeocoding(true)
-    const result = await geocodeAddressFallback(trimmed)
+    const result = (await geocodeViaServer(trimmed)) ?? (await geocodeAddressFallback(trimmed))
     setGeocoding(false)
     if (!result) {
       setError('Could not find that address. Check spelling or try a postal code.')

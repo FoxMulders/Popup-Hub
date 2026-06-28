@@ -822,16 +822,17 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
             <div className="flex items-center justify-between rounded-xl border p-4">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-medium text-foreground">Allow Direct Sales / MLM Vendors</p>
+                  <p className="text-sm font-medium text-foreground">Allow direct sales vendors</p>
                   <Tooltip>
                     <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      When enabled, MLM brand categories (Scentsy, Norwex, doTERRA, The Super Patch Company, etc.) become available in the category selector. Each coordinator chooses whether to allow them at their event.
+                      When enabled, catalog and party-plan companies (Scentsy, Norwex, doTERRA, etc.) can be
+                      offered at this market. You control how many booths they get in the capacity step.
                     </TooltipContent>
                   </Tooltip>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  When enabled, MLM brands (Scentsy, Norwex, doTERRA, etc.) appear as selectable categories.
+                  When enabled, direct-sales categories appear in the booth limit editor.
                 </p>
               </div>
               <Switch
