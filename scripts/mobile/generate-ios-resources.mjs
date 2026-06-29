@@ -234,20 +234,29 @@ async function patchInfoPlist() {
 
 async function ensureIosEntitlements() {
   const entitlementsPath = path.join(iosAppDir, 'App.entitlements')
-  const entitlements = `<?xml version="1.0" encoding="UTF-8"?>
+  const defaultEntitlements = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-\t<key>com.apple.developer.associated-domains</key>
+\t<key>com.apple.security.application-groups</key>
 \t<array>
-\t\t<string>applinks:popuphub.ca</string>
+\t\t<string>group.ca.popuphub.app</string>
 \t</array>
-\t<key>aps-environment</key>
-\t<string>development</string>
 </dict>
 </plist>
 `
-  await writeFile(entitlementsPath, entitlements)
+
+  if (!(await pathExists(entitlementsPath))) {
+    await writeFile(entitlementsPath, defaultEntitlements)
+    console.log('Created ios/App/App/App.entitlements (App Group only; no aps-environment)')
+  } else {
+    let xml = await readFile(entitlementsPath, 'utf8')
+    if (xml.includes('aps-environment')) {
+      xml = xml.replace(/\n?\t<key>aps-environment<\/key>\n?\t<string>[^<]+<\/string>/g, '')
+      await writeFile(entitlementsPath, xml)
+      console.log('Removed aps-environment from App.entitlements (forces Development signing)')
+    }
+  }
 
   const pbxproj = path.join(root, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj')
   if (!(await pathExists(pbxproj))) return

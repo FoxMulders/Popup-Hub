@@ -2,14 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — iOS code signing hardening (local, not deployed)
-- **Goal:** Fix ITMS-90035 (invalid signature) on TestFlight build 10 / v1.120.0.
+## Active work — iOS App Store signing fix ITMS-90035 (branch `cursor/ios-app-store-signing-fix-5279`)
+- **Goal:** Resubmit Popup Hub iOS v1.120.0 after App Store Connect rejected build 10 with **ITMS-90035** (invalid signature — Development/Ad Hoc cert instead of Apple Distribution).
+- **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
+- **Root cause:** Release archive likely signed with a Development identity (common when `aps-environment=development` was present, or Archive used Debug / a device-targeted dev profile). `generate-ios-resources.mjs` also overwrote `App.entitlements` on every `mobile:assets` run.
 - **Shipped locally:**
-  - **`.github/workflows/deploy.yml`** — archive step forces `CODE_SIGN_IDENTITY="Apple Distribution"` so CI cannot fall back to a development identity.
-  - **`ios/App/App.xcodeproj/project.pbxproj`** — removed legacy project-level `CODE_SIGN_IDENTITY = "iPhone Developer"` from Debug config.
-- **Blockers (external):** Confirm `BUILD_CERTIFICATE_BASE64` secret exports an **Apple Distribution** identity (not Apple Development). Check failed workflow log: `security find-identity -v -p codesigning` must list `Apple Distribution: … (6ACBDTX7T7)`.
-- **Next:** User commit + push to `master` to trigger Deploy to TestFlight; bump build number if re-uploading same marketing version.
+  - **`ios/App/App.xcodeproj/project.pbxproj`:** `CURRENT_PROJECT_VERSION` 2 → **11** (App + widget); widget target gets `ProvisioningStyle = Automatic`; Debug App target gets `DEVELOPMENT_TEAM`. Release stays `CODE_SIGN_STYLE = Automatic` only (no hardcoded `CODE_SIGN_IDENTITY` — conflicts with automatic signing in CI/Xcode).
+  - **`scripts/mobile/generate-ios-resources.mjs`:** Stop overwriting entitlements with `aps-environment=development`; preserve App Group; strip `aps-environment` if present.
+  - **`.github/workflows/deploy.yml`:** Clear stale provisioning profiles before archive; pass `CODE_SIGN_IDENTITY=Apple Distribution` on `xcodebuild archive`.
+  - **`PM/ios-testflight.md`:** ITMS-90035 troubleshooting row + expanded Development-profile guidance.
+- **Manual re-archive (Mac):** `git pull` → open `ios/App/App.xcworkspace` → confirm Version **1.120.0** / Build **11** → Scheme Archive = **Release** → **Any iOS Device** → Clean Build Folder → **Product → Archive** → **Distribute App → App Store Connect**.
+- **Verify:** Signing & Capabilities shows **Apple Distribution** for Release; `App.entitlements` has App Group only (no `aps-environment`); ASC processing passes without ITMS-90035.
+- **Next:** Monitor **Deploy to TestFlight** on `master` (`7d6765a4`); confirm build 11 processes in App Store Connect without ITMS-90035.
 
+## Active work — Signup role selection + questionnaire (local, not deployed)
 - **Goal:** Make vendor and coordinator signup obvious; explain role hierarchy (vendor/coordinator include patron access); offer a help-me-choose questionnaire.
 - **Personas:** All users · `/signup` (Patron · Vendor · Coordinator).
 - **Shipped locally:**

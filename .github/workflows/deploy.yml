@@ -110,6 +110,10 @@ jobs:
 
       - name: Build and Archive Xcode Project
         run: |
+          # Drop stale local profiles so automatic signing mints a fresh App Store
+          # profile via the ASC API key (xcodebuild won't refresh if a local match exists).
+          rm -rf ~/Library/MobileDevice/Provisioning\ Profiles/*
+
           # Automatic signing for a Release archive against the imported Apple Distribution
           # identity. -allowProvisioningUpdates + the Admin ASC API key generate/refresh the
           # matching App Store profile (and register the App Group) without minting a new cert.
@@ -126,7 +130,6 @@ jobs:
                      -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
                      DEVELOPMENT_TEAM=6ACBDTX7T7 \
                      CODE_SIGN_STYLE=Automatic \
-                     CODE_SIGN_IDENTITY="Apple Distribution" \
                      OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
                      COMPILER_INDEX_STORE_ENABLE=NO
 
