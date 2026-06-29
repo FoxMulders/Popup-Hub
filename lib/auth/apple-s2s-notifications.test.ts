@@ -17,7 +17,7 @@ function test(name: string, fn: () => void) {
 
 console.log('apple-s2s-notifications')
 
-test('parseAppleNotificationEvents extracts account-delete', () => {
+test('parseAppleNotificationEvents extracts account-delete object claim', () => {
   const event = parseAppleNotificationEvents({
     events: {
       type: 'account-delete',
@@ -32,6 +32,32 @@ test('parseAppleNotificationEvents extracts account-delete', () => {
   assert.equal(event.email, undefined)
 })
 
+test('parseAppleNotificationEvents parses stringified events claim from production', () => {
+  const event = parseAppleNotificationEvents({
+    events: JSON.stringify({
+      type: 'account-deleted',
+      sub: '001234.abc.def',
+      event_time: 1_700_000_000,
+    }),
+  })
+
+  assert.ok(event)
+  assert.equal(event.type, 'account-delete')
+  assert.equal(event.sub, '001234.abc.def')
+})
+
+test('parseAppleNotificationEvents normalizes account-deleted object claim', () => {
+  const event = parseAppleNotificationEvents({
+    events: {
+      type: 'account-deleted',
+      sub: '001234.abc.def',
+    },
+  })
+
+  assert.ok(event)
+  assert.equal(event.type, 'account-delete')
+})
+
 test('parseAppleNotificationEvents extracts consent-revoked with email', () => {
   const event = parseAppleNotificationEvents({
     events: {
@@ -44,6 +70,19 @@ test('parseAppleNotificationEvents extracts consent-revoked with email', () => {
   assert.ok(event)
   assert.equal(event.type, 'consent-revoked')
   assert.equal(event.email, 'relay@privaterelay.appleid.com')
+})
+
+test('parseAppleNotificationEvents parses stringified consent-revoked claim', () => {
+  const event = parseAppleNotificationEvents({
+    events: JSON.stringify({
+      type: 'consent-revoked',
+      sub: '001234.abc.def',
+      event_time: 1_700_000_000,
+    }),
+  })
+
+  assert.ok(event)
+  assert.equal(event.type, 'consent-revoked')
 })
 
 test('parseAppleNotificationEvents accepts email-enabled and email-disabled', () => {

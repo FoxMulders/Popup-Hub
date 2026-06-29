@@ -32,14 +32,53 @@ function resolveAppleAudiences(): string[] {
   return servicesId ? [bundleId, servicesId] : [bundleId]
 }
 
+function parseEventsClaim(rawEvents: unknown): Record<string, unknown> | null {
+  if (typeof rawEvents === 'string') {
+    try {
+      const parsed = JSON.parse(rawEvents) as unknown
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const first = parsed[0]
+        if (first && typeof first === 'object' && !Array.isArray(first)) {
+          return first as Record<string, unknown>
+        }
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  if (rawEvents && typeof rawEvents === 'object' && !Array.isArray(rawEvents)) {
+    return rawEvents as Record<string, unknown>
+  }
+
+  return null
+}
+
+function normalizeAppleEventType(type: string): AppleS2SEventType | null {
+  if (type === 'account-delete' || type === 'account-deleted') {
+    return 'account-delete'
+  }
+  if (
+    type === 'consent-revoked' ||
+    type === 'email-enabled' ||
+    type === 'email-disabled'
+  ) {
+    return type
+  }
+  return null
+}
+
 /** Parse the `events` claim from a verified Apple S2S JWT payload. */
 export function parseAppleNotificationEvents(claims: JWTPayload): AppleS2SEvent | null {
-  const rawEvents = claims.events
-  if (!rawEvents || typeof rawEvents !== 'object' || Array.isArray(rawEvents)) {
+  const events = parseEventsClaim(claims.events)
+  if (!events) {
     return null
   }
 
-  const events = rawEvents as Record<string, unknown>
   const type = events.type
   const sub = events.sub
 
@@ -47,18 +86,14 @@ export function parseAppleNotificationEvents(claims: JWTPayload): AppleS2SEvent 
     return null
   }
 
-  if (
-    type !== 'account-delete' &&
-    type !== 'consent-revoked' &&
-    type !== 'email-enabled' &&
-    type !== 'email-disabled'
-  ) {
+  const normalizedType = normalizeAppleEventType(type)
+  if (!normalizedType) {
     return null
   }
 
   const email = typeof events.email === 'string' ? events.email : undefined
 
-  return { type, sub, email }
+  return { type: normalizedType, sub, email }
 }
 
 /** Verify Apple's signed server-to-server notification JWT. */
