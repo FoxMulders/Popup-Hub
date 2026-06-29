@@ -129,6 +129,38 @@ Avoid describing the app as “just a website wrapper.” Emphasize coordinator/
 - **Universal links:** `public/.well-known/apple-app-site-association` — replace `TEAM_ID` before production; deploy to popuphub.ca.
 - **Windows CI:** Cannot archive iOS builds; use Mac locally or macOS CI (e.g. GitHub Actions + `macos-latest` + `fastlane` later).
 
+## 8b. CI signing — manual App Store distribution (current approach)
+
+The **Deploy to TestFlight** workflow uses **manual** distribution signing. This is deliberate: automatic signing (`-allowProvisioningUpdates`) on headless GitHub runners repeatedly drifted to *iOS App Development* profiles and minted a new certificate per run until the Apple certificate quota was exhausted (`Choose a certificate to revoke…`). Manual signing never contacts the portal to mint anything, so it is immune to both failures.
+
+### How it works
+
+- `project.pbxproj` Release configs (App + widget) pin `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "Apple Distribution"`, and a `PROVISIONING_PROFILE_SPECIFIER`.
+- CI imports one Apple Distribution `.p12` and installs **two** App Store profiles, then archives/exports with **no** `-allowProvisioningUpdates`.
+- Debug configs stay Automatic so local Xcode dev is unaffected.
+
+### Required GitHub secrets
+
+| Secret | Contents |
+|--------|----------|
+| `BUILD_CERTIFICATE_BASE64` | base64 of your **one** Apple Distribution `.p12` (with private key) |
+| `P12_PASSWORD` | password for that `.p12` |
+| `BUILD_PROVISION_PROFILE_BASE64` | base64 of the **App** App Store profile (`.mobileprovision`) for `ca.popuphub.app` |
+| `BUILD_WIDGET_PROVISION_PROFILE_BASE64` | base64 of the **widget** App Store profile for `ca.popuphub.app.PopupHubWidget` |
+| `APP_STORE_CONNECT_KEY_ID` / `APP_STORE_CONNECT_ISSUER_ID` / `APP_STORE_CONNECT_API_KEY` | ASC API key — used **only** to authenticate the TestFlight upload |
+
+### One-time setup in the Apple Developer portal
+
+1. **Certificates** → confirm exactly **one** Apple Distribution cert; revoke surplus **Development** certs to clear the quota wall.
+2. **Profiles → + → App Store** for **each** App ID:
+   - `ca.popuphub.app` → name the profile **exactly** `PopupHub App Store`
+   - `ca.popuphub.app.PopupHubWidget` → name it **exactly** `PopupHub Widget App Store`
+   - Both must select the **same** Apple Distribution certificate above.
+3. Download each `.mobileprovision`, then on a Mac/Linux: `base64 -i <file>.mobileprovision | pbcopy` and paste into the matching secret.
+4. Export the distribution identity as `.p12` (Keychain Access → My Certificates → right-click → Export) → `base64 -i dist.p12` → `BUILD_CERTIFICATE_BASE64` (+ `P12_PASSWORD`).
+
+> The profile **names must match** the `PROVISIONING_PROFILE_SPECIFIER` values in `project.pbxproj` and the `provisioningProfiles` dict in `ios/App/App/ExportOptions.plist`. The workflow fails fast with an actionable error if a downloaded profile's name doesn't match. If you prefer different names, change them in all three places.
+
 ## 9. Troubleshooting
 
 | Symptom | Fix |

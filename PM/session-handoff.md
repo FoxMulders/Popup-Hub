@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS CI signing pivot to MANUAL distribution
+- **Goal:** Stop the recurring TestFlight archive failure (`Choose a certificate to revoke. Your account has reached the maximum number of certificates` + `No profiles … iOS App Development`). Root cause: automatic signing + `-allowProvisioningUpdates` on headless CI keeps minting a **Development** cert per run (distribution cert count is fine — the exhausted pool is **Development** certs) and drifting to a Development profile.
+- **Fix (Option B — manual App Store signing, no portal minting):**
+  - **`ios/App/App.xcodeproj/project.pbxproj`** — App + widget Release: `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "Apple Distribution"` (+ `[sdk=iphoneos*]`), `PROVISIONING_PROFILE_SPECIFIER` = `PopupHub App Store` / `PopupHub Widget App Store`. Debug stays Automatic (local dev unaffected).
+  - **`scripts/mobile/patch-ios-widget.mjs`** — widget Release block regenerates with the same manual settings.
+  - **`ios/App/App/ExportOptions.plist`** — `signingStyle=manual`, `signingCertificate=Apple Distribution`, `provisioningProfiles` dict for both bundle ids.
+  - **`.github/workflows/deploy.yml`** — new **Install App Store provisioning profiles** step (decodes 2 profile secrets, validates name, installs by UUID). Archive is now Manual with **no** `-allowProvisioningUpdates`/ASC key. Export keeps ASC key only for the TestFlight upload.
+- **BLOCKER (user action before next run):**
+  1. Apple portal → revoke surplus **Development** certs (keep the one Apple Distribution).
+  2. Create 2 **App Store** profiles from that cert, named **exactly** `PopupHub App Store` (`ca.popuphub.app`) and `PopupHub Widget App Store` (`ca.popuphub.app.PopupHubWidget`).
+  3. Add GitHub secrets `BUILD_PROVISION_PROFILE_BASE64` + `BUILD_WIDGET_PROVISION_PROFILE_BASE64` (base64 of each `.mobileprovision`); confirm `BUILD_CERTIFICATE_BASE64`/`P12_PASSWORD` are the matching distribution `.p12`.
+- **Note:** Build 11 may already be consumed in App Store Connect — if upload rejects as duplicate, bump `CURRENT_PROJECT_VERSION` to 12 (App + widget). Full runbook in `PM/ios-testflight.md` §8b.
+- **Next:** Push `master` after secrets are present → monitor **Deploy to TestFlight** (expect `ARCHIVE SUCCEEDED` → `EXPORT SUCCEEDED` → upload).
+
 ## Active work — iOS App Store signing fix ITMS-90035 (branch `cursor/ios-app-store-signing-fix-5279`)
 - **Goal:** Resubmit Popup Hub iOS v1.120.0 after App Store Connect rejected build 10 with **ITMS-90035** (invalid signature — Development/Ad Hoc cert instead of Apple Distribution).
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.

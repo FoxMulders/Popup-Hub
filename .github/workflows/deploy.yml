@@ -63,10 +63,10 @@ jobs:
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
         run: |
           set -euo pipefail
-          # Import ONE persistent Apple Distribution cert + private key into the keychain the
-          # archive uses. With this identity present, automatic signing + -allowProvisioningUpdates
-          # reuses it (and auto-generates a matching App Store profile) instead of asking Apple to
-          # mint a brand-new distribution certificate on every CI run.
+          # Import ONE Apple Distribution cert + private key into the keychain the archive uses.
+          # Manual signing pairs this identity with the App Store profiles installed in the next
+          # step. No cert/profile is ever minted on the portal, so the Apple certificate quota is
+          # never touched (the recurring "Choose a certificate to revoke" failure).
           if [ -z "${BUILD_CERTIFICATE_BASE64:-}" ]; then
             echo "::error::BUILD_CERTIFICATE_BASE64 secret is not set. Export a valid (non-revoked) Apple Distribution certificate as a .p12, base64-encode it, and store it as BUILD_CERTIFICATE_BASE64 (with P12_PASSWORD). This lets CI reuse one certificate instead of exhausting the Apple certificate quota."
             exit 1
@@ -86,6 +86,44 @@ jobs:
           echo "Code-signing identities available to the archive:"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
+      - name: Install App Store provisioning profiles
+        env:
+          APP_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          WIDGET_PROFILE_BASE64: ${{ secrets.BUILD_WIDGET_PROVISION_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          # Manual signing: install the App Store distribution profiles for BOTH the app and
+          # the widget extension. No -allowProvisioningUpdates is used in archive/export, so
+          # xcodebuild never contacts the portal to mint certs/profiles — this is what makes the
+          # build immune to the Apple certificate-quota wall and the headless "iOS App Development"
+          # profile drift documented in PM/ios-testflight.md.
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+
+          install_profile() {
+            local b64="$1" label="$2" expected_name="$3"
+            if [ -z "${b64:-}" ]; then
+              echo "::error::$label provisioning profile secret is empty. Create an App Store distribution profile in the Apple Developer portal, base64-encode the .mobileprovision, and set the matching GitHub secret."
+              exit 1
+            fi
+            local raw="$RUNNER_TEMP/$label.mobileprovision"
+            local plist="$RUNNER_TEMP/$label.plist"
+            echo "$b64" | base64 --decode > "$raw"
+            security cms -D -i "$raw" > "$plist"
+            local uuid name
+            uuid=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$plist")
+            name=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$plist")
+            echo "$label profile → name='$name' uuid=$uuid"
+            if [ "$name" != "$expected_name" ]; then
+              echo "::error::$label profile is named '$name' but the project expects '$expected_name'. Rename the profile in the Apple portal (or update PROVISIONING_PROFILE_SPECIFIER in project.pbxproj + ExportOptions.plist) so they match exactly."
+              exit 1
+            fi
+            cp "$raw" "$PROFILES_DIR/$uuid.mobileprovision"
+          }
+
+          install_profile "$APP_PROFILE_BASE64" "App" "PopupHub App Store"
+          install_profile "$WIDGET_PROFILE_BASE64" "Widget" "PopupHub Widget App Store"
+
       - name: Prepare App Store Connect API key
         env:
           API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -93,7 +131,7 @@ jobs:
           API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: |
           # Write the .p8 to both a stable path (for -authenticationKeyPath) and the
-          # default search dir so archive (auto signing) and export can authenticate.
+          # default search dir so the export step can authenticate the TestFlight upload.
           KEY_DIR=$RUNNER_TEMP/private_keys
           mkdir -p "$KEY_DIR" ~/.appstoreconnect/private_keys
           KEY_PATH="$KEY_DIR/AuthKey_$API_KEY_ID.p8"
@@ -110,13 +148,11 @@ jobs:
 
       - name: Build and Archive Xcode Project
         run: |
-          # Drop stale local profiles so automatic signing mints a fresh App Store
-          # profile via the ASC API key (xcodebuild won't refresh if a local match exists).
-          rm -rf ~/Library/MobileDevice/Provisioning\ Profiles/*
-
-          # Automatic signing for a Release archive against the imported Apple Distribution
-          # identity. -allowProvisioningUpdates + the Admin ASC API key generate/refresh the
-          # matching App Store profile (and register the App Group) without minting a new cert.
+          # Manual distribution signing. Each target's PROVISIONING_PROFILE_SPECIFIER comes from
+          # project.pbxproj (App → "PopupHub App Store", widget → "PopupHub Widget App Store");
+          # the profiles were installed by the previous step. No -allowProvisioningUpdates and no
+          # ASC API key here, so xcodebuild signs entirely from the imported Apple Distribution
+          # cert + the installed profiles and never contacts the portal to mint anything.
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -sdk iphoneos \
@@ -124,22 +160,21 @@ jobs:
                      -destination 'generic/platform=iOS' \
                      -archivePath $RUNNER_TEMP/App.xcarchive \
                      archive \
-                     -allowProvisioningUpdates \
-                     -authenticationKeyPath "$ASC_KEY_PATH" \
-                     -authenticationKeyID "$ASC_KEY_ID" \
-                     -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
                      DEVELOPMENT_TEAM=6ACBDTX7T7 \
-                     CODE_SIGN_STYLE=Automatic \
+                     CODE_SIGN_STYLE=Manual \
+                     CODE_SIGN_IDENTITY="Apple Distribution" \
                      OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
                      COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Upload Build to TestFlight
         run: |
+          # Manual signing on export too (ExportOptions.plist pins signingStyle=manual +
+          # provisioningProfiles for both bundle ids). The ASC API key is kept ONLY to
+          # authenticate the TestFlight upload (destination=upload), not to mint signing assets.
           xcodebuild -exportArchive \
                      -archivePath $RUNNER_TEMP/App.xcarchive \
                      -exportPath $RUNNER_TEMP/exported \
                      -exportOptionsPlist ios/App/App/ExportOptions.plist \
-                     -allowProvisioningUpdates \
                      -authenticationKeyPath "$ASC_KEY_PATH" \
                      -authenticationKeyID "$ASC_KEY_ID" \
                      -authenticationKeyIssuerID "$ASC_ISSUER_ID"
