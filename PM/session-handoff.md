@@ -7,7 +7,7 @@
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
 - **Root cause:** Release archive likely signed with a Development identity (common when `aps-environment=development` was present, or Archive used Debug / a device-targeted dev profile). `generate-ios-resources.mjs` also overwrote `App.entitlements` on every `mobile:assets` run.
 - **Shipped locally:**
-  - **`ios/App/App.xcodeproj/project.pbxproj`:** `CURRENT_PROJECT_VERSION` 2 → **11** (App + widget); Release targets pin `CODE_SIGN_IDENTITY = Apple Distribution`; widget target gets `ProvisioningStyle = Automatic`; Debug App target gets `DEVELOPMENT_TEAM`.
+  - **`ios/App/App.xcodeproj/project.pbxproj`:** `CURRENT_PROJECT_VERSION` 2 → **11** (App + widget); widget target gets `ProvisioningStyle = Automatic`; Debug App target gets `DEVELOPMENT_TEAM`. Release stays `CODE_SIGN_STYLE = Automatic` only (no hardcoded `CODE_SIGN_IDENTITY` — conflicts with automatic signing in CI/Xcode).
   - **`scripts/mobile/generate-ios-resources.mjs`:** Stop overwriting entitlements with `aps-environment=development`; preserve App Group; strip `aps-environment` if present.
   - **`.github/workflows/deploy.yml`:** Clear stale provisioning profiles before archive; pass `CODE_SIGN_IDENTITY=Apple Distribution` on `xcodebuild archive`.
   - **`PM/ios-testflight.md`:** ITMS-90035 troubleshooting row + expanded Development-profile guidance.
