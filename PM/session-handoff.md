@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug scan: is_test discover leak (branch `cursor/critical-bug-investigation-bdd9`)
+- **Goal:** Daily push-triggered scan for high-severity regressions on `master` (`c5d37e0e`).
+- **Critical bug found:** QA scenario markets (`events.is_test = true`) with `published`/`active` status appeared on public `/discover`, vendor directory, patron widgets, event detail, and coordinator profiles. Sitemap already excluded them; catalog queries did not. Ship 45 scenario cover images worsened the leak (real-looking cards).
+- **Fix (commit `fcd2e76f`):** Shared `PUBLIC_MARKET_CATALOG_EXCLUDE_TEST` in `lib/queries/public-market-catalog.ts`; applied to `cached-public-markets`, `fetchOpenMarkets`, `public-event-detail`, coordinator public profile.
+- **Tests:** `npx tsx lib/queries/public-market-catalog.test.ts` PASS.
+- **Next:** Merge PR; deploy; smoke `/discover` with seeded scenario markets absent from catalog.
+
 ## Active work — iOS App Store signing fix ITMS-90035 (branch `cursor/ios-app-store-signing-fix-5279`)
 - **Goal:** Resubmit Popup Hub iOS v1.120.0 after App Store Connect rejected build 10 with **ITMS-90035** (invalid signature — Development/Ad Hoc cert instead of Apple Distribution).
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
