@@ -10,6 +10,7 @@ import type {
   WidgetPersona,
   WidgetVendorFeed,
 } from '@/lib/widget/types'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import type { BoothApplication, Event, Notification, WalletTransaction } from '@/types/database'
 
 const OPEN_STATUSES = ['published', 'active'] as const
@@ -100,10 +101,12 @@ async function fetchWallet(supabase: SupabaseClient, userId: string) {
 }
 
 async function fetchOpenMarkets(supabase: SupabaseClient): Promise<Event[]> {
-  const { data } = await supabase
-    .from('events')
-    .select('id, name, status, start_at, end_at, location_name, latitude, longitude')
-    .in('status', [...OPEN_STATUSES])
+  const { data } = await excludeTestMarkets(
+    supabase
+      .from('events')
+      .select('id, name, status, start_at, end_at, location_name, latitude, longitude')
+      .in('status', [...OPEN_STATUSES])
+  )
     .order('start_at', { ascending: true })
     .limit(20)
   return (data ?? []) as Event[]
