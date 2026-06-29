@@ -73,12 +73,53 @@ jobs:
           fi
 
           CERT_PATH="$RUNNER_TEMP/build_certificate.p12"
-          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          # Strip any whitespace/newlines a copy-paste into the GitHub secret UI may have
+          # introduced before decoding — a single stray char makes the .p12 unparseable and
+          # produces the "security: problem decoding ... (-8183)" failure.
+          printf '%s' "$BUILD_CERTIFICATE_BASE64" | tr -d '[:space:]' | base64 --decode > "$CERT_PATH" 2>/dev/null || true
+
+          if [ ! -s "$CERT_PATH" ]; then
+            echo "::error::Decoded certificate is empty. BUILD_CERTIFICATE_BASE64 is not valid base64 of a .p12 — re-run 'base64 -i your-dist.p12 | pbcopy' and paste the full output into the secret."
+            exit 1
+          fi
+          echo "Decoded .p12 size: $(wc -c < "$CERT_PATH") bytes ($(file -b "$CERT_PATH"))"
 
           # Apple-recommended import flags (see Apple's "Installing an Apple certificate on macOS
           # runners" docs). -A grants keychain access to all tools; the partition-list call then
           # lets codesign/xcodebuild use the key without an interactive prompt.
-          security import "$CERT_PATH" -P "${P12_PASSWORD:-}" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          if ! security import "$CERT_PATH" -P "${P12_PASSWORD:-}" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH" 2>"$RUNNER_TEMP/import.log"; then
+            cat "$RUNNER_TEMP/import.log" >&2
+            # macOS `security` cannot decode .p12 files produced with modern OpenSSL 3
+            # encryption (AES-256-CBC / PBKDF2) — the exact "-8183 / problem decoding" error.
+            # Re-export the bundle through the runner's OpenSSL into a legacy-compatible .p12
+            # (3DES) that `security import` accepts, preserving the same password. The read side
+            # is attempted with and without -legacy because the runner may ship OpenSSL 3
+            # (has -legacy) or LibreSSL (does not), and old exports may use RC2 (needs -legacy).
+            echo "Direct import failed — re-encoding .p12 to a security-compatible format via OpenSSL."
+            echo "openssl: $(openssl version)"
+            COMPAT_PATH="$RUNNER_TEMP/build_certificate_compat.p12"
+            PEM_PATH="$RUNNER_TEMP/build_certificate.pem"
+
+            read_p12() {
+              openssl pkcs12 -in "$CERT_PATH" -nodes -passin "pass:${P12_PASSWORD:-}" -out "$PEM_PATH" 2>/dev/null \
+                || openssl pkcs12 -in "$CERT_PATH" -nodes -legacy -passin "pass:${P12_PASSWORD:-}" -out "$PEM_PATH" 2>/dev/null
+            }
+
+            if ! read_p12 || [ ! -s "$PEM_PATH" ]; then
+              echo "::error::Could not read the .p12 with OpenSSL. P12_PASSWORD is likely wrong, or BUILD_CERTIFICATE_BASE64 is not a real Apple Distribution .p12. Re-export the identity from Keychain Access (right-click > Export, set a password) and update both secrets."
+              exit 1
+            fi
+
+            openssl pkcs12 -export -out "$COMPAT_PATH" -in "$PEM_PATH" -passout "pass:${P12_PASSWORD:-}" \
+              -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \
+              || {
+                echo "::error::Could not re-encode the .p12 into a security-compatible format."
+                exit 1
+              }
+            rm -f "$PEM_PATH"
+            security import "$COMPAT_PATH" -P "${P12_PASSWORD:-}" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+            rm -f "$COMPAT_PATH"
+          fi
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN_PATH" >/dev/null
 
           rm -f "$CERT_PATH"

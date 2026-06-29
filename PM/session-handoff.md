@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Verified this session — `npx tsc --noEmit` clean (stale CI errors not reproducible)
+- **Trigger:** CI reported `app/(browse)/favorites/page.tsx(71,47): TS18047 'e' is possibly 'null'` and `lib/queries/cached-public-markets.ts(45,5): TS2589 type instantiation excessively deep`.
+- **Result:** Current `master` (`31d04ed2`) passes `npx tsc --noEmit` (exit 0), confirmed twice including a **fresh** run after deleting `tsconfig.tsbuildinfo` (tsconfig has `incremental: true`, so local runs can skip cached files).
+- **Why stale:** Error line numbers no longer match the files — `favorites/page.tsx` line 71 is now blank and `allEvents` already casts `.filter(Boolean) as Event[]`; `cached-public-markets.ts` line 45 is a plain `.select('id')` with no deep type. Both files last changed before HEAD; the fixes are already committed.
+- **Next:** No code change needed. Re-running CI on current `master` should pass the TypeScript step.
+
 ## Active work — iOS CI signing pivot to MANUAL distribution
 - **Goal:** Stop the recurring TestFlight archive failure (`Choose a certificate to revoke. Your account has reached the maximum number of certificates` + `No profiles … iOS App Development`). Root cause: automatic signing + `-allowProvisioningUpdates` on headless CI keeps minting a **Development** cert per run (distribution cert count is fine — the exhausted pool is **Development** certs) and drifting to a Development profile.
 - **Fix (Option B — manual App Store signing, no portal minting):**
@@ -500,6 +506,10 @@
 - **Fallbacks if export still fails:** (1) `Cloud signing permission error` → key is not Admin or secrets stale; (2) `No profiles` at archive → key inactive or lacks Certificates/Profiles access; (3) upload rejected → version/build conflict or missing App Store Connect app record for `ca.popuphub.app`.
 - **Verify:** Push to `master` → watch GitHub Action. Paste archive/export logs if failure persists.
 - **Next:** User updates Admin ASC API key secrets → commit/push when ready → monitor run #62+.
+
+- **Attempt #59 root cause (.p12 decode failure):** Run failed in **Import Apple Distribution certificate** with `security: failed to add data to decoder: UNKNOWN (-8183(d))` + `security: problem decoding`. The bytes decoded from `BUILD_CERTIFICATE_BASE64` were not parseable PKCS#12 — either a malformed/whitespace-corrupted base64 secret, or a `.p12` encrypted with modern OpenSSL-3 ciphers (AES-256-CBC/PBKDF2) that legacy macOS `security import` cannot read.
+- **Attempt #59 fix — `.github/workflows/deploy.yml`:** Hardened the import step: (1) strip whitespace before `base64 --decode` and fail fast with an actionable `::error::` if the decoded `.p12` is empty (prints size + `file` type); (2) on `security import` failure, re-encode the `.p12` via OpenSSL into a 3DES legacy-compatible bundle (read attempted with and without `-legacy` to cover OpenSSL 3 vs LibreSSL runners), then import that. Wrong-password / not-a-real-`.p12` now surface a clear error instead of `-8183`.
+- **Attempt #59 next:** If the OpenSSL fallback still errors, the secrets themselves are wrong — re-export the Apple Distribution identity from Keychain Access, `base64 -i dist.p12 | pbcopy`, update `BUILD_CERTIFICATE_BASE64` + `P12_PASSWORD`, then re-run **Deploy to TestFlight**.
 
 - **Attempt #58 root cause (cert-quota exhaustion):** Archive failed with `error: Choose a certificate to revoke. Your account has reached the maximum number of certificates.` + downstream `No profiles for 'ca.popuphub.app' were found ... iOS App Development provisioning profiles`. Path A (pure cloud-managed signing) mints a **new Apple Distribution cert every run** (fresh runner = empty keychain), so the account hit the Distribution-cert cap; once minting fails, automatic signing falls back to hunting a Development profile (the second error is a symptom, not the cause). App Groups entitlement (new widget) is not the blocker.
 - **Attempt #58 fix — `.github/workflows/deploy.yml` (local, not committed):** Renamed `Prepare signing keychain for cloud-managed distribution` → `Prepare signing keychain` (no behaviour change beyond comments). Added **`Import Apple Distribution certificate`** step: decodes `BUILD_CERTIFICATE_BASE64` → `.p12`, `security import ... -A -t cert -f pkcs12 -k $KEYCHAIN_PATH`, `set-key-partition-list`, prints `find-identity`. Archive stays Automatic + `-allowProvisioningUpdates` + ASC key, so the profile auto-generates to match the imported cert (no #42-style mismatch) and **no new cert is minted per run**. Fails fast with an actionable `::error::` if `BUILD_CERTIFICATE_BASE64` is empty.
@@ -2544,9 +2554,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `40a1571a` (pushed to `origin/master`)
-- Last deploy commit: `40a1571a` - feat: ship 44 session updates (Center loader logo and animation; Popup Hub empty-state copy; Uniform platform feature cards; Scenario test markets (`is_test`); +40 more)
-- Production: https://popuphub.ca - **v1.180.0 build 1** | commit `2f8186e3` (handoff updated 2026-06-28 16:52)
+- Branch: `master` @ `31d04ed2` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.183.0 build 1** | commit `e3ce0f5a` (handoff updated 2026-06-29 11:46)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
