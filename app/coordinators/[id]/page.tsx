@@ -11,6 +11,7 @@ import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinato
 import { CoordinatorPeerVouchButton } from '@/components/coordinator/coordinator-community-trust'
 import { CoordinatorFollowButton } from '@/components/shopper/coordinator-follow-button'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
+import { PUBLIC_MARKET_CATALOG_EXCLUDE_TEST } from '@/lib/queries/public-market-catalog'
 import { format } from 'date-fns'
 import { Calendar, MapPin, ArrowLeft } from 'lucide-react'
 import type { Event } from '@/types/database'
@@ -112,6 +113,7 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
     .from('events')
     .select('id, name, location_name, start_at, status')
     .eq('coordinator_id', id)
+    .eq('is_test', PUBLIC_MARKET_CATALOG_EXCLUDE_TEST)
     .in('status', ['published', 'active', 'completed'])
     .order('start_at', { ascending: false })
     .limit(12)

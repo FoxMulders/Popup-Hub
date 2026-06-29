@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EventDetailClient } from '@/components/shopper/event-detail-client'
 import { getStrollerBadge } from '@/lib/shopper/layout'
+import { PUBLIC_MARKET_CATALOG_EXCLUDE_TEST } from '@/lib/queries/public-market-catalog'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
 import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-banner'
 import type {
@@ -37,6 +38,7 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
       event_days(*)
     `)
     .eq('id', eventId)
+    .eq('is_test', PUBLIC_MARKET_CATALOG_EXCLUDE_TEST)
     .in('status', ['published', 'active', 'completed'])
     .single()
 
