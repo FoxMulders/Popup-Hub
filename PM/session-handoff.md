@@ -2,7 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — iOS CI signing pivot to MANUAL distribution
+## Active work — Critical bug scan: `is_test` markets on public discover (branch `cursor/critical-bug-investigation-c50b`)
+- **Trigger:** Push `31d04ed2` (iOS manual signing CI) — no runtime bugs in that diff; scan found pre-existing catalog leak from scenario markets (`is_test=true`, `status=published`).
+- **Bug:** Published QA scenario markets appeared on `/discover`, vendor directory, iOS widget feed, public event pages, and coordinator profiles. Sitemap already excluded them via `.eq('is_test', false)`.
+- **Fix:** `excludeTestMarkets()` helper in `lib/queries/public-market-catalog.ts`; applied to cached public catalog queries, widget `fetchOpenMarkets`, browse event pages, coordinator public profile, favorites recs; vendor apply API rejects `is_test` events.
+- **Next:** Merge PR → deploy → confirm scenario markets no longer on discover.
+
 - **Goal:** Stop the recurring TestFlight archive failure (`Choose a certificate to revoke. Your account has reached the maximum number of certificates` + `No profiles … iOS App Development`). Root cause: automatic signing + `-allowProvisioningUpdates` on headless CI keeps minting a **Development** cert per run (distribution cert count is fine — the exhausted pool is **Development** certs) and drifting to a Development profile.
 - **Fix (Option B — manual App Store signing, no portal minting):**
   - **`ios/App/App.xcodeproj/project.pbxproj`** — App + widget Release: `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "Apple Distribution"` (+ `[sdk=iphoneos*]`), `PROVISIONING_PROFILE_SPECIFIER` = `PopupHub App Store` / `PopupHub Widget App Store`. Debug stays Automatic (local dev unaffected).
