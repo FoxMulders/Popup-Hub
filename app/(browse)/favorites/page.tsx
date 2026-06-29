@@ -68,7 +68,7 @@ export default async function FavoritesPage() {
       const ev = Array.isArray(f.events) ? f.events[0] : f.events
       return ev as Event | null
     })
-    .filter((e): e is Event => Boolean(e) && !e.is_test)
+    .filter((e): e is Event => e != null && !e.is_test)
 
   const upcomingEvents = allEvents
     .filter((e) => new Date(e.end_at) >= new Date())
