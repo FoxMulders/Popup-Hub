@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped — Apple S2S notification parsing fix (`cursor/critical-bug-investigation-1f70`)
+- **Bug:** `lib/auth/apple-s2s-notifications.ts` only accepted `events` as a JSON object and `account-delete`. Apple production sends `events` as a **stringified JSON** claim and uses **`account-deleted`** per docs/forums — every real webhook returned 401 and lifecycle actions never ran.
+- **Impact:** `consent-revoked` did not unlink Apple identities or revoke sessions; permanent Apple account deletion did not delete Supabase users.
+- **Fix:** Parse stringified `events`, normalize `account-deleted` → `account-delete`; tests cover both shapes.
+- **Verify:** `npx tsx lib/auth/apple-s2s-notifications.test.ts` PASS.
+- **Next:** Merge PR + deploy; confirm Apple S2S endpoint returns 200 on next notification.
+
 ## Active work — Public event TypeScript CI fix (local, not deployed)
 - **Baseline:** `master` at `3fb0fde1` (`fix(ios): harden TestFlight cert import against .p12 decode failures`); production/build metadata not refreshed because this was not deployed.
 - **Trigger:** CI build failed in the TypeScript step: `app/(browse)/events/[id]/page.tsx(18,5): TS2589 Type instantiation is excessively deep and possibly infinite`.
