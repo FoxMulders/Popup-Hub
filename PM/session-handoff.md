@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session — Critical bug: `is_test` markets on public discover (PR pending)
+- **Goal:** Stop QA scenario markets (`is_test=true`) from appearing on patron/vendor public surfaces.
+- **Personas:** Patron · Discover (`/discover`); Vendor · open markets directory; Patron · iOS widget feed.
+- **Bug:** Ship 44/45 seeded 14 published/active `is_test` scenario markets; public catalog queries (`getCachedDiscoverMarkets`, vendor directory, widget `fetchOpenMarkets`, `PublicEventDetail`, coordinator public profile) did not filter `is_test`. Ship 45 cover images made them look like real listings; `active_today` schedule put "Market Day — Active Status" on discover every day.
+- **Fix (branch `cursor/critical-bug-investigation-f696`, commit `efd0d292`):**
+  - **`lib/queries/public-market-catalog.ts`** — shared `PUBLIC_MARKET_CATALOG_EXCLUDE_TEST` constant (matches sitemap).
+  - Applied to **`cached-public-markets.ts`**, **`lib/widget/fetch-data.ts`**, **`public-event-detail.tsx`**, **`app/coordinators/[id]/page.tsx`**.
+  - **`lib/queries/public-market-catalog.test.ts`** — unit test; wired into `test:unit`.
+- **Verify:** `npx tsx lib/queries/public-market-catalog.test.ts` PASS. Smoke: `/discover` and `/vendor/events` must not list scenario markets after deploy.
+- **Next:** Merge PR; redeploy production; confirm scenario cards gone from discover.
+
 ## Active work — iOS App Store signing fix ITMS-90035 (branch `cursor/ios-app-store-signing-fix-5279`)
 - **Goal:** Resubmit Popup Hub iOS v1.120.0 after App Store Connect rejected build 10 with **ITMS-90035** (invalid signature — Development/Ad Hoc cert instead of Apple Distribution).
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
