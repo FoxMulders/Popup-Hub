@@ -301,7 +301,6 @@ pbx = pbx.replace(
 \t\t\tisa = XCBuildConfiguration;
 \t\t\tbuildSettings = {
 \t\t\t\tCODE_SIGN_ENTITLEMENTS = ../PopupHubWidget/PopupHubWidget.entitlements;
-\t\t\t\tCODE_SIGN_IDENTITY = "Apple Distribution";
 \t\t\t\tCODE_SIGN_STYLE = Automatic;
 \t\t\t\tCURRENT_PROJECT_VERSION = 11;
 \t\t\t\tDEVELOPMENT_TEAM = 6ACBDTX7T7;
