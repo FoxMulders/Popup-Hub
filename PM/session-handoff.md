@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS App Store signing fix ITMS-90035 (branch `cursor/ios-app-store-signing-fix-5279`)
+- **Goal:** Resubmit Popup Hub iOS v1.120.0 after App Store Connect rejected build 10 with **ITMS-90035** (invalid signature — Development/Ad Hoc cert instead of Apple Distribution).
+- **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
+- **Root cause:** Release archive likely signed with a Development identity (common when `aps-environment=development` was present, or Archive used Debug / a device-targeted dev profile). `generate-ios-resources.mjs` also overwrote `App.entitlements` on every `mobile:assets` run.
+- **Shipped locally:**
+  - **`ios/App/App.xcodeproj/project.pbxproj`:** `CURRENT_PROJECT_VERSION` 2 → **11** (App + widget); Release targets pin `CODE_SIGN_IDENTITY = Apple Distribution`; widget target gets `ProvisioningStyle = Automatic`; Debug App target gets `DEVELOPMENT_TEAM`.
+  - **`scripts/mobile/generate-ios-resources.mjs`:** Stop overwriting entitlements with `aps-environment=development`; preserve App Group; strip `aps-environment` if present.
+  - **`.github/workflows/deploy.yml`:** Clear stale provisioning profiles before archive; pass `CODE_SIGN_IDENTITY=Apple Distribution` on `xcodebuild archive`.
+  - **`PM/ios-testflight.md`:** ITMS-90035 troubleshooting row + expanded Development-profile guidance.
+- **Manual re-archive (Mac):** `git pull` → open `ios/App/App.xcworkspace` → confirm Version **1.120.0** / Build **11** → Scheme Archive = **Release** → **Any iOS Device** → Clean Build Folder → **Product → Archive** → **Distribute App → App Store Connect**.
+- **Verify:** Signing & Capabilities shows **Apple Distribution** for Release; `App.entitlements` has App Group only (no `aps-environment`); ASC processing passes without ITMS-90035.
+- **Next:** Merge PR → user archives on Mac (or CI TestFlight run) → confirm build 11 processes in App Store Connect.
+
 ## Active work — Signup role selection + questionnaire (local, not deployed)
 - **Goal:** Make vendor and coordinator signup obvious; explain role hierarchy (vendor/coordinator include patron access); offer a help-me-choose questionnaire.
 - **Personas:** All users · `/signup` (Patron · Vendor · Coordinator).
