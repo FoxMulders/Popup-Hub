@@ -158,8 +158,9 @@ function parseVersionMeta() {
   const minor = match ? Number(match[2]) : 0
   const patch = match ? Number(match[3]) : 0
   const build = Number(buildMeta.build ?? 1)
+  const iosBuild = Number(buildMeta.iosBuild ?? build)
   const versionCode = major * 100_000 + minor * 1_000 + patch * 10 + build
-  return { version, versionCode, build }
+  return { version, versionCode, build, iosBuild }
 }
 
 function readFileSyncSafe(target, fallback) {
@@ -171,7 +172,7 @@ function readFileSyncSafe(target, fallback) {
 }
 
 async function syncNativeVersions() {
-  const { version, versionCode, build } = parseVersionMeta()
+  const { version, versionCode, build, iosBuild } = parseVersionMeta()
 
   const androidGradle = path.join(root, 'android', 'app', 'build.gradle')
   if (await pathExists(androidGradle)) {
@@ -186,9 +187,9 @@ async function syncNativeVersions() {
   if (await pathExists(pbxproj)) {
     let project = await readFile(pbxproj, 'utf8')
     project = project.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${version};`)
-    project = project.replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${build};`)
+    project = project.replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${iosBuild};`)
     await writeFile(pbxproj, project)
-    console.log(`iOS MARKETING_VERSION=${version} CURRENT_PROJECT_VERSION=${build}`)
+    console.log(`iOS MARKETING_VERSION=${version} CURRENT_PROJECT_VERSION=${iosBuild}`)
   }
 }
 

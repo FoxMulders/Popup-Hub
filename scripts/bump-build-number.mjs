@@ -65,6 +65,7 @@ function readBuildState() {
       minor: Number.isFinite(data.minor) ? data.minor : semver?.minor ?? 0,
       patch: Number.isFinite(data.patch) ? data.patch : semver?.patch ?? 0,
       build: Number.isFinite(data.build) ? data.build : 0,
+      iosBuild: Number.isFinite(data.iosBuild) ? data.iosBuild : undefined,
       commit: typeof data.commit === 'string' ? data.commit : '',
     }
   } catch {
@@ -102,6 +103,10 @@ const nextState = {
   patch: packageSemver?.patch ?? state.patch,
   build: nextBuild,
   commit,
+}
+
+if (Number.isFinite(state.iosBuild)) {
+  nextState.iosBuild = state.iosBuild
 }
 
 writeFileSync(buildFile, `${JSON.stringify(nextState, null, 2)}\n`)

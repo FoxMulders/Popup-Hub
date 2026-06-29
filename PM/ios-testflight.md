@@ -65,14 +65,16 @@ In Xcode (**App** target):
 |---------|-------|
 | Display Name | Popup Hub |
 | Bundle Identifier | `ca.popuphub.app` |
-| Version | `1.100.0` (match `package.json`; auto-bumps on deploy from commit prefix) |
-| Build | increment each upload (e.g. `165` to match web build or independent iOS counter) |
+| Version | `1.184.0` (match `package.json`; auto-synced via `mobile:assets`) |
+| Build | increment each upload via `build-number.json` → `iosBuild` (e.g. `12`; independent from web build counter) |
 | Signing | Automatic + correct Team |
 | Deployment Target | iOS 15+ (Capacitor 7 default) |
 
 **Product → Archive** → **Distribute App** → **App Store Connect** → Upload.
 
 Processing in App Store Connect usually takes 5–30 minutes.
+
+**iOS build counter:** `build-number.json` → `iosBuild` (independent from the web `build` counter). `npm run mobile:assets` syncs `CURRENT_PROJECT_VERSION` from `iosBuild` and `MARKETING_VERSION` from `package.json`. Bump `iosBuild` before each TestFlight upload if App Store Connect rejects a duplicate build.
 
 ## 5. TestFlight — internal testing
 
