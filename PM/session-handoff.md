@@ -13,7 +13,7 @@
   - **`PM/ios-testflight.md`:** ITMS-90035 troubleshooting row + expanded Development-profile guidance.
 - **Manual re-archive (Mac):** `git pull` → open `ios/App/App.xcworkspace` → confirm Version **1.120.0** / Build **11** → Scheme Archive = **Release** → **Any iOS Device** → Clean Build Folder → **Product → Archive** → **Distribute App → App Store Connect**.
 - **Verify:** Signing & Capabilities shows **Apple Distribution** for Release; `App.entitlements` has App Group only (no `aps-environment`); ASC processing passes without ITMS-90035.
-- **Next:** Merge PR → user archives on Mac (or CI TestFlight run) → confirm build 11 processes in App Store Connect.
+- **Next:** Monitor **Deploy to TestFlight** on `master` (`7d6765a4`); confirm build 11 processes in App Store Connect without ITMS-90035.
 
 ## Active work — Signup role selection + questionnaire (local, not deployed)
 - **Goal:** Make vendor and coordinator signup obvious; explain role hierarchy (vendor/coordinator include patron access); offer a help-me-choose questionnaire.
