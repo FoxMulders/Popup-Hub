@@ -150,8 +150,17 @@ jobs:
             fi
             local raw="$RUNNER_TEMP/$label.mobileprovision"
             local plist="$RUNNER_TEMP/$label.plist"
-            echo "$b64" | base64 --decode > "$raw"
-            security cms -D -i "$raw" > "$plist"
+            # Strip whitespace/newlines from copy-paste into GitHub secrets UI.
+            printf '%s' "$b64" | tr -d '[:space:]' | base64 --decode > "$raw" 2>/dev/null || true
+            if [ ! -s "$raw" ]; then
+              echo "::error::Decoded $label profile is empty. Re-run 'base64 -i YourProfile.mobileprovision | pbcopy' and paste the full output into the matching GitHub secret (no line breaks in the middle of the payload)."
+              exit 1
+            fi
+            if ! security cms -D -i "$raw" > "$plist" 2>"$RUNNER_TEMP/${label}-cms.log"; then
+              cat "$RUNNER_TEMP/${label}-cms.log" >&2
+              echo "::error::Could not decode $label .mobileprovision. The secret is not valid base64 of a profile downloaded from the Apple Developer portal."
+              exit 1
+            fi
             local uuid name
             uuid=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$plist")
             name=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$plist")
