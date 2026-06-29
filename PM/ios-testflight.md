@@ -182,3 +182,45 @@ The **Deploy to TestFlight** workflow uses **manual** distribution signing. This
 1. Universal links + `apple-app-site-association` on production domain.
 2. Push notifications (APNs) for market-day alerts.
 3. Evaluate bundled static export or live-update for App Store compliance long term.
+
+## 10. Manual completion checklist (after repo merge)
+
+Use this once `node scripts/mobile/verify-testflight-signing-config.mjs` passes locally.
+
+### A. Fix GitHub secrets (if CI fails at profile install)
+
+1. Apple Developer → **Profiles** → download **App Store** profiles (not Development):
+   - `PopupHub App Store` → `ca.popuphub.app`
+   - `PopupHub Widget App Store` → `ca.popuphub.app.PopupHubWidget`
+2. On Mac, for each file:
+   ```bash
+   base64 -i PopupHub_App_Store.mobileprovision | pbcopy
+   ```
+   Paste into `BUILD_PROVISION_PROFILE_BASE64` (repeat for widget → `BUILD_WIDGET_PROVISION_PROFILE_BASE64`).
+3. Re-run **Actions → Deploy to TestFlight → Run workflow** (`workflow_dispatch` on `master`).
+
+### B. Supabase (required for native sign-in)
+
+Supabase Dashboard → **Authentication → URL Configuration**:
+
+- Site URL: `https://popuphub.ca`
+- Redirect URLs: `https://popuphub.ca/**`, `https://popuphub.ca/api/auth/callback`, `ca.popuphub.app://auth/callback`
+
+### C. App Store Connect (after successful upload)
+
+- [ ] **App Information** → upload [`mobile/ios/routing-app-coverage.geojson`](mobile/ios/routing-app-coverage.geojson)
+- [ ] **TestFlight** → wait for build **12** / v**1.184.0** to finish processing
+- [ ] Answer **Export Compliance** (typically No)
+- [ ] **Internal Testing** → create group → add team Apple IDs → send invites
+
+### D. Apple Sign in with Apple S2S (post-deploy)
+
+Apple Developer → App ID `ca.popuphub.app` → Sign in with Apple → **Server-to-Server Notification Endpoint**:
+
+`https://popuphub.ca/api/auth/apple/notifications`
+
+Verify: `curl -s -o /dev/null -w "%{http_code}" -X POST https://popuphub.ca/api/auth/apple/notifications -H "Content-Type: application/json" -d '{}'` → expect **400** (not 404).
+
+### E. Device smoke tests (`PM/ios-testflight.md` §5)
+
+Install via TestFlight, then run flows 1–8 (required). Flows 9–10 (push/instant-book) are **v1 deferred** until APNs is enabled.
