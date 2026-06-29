@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { PublicEventDetail } from '@/components/public/public-event-detail'
 import { EventJsonLd } from '@/components/seo/event-json-ld'
 import { JsonLdScript } from '@/components/seo/json-ld-script'
@@ -13,12 +14,13 @@ interface Props {
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: event } = await supabase
-    .from('events')
-    .select('name, description, location_name, cover_image_url, start_at')
-    .eq('id', id)
-    .in('status', ['published', 'active', 'completed'])
-    .maybeSingle()
+  const { data: event } = await excludeTestMarkets(
+    supabase
+      .from('events')
+      .select('name, description, location_name, cover_image_url, start_at')
+      .eq('id', id)
+      .in('status', ['published', 'active', 'completed'])
+  ).maybeSingle()
 
   if (!event) {
     return buildPublicMetadata({
@@ -49,14 +51,15 @@ export default async function PublicEventPage({ params }: Props) {
   const supabase = await createClient()
 
   const [{ data: event }, { count: vendorCount }, { data: vendorApps }] = await Promise.all([
-    supabase
-      .from('events')
-      .select(
-        'id, name, description, start_at, end_at, location_name, address, city, latitude, longitude, cover_image_url, status, coordinator_id, coordinator:profiles!events_coordinator_id_fkey(id, full_name)'
-      )
-      .eq('id', id)
-      .in('status', ['published', 'active', 'completed'])
-      .maybeSingle(),
+    excludeTestMarkets(
+      supabase
+        .from('events')
+        .select(
+          'id, name, description, start_at, end_at, location_name, address, city, latitude, longitude, cover_image_url, status, coordinator_id, coordinator:profiles!events_coordinator_id_fkey(id, full_name)'
+        )
+        .eq('id', id)
+        .in('status', ['published', 'active', 'completed'])
+    ).maybeSingle(),
     supabase
       .from('booth_applications')
       .select('id', { count: 'exact', head: true })
