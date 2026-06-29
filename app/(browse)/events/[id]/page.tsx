@@ -10,15 +10,57 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
+type PublicEventMetadataRow = {
+  name: string
+  description: string | null
+  location_name: string | null
+  cover_image_url: string | null
+  start_at: string | null
+}
+
+type PublicEventStructuredRow = {
+  id: string
+  name: string
+  description: string | null
+  start_at: string | null
+  end_at: string | null
+  location_name: string | null
+  address: string | null
+  city: string | null
+  latitude: number | null
+  longitude: number | null
+  cover_image_url: string | null
+  status: string | null
+  coordinator_id: string | null
+  coordinator?: { id?: string; full_name?: string | null } | { id?: string; full_name?: string | null }[] | null
+}
+
+type PublicVendorApplicationRow = {
+  passport?: { business_name?: string | null } | { business_name?: string | null }[] | null
+}
+
+type PublicQueryBuilder = PromiseLike<unknown> & {
+  select: (columns: string, options?: unknown) => PublicQueryBuilder
+  eq: (column: string, value: unknown) => PublicQueryBuilder
+  in: (column: string, values: unknown[]) => PublicQueryBuilder
+  maybeSingle: () => PublicQueryBuilder
+  limit: (count: number) => PublicQueryBuilder
+}
+
+type UntypedSupabaseClient = {
+  from: (table: string) => PublicQueryBuilder
+}
+
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: event } = await supabase
+  const publicDb = supabase as unknown as UntypedSupabaseClient
+  const { data: event } = (await publicDb
     .from('events')
     .select('name, description, location_name, cover_image_url, start_at')
     .eq('id', id)
     .in('status', ['published', 'active', 'completed'])
-    .maybeSingle()
+    .maybeSingle()) as { data: PublicEventMetadataRow | null }
 
   if (!event) {
     return buildPublicMetadata({
@@ -47,9 +89,10 @@ export async function generateMetadata({ params }: Props) {
 export default async function PublicEventPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
+  const publicDb = supabase as unknown as UntypedSupabaseClient
 
   const [{ data: event }, { count: vendorCount }, { data: vendorApps }] = await Promise.all([
-    supabase
+    publicDb
       .from('events')
       .select(
         'id, name, description, start_at, end_at, location_name, address, city, latitude, longitude, cover_image_url, status, coordinator_id, coordinator:profiles!events_coordinator_id_fkey(id, full_name)'
@@ -57,18 +100,22 @@ export default async function PublicEventPage({ params }: Props) {
       .eq('id', id)
       .in('status', ['published', 'active', 'completed'])
       .maybeSingle(),
-    supabase
+    publicDb
       .from('booth_applications')
       .select('id', { count: 'exact', head: true })
       .eq('event_id', id)
       .eq('status', 'approved'),
-    supabase
+    publicDb
       .from('booth_applications')
       .select('passport:vendor_passports(business_name)')
       .eq('event_id', id)
       .eq('status', 'approved')
       .limit(12),
-  ])
+  ]) as [
+    { data: PublicEventStructuredRow | null },
+    { count: number | null },
+    { data: PublicVendorApplicationRow[] | null },
+  ]
 
   const vendorNames = (vendorApps ?? [])
     .map((row) => {

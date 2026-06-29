@@ -2,11 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Verified this session — `npx tsc --noEmit` clean (stale CI errors not reproducible)
-- **Trigger:** CI reported `app/(browse)/favorites/page.tsx(71,47): TS18047 'e' is possibly 'null'` and `lib/queries/cached-public-markets.ts(45,5): TS2589 type instantiation excessively deep`.
-- **Result:** Current `master` (`31d04ed2`) passes `npx tsc --noEmit` (exit 0), confirmed twice including a **fresh** run after deleting `tsconfig.tsbuildinfo` (tsconfig has `incremental: true`, so local runs can skip cached files).
-- **Why stale:** Error line numbers no longer match the files — `favorites/page.tsx` line 71 is now blank and `allEvents` already casts `.filter(Boolean) as Event[]`; `cached-public-markets.ts` line 45 is a plain `.select('id')` with no deep type. Both files last changed before HEAD; the fixes are already committed.
-- **Next:** No code change needed. Re-running CI on current `master` should pass the TypeScript step.
+## Active work — Public event TypeScript CI fix (local, not deployed)
+- **Baseline:** `master` at `3fb0fde1` (`fix(ios): harden TestFlight cert import against .p12 decode failures`); production/build metadata not refreshed because this was not deployed.
+- **Trigger:** CI build failed in the TypeScript step: `app/(browse)/events/[id]/page.tsx(18,5): TS2589 Type instantiation is excessively deep and possibly infinite`.
+- **Fix:** `app/(browse)/events/[id]/page.tsx` now uses route-local public row shapes and an untyped Supabase query boundary for the metadata/JSON-LD reads, preserving the existing select strings while preventing Supabase relationship inference from recursing in `tsc`.
+- **Verify:** `npx eslint "app/(browse)/events/[id]/page.tsx"` PASS; `npx tsc --noEmit` PASS.
+- **Blockers:** None for the TypeScript error. Working tree still has pre-existing PM deploy file edits plus this local fix.
+- **Next:** Commit + push/deploy when ready; re-run GitHub build to confirm the TypeScript step passes in CI.
 
 ## Active work — iOS CI signing pivot to MANUAL distribution
 - **Goal:** Stop the recurring TestFlight archive failure (`Choose a certificate to revoke. Your account has reached the maximum number of certificates` + `No profiles … iOS App Development`). Root cause: automatic signing + `-allowProvisioningUpdates` on headless CI keeps minting a **Development** cert per run (distribution cert count is fine — the exhausted pool is **Development** certs) and drifting to a Development profile.
