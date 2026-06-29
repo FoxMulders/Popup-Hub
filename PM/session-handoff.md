@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS archive fix: duplicate widget Info.plist (local, not committed)
+- **Goal:** Stop the TestFlight `archive` failure (`CreateBuildDirectory … (1 failure)`, exit code 65) caused by the `duplicate output file … PopupHubWidgetExtension.appex/Info.plist` warning.
+- **Root cause:** The widget's `Info.plist` was listed in the **PopupHubWidgetExtension Copy Bundle Resources** phase **and** processed as the target's `INFOPLIST_FILE`, so `Info.plist` was emitted to the `.appex` twice. The new build system promotes that duplicate to a hard error during `archive` (it is only a warning in plain `build`). This invalidates the earlier handoff note (Attempt #61) that called the duplicate "a warning, not the failure."
+- **Fix (both checked-in project + generator):**
+  - `ios/App/App.xcodeproj/project.pbxproj` — removed the `Info.plist in Resources` `PBXBuildFile` (`W1DGE00C…`) and its entry in the widget `PBXResourcesBuildPhase` (`W1DGE0101…`). The file reference + group membership stay (still visible in the navigator); `INFOPLIST_FILE = ../PopupHubWidget/Info.plist` remains the sole source.
+  - `scripts/mobile/patch-ios-widget.mjs` — same removal so regenerating the widget target no longer re-adds the duplicate (widget Resources phase emits empty `files = ()`).
+- **Verify:** No remaining `Info.plist in Resources` reference in either file; widget Resources phase is now empty. Confirm on Mac/CI with `xcodebuild archive` → expect the duplicate-output warning gone and `ARCHIVE SUCCEEDED`.
+- **Next:** Commit + push → re-run **Deploy to TestFlight**. Signing blockers below (cert/profile binding) are separate and still apply once the archive step is reached.
+
 ## Active work — iOS TestFlight completion (build 12, merged PR #122 + #123)
 - **Goal:** Land repo fixes for internal TestFlight upload via GitHub Actions manual signing.
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight internal.
@@ -35,8 +44,20 @@
 ## Active work — iOS CI signing pivot to MANUAL distribution
 - **Baseline:** `master` at `b5712470` (`feat: ship 46 session updates`); latest CI run failed in **Install App Store provisioning profiles** (not cert import).
 - **Goal:** Stop the recurring TestFlight archive failure (`Choose a certificate to revoke. Your account has reached the maximum number of certificates` + `No profiles … iOS App Development`). Root cause: automatic signing + `-allowProvisioningUpdates` on headless CI keeps minting a **Development** cert per run (distribution cert count is fine — the exhausted pool is **Development** certs) and drifting to a Development profile.
-- **Attempt #60 (latest run):** Cert import passed (#59 fix worked). **Install App Store provisioning profiles** failed with `security: failed to add data to decoder: UNKNOWN (-8183)` + `security: problem decoding` — same symptom as #59 but on `BUILD_PROVISION_PROFILE_BASE64` / `BUILD_WIDGET_PROVISION_PROFILE_BASE64`. Profile step still used naive `echo "$b64" | base64 --decode` without whitespace strip or empty-file guard.
-- **Attempt #60 fix (local):** Hardened `install_profile()` in **`.github/workflows/deploy.yml`** — strip whitespace before decode, fail fast if empty (prints size + `file` type), actionable `::error::` if `security cms` cannot parse the bytes.
+- **Attempt #60 (resolved):** Cert import passed (#59 fix worked). **Install App Store provisioning profiles** failed with `security: failed to add data to decoder: UNKNOWN (-8183)` + `security: problem decoding` — same symptom as #59 but on `BUILD_PROVISION_PROFILE_BASE64` / `BUILD_WIDGET_PROVISION_PROFILE_BASE64`. Hardened `install_profile()` in **`.github/workflows/deploy.yml`** (strip whitespace, fail-fast if empty + size/`file` diag, actionable `::error::` if `security cms` can't parse). Committed in merge `ad27a2d1`; user then set both profile secrets — profile step now PASSES.
+- **Attempt #61 BLOCKER (run `28406079745`, failure):** `** ARCHIVE FAILED **` → `error: Signing certificate is invalid. Signing certificate "Apple Distribution: Brad Mulders (6ACBDTX7T7)", serial number "67AB9020D1C942FA965AC004B274244B", is not valid for code signing. It may have been revoked or expired.` (target `PopupHubWidgetExtension`). Profile install + cert import both succeeded; the cert in `BUILD_CERTIFICATE_BASE64` is **revoked/expired** (likely the surplus cert revoked during #58 cleanup). Not a code bug — no workflow change fixes a dead cert.
+- **Attempt #61 USER ACTION (required):**
+  1. developer.apple.com → Certificates → confirm serial `67AB9020D1C942FA965AC004B274244B` is revoked/expired; create a **new Apple Distribution** cert (or pick a still-valid one).
+  2. Keychain Access → My Certificates → expand the new `Apple Distribution: … (6ACBDTX7T7)` (must show a private key) → Export `.p12` → `base64 -i dist.p12 | pbcopy` → update `BUILD_CERTIFICATE_BASE64` + `P12_PASSWORD`.
+  3. **Regenerate BOTH App Store profiles from the new cert** (profiles bind to the signing cert) → keep names exactly `PopupHub App Store` / `PopupHub Widget App Store` → `base64 -i <file>.mobileprovision | pbcopy` → update `BUILD_PROVISION_PROFILE_BASE64` + `BUILD_WIDGET_PROVISION_PROFILE_BASE64`.
+  4. Re-run **Deploy to TestFlight** (`gh workflow run "Deploy to TestFlight" --ref master`).
+- **Note:** The `duplicate output file … PopupHubWidgetExtension.appex/Info.plist` line is a warning, not the failure.
+- **Attempt #62 BLOCKER (run `28408871561`, failure):** Cert no longer revoked (good). New error: `Provisioning profile "PopupHub App Store" doesn't include signing certificate "Apple Distribution: Brad Mulders (6ACBDTX7T7)"` (+ same for `PopupHub Widget App Store`). The `.p12` cert and the two profiles reference **different** Apple Distribution certs — there are now multiple dist certs, and the regenerated profiles were built against one that isn't the one whose private key is in `BUILD_CERTIFICATE_BASE64`. Cert + profiles must bind to the SAME cert.
+- **Attempt #62 USER ACTION (required) — pick ONE cert and make everything use it:**
+  - Identify the Apple Distribution cert whose private key is in your `.p12` (Keychain Access → My Certificates → the identity you exported).
+  - Apple portal → Profiles → edit BOTH `PopupHub App Store` and `PopupHub Widget App Store` → select **that exact cert** → regenerate → download → `base64 -i <file>.mobileprovision | pbcopy` → update `BUILD_PROVISION_PROFILE_BASE64` + `BUILD_WIDGET_PROVISION_PROFILE_BASE64`.
+  - (Optional) revoke any extra/duplicate Apple Distribution certs so the next regeneration can't pick the wrong one.
+  - Confirm `BUILD_CERTIFICATE_BASE64`/`P12_PASSWORD` still match that same cert, then re-run.
 - **Fix (Option B — manual App Store signing, no portal minting):**
   - **`ios/App/App.xcodeproj/project.pbxproj`** — App + widget Release: `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = "Apple Distribution"` (+ `[sdk=iphoneos*]`), `PROVISIONING_PROFILE_SPECIFIER` = `PopupHub App Store` / `PopupHub Widget App Store`. Debug stays Automatic (local dev unaffected).
   - **`scripts/mobile/patch-ios-widget.mjs`** — widget Release block regenerates with the same manual settings.
@@ -2585,8 +2606,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `31d04ed2` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.183.0 build 1** | commit `e3ce0f5a` (handoff updated 2026-06-29 11:46)
+- Branch: `master` @ `ad27a2d1` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.185.0 build 1** | commit `b5712470` (handoff updated 2026-06-29 15:27)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 

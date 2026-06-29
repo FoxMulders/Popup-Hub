@@ -51,7 +51,6 @@ pbx = pbx.replace(
 \t\t${ids.widgetSwiftBuild} /* PopupHubWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = ${ids.widgetSwift} /* PopupHubWidget.swift */; };
 \t\t${ids.feedSwiftBuild} /* WidgetFeedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ${ids.feedSwift} /* WidgetFeedClient.swift */; };
 \t\t${ids.intentsSwiftBuild} /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = ${ids.intentsSwift} /* WidgetIntents.swift */; };
-\t\t${ids.widgetPlistBuild} /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = ${ids.widgetPlist} /* Info.plist */; };
 \t\t${ids.embedBuild} /* PopupHubWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = ${ids.appexProduct} /* PopupHubWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */`
 )
@@ -199,7 +198,6 @@ pbx = pbx.replace(
 \t\t\tisa = PBXResourcesBuildPhase;
 \t\t\tbuildActionMask = 2147483647;
 \t\t\tfiles = (
-\t\t\t\t${ids.widgetPlistBuild} /* Info.plist in Resources */,
 \t\t\t);
 \t\t\trunOnlyForDeploymentPostprocessing = 0;
 \t\t};

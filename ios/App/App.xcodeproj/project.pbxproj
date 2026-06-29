@@ -19,7 +19,6 @@
 		W1DGE0091FED796500168601 /* PopupHubWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0041FED796500168601 /* PopupHubWidget.swift */; };
 		W1DGE00A1FED796500168601 /* WidgetFeedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0051FED796500168601 /* WidgetFeedClient.swift */; };
 		W1DGE00B1FED796500168601 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0061FED796500168601 /* WidgetIntents.swift */; };
-		W1DGE00C1FED796500168601 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = W1DGE0071FED796500168601 /* Info.plist */; };
 		W1DGE0131FED796500168601 /* PopupHubWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = W1DGE00D1FED796500168601 /* PopupHubWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -228,7 +227,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				W1DGE00C1FED796500168601 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
