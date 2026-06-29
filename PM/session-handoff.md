@@ -2,6 +2,27 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS TestFlight completion (build 12, branch `cursor/ios-testflight-completion-c046`)
+- **Goal:** Land repo fixes for internal TestFlight upload via GitHub Actions manual signing.
+- **Persona:** All users · native `ca.popuphub.app` · TestFlight internal.
+- **Shipped (repo):**
+  - **`build-number.json`** — `iosBuild: 12` (independent iOS upload counter).
+  - **`scripts/mobile/generate-ios-resources.mjs`** — syncs `CURRENT_PROJECT_VERSION` from `iosBuild`, not web `build`.
+  - **`scripts/bump-build-number.mjs`** — preserves `iosBuild` across web prebuild bumps.
+  - **`ios/App/App.xcodeproj/project.pbxproj`** — `CURRENT_PROJECT_VERSION = 12`, `MARKETING_VERSION = 1.184.0`.
+  - **`.github/workflows/deploy.yml`** — `workflow_dispatch`; runs `assets:logo` + `mobile:assets` before `cap sync ios`.
+  - **`scripts/mobile/verify-testflight-signing-config.mjs`** — validates profile names + `iosBuild` alignment.
+  - **`PM/ios-testflight.md`** — version/build docs updated.
+- **Verify:** `node scripts/mobile/verify-testflight-signing-config.mjs` PASS; prod Apple S2S endpoint returns `400` (live); `https://popuphub.ca/discover` returns `200`.
+- **Blockers (user action — dashboards/portals):**
+  1. Apple portal → one Distribution cert; App Store profiles **`PopupHub App Store`** + **`PopupHub Widget App Store`**.
+  2. GitHub secrets (6): `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`, `BUILD_PROVISION_PROFILE_BASE64`, `BUILD_WIDGET_PROVISION_PROFILE_BASE64`, `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_API_KEY`.
+  3. Supabase → redirect URLs include `ca.popuphub.app://auth/callback` (see `PM/oauth-provider-setup.md`).
+  4. App Store Connect → upload `mobile/ios/routing-app-coverage.geojson`; create internal TestFlight group after build processes.
+  5. Apple Developer → Sign in with Apple S2S URL `https://popuphub.ca/api/auth/apple/notifications`.
+  6. Physical device → `PM/ios-testflight.md` §5 smoke matrix (push alerts #9–10 deferred until APNs).
+- **Next:** Merge to `master` → monitor **Deploy to TestFlight** → ASC internal testing → device smoke.
+
 ## Active work — Public event TypeScript CI fix (local, not deployed)
 - **Baseline:** `master` at `3fb0fde1` (`fix(ios): harden TestFlight cert import against .p12 decode failures`); production/build metadata not refreshed because this was not deployed.
 - **Trigger:** CI build failed in the TypeScript step: `app/(browse)/events/[id]/page.tsx(18,5): TS2589 Type instantiation is excessively deep and possibly infinite`.

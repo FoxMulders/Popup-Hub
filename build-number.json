@@ -4,5 +4,6 @@
   "minor": 184,
   "patch": 0,
   "build": 1,
+  "iosBuild": 12,
   "commit": "3fb0fde1"
 }
