@@ -202,7 +202,15 @@ interface BrandLogoMarkProps {
   href?: string
 }
 
-/** Horizontal "PopupHub" wordmark for sticky header chrome. */
+/** Square brand-icon heights paired with the wordmark in each header size. */
+const LOCKUP_ICON_HEIGHTS: Record<BrandLogoMarkSize, string> = {
+  nav: 'h-[5rem] w-[5rem] sm:h-[5.6rem] sm:w-[5.6rem]',
+  auth: 'h-12 w-12 sm:h-14 sm:w-14',
+  header: 'h-8 w-8 sm:h-9 sm:w-9',
+  rail: 'h-7 w-7',
+}
+
+/** Horizontal lockup: green-tent + blue-pin storefront icon beside the "PopupHub" wordmark. */
 export function BrandLogoLockup({
   className,
   href,
@@ -212,21 +220,39 @@ export function BrandLogoLockup({
   href?: string
   size?: BrandLogoMarkSize
 }) {
-  const wordmark = (
-    <Image
-      src={brandWordmarkSrc()}
-      alt="Popup Hub"
-      width={BRAND_WORDMARK.width}
-      height={BRAND_WORDMARK.height}
-      unoptimized
-      priority
-      draggable={false}
-      className={cn(
-        'pointer-events-none w-auto max-w-full select-none object-contain object-left',
-        MARK_HEIGHTS[size],
-        className,
-      )}
-    />
+  const iconSrc = useBrandLogoSrc()
+
+  const lockup = (
+    <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <Image
+        src={iconSrc}
+        alt=""
+        aria-hidden
+        width={BRAND_LOGO.width}
+        height={BRAND_LOGO.height}
+        unoptimized
+        priority
+        draggable={false}
+        className={cn(
+          'pointer-events-none select-none object-contain',
+          LOCKUP_ICON_HEIGHTS[size],
+        )}
+      />
+      <Image
+        src={brandWordmarkSrc()}
+        alt="Popup Hub"
+        width={BRAND_WORDMARK.width}
+        height={BRAND_WORDMARK.height}
+        unoptimized
+        priority
+        draggable={false}
+        className={cn(
+          'pointer-events-none w-auto max-w-full select-none object-contain object-left',
+          MARK_HEIGHTS[size],
+          className,
+        )}
+      />
+    </span>
   )
 
   if (href) {
@@ -236,12 +262,12 @@ export function BrandLogoLockup({
         className="inline-flex shrink-0 items-center rounded-md"
         aria-label="Popup Hub"
       >
-        {wordmark}
+        {lockup}
       </Link>
     )
   }
 
-  return wordmark
+  return lockup
 }
 
 export function BrandLogoMark({ size = 'nav', className, href }: BrandLogoMarkProps) {

@@ -13,9 +13,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
 import { GuestNav } from '@/components/nav/guest-nav'
-import { Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { type SignupRole } from '@/lib/auth/rbac'
+import { getSignupRoleLabel, signupRoleSubmitHint } from '@/lib/auth/signup-role-questionnaire'
+import { SignupRolePicker } from '@/components/auth/signup-role-picker'
 import {
   onNativeOAuthBrowserFinished,
   signInWithOAuth,
@@ -25,28 +27,6 @@ import { OAuthProviderButtons } from '@/components/auth/oauth-provider-buttons'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { LoginForm } from '@/app/(auth)/login/login-form'
-import { VendorSignupPassportPreview } from '@/components/marketing/vendor-signup-passport-preview'
-
-const ROLE_OPTIONS = [
-  {
-    id: 'shopper' as SignupRole,
-    label: 'Patron',
-    desc: 'Discover markets, maps & favorites',
-    icon: ShoppingBag,
-  },
-  {
-    id: 'vendor' as SignupRole,
-    label: 'Vendor',
-    desc: 'Apply for booths — juried markets review each application',
-    icon: Store,
-  },
-  {
-    id: 'coordinator' as SignupRole,
-    label: 'Coordinator',
-    desc: 'Create events & manage vendors',
-    icon: Calendar,
-  },
-] as const
 
 function defaultPostSignupPath(role: SignupRole): string | undefined {
   if (role === 'coordinator') return '/coordinator/events/new'
@@ -203,7 +183,8 @@ function SignupForm() {
     toast.success('Confirmation link sent again — check your inbox.')
   }
 
-  const selectedLabel = ROLE_OPTIONS.find((option) => option.id === role)?.label ?? role
+  const selectedLabel = getSignupRoleLabel(role)
+  const submitHint = signupRoleSubmitHint(role)
   const signupTitle =
     roleLocked && role === 'coordinator'
       ? 'Start hosting your market'
@@ -312,59 +293,7 @@ function SignupForm() {
           </>
         ) : (
           <>
-          {!roleLocked ? (
-            <fieldset className="mb-6">
-              <legend className="mb-2 block text-sm font-medium">I am a… *</legend>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {ROLE_OPTIONS.map(({ id, label, desc, icon: Icon }) => {
-                  const selected = role === id
-                  return (
-                    <label
-                      key={id}
-                      className={`flex min-h-[4.5rem] cursor-pointer touch-manipulation flex-col items-center rounded-xl border p-3 text-center transition ${
-                        selected
-                          ? 'border-harvest-500 bg-harvest-50 ring-2 ring-harvest-200/80'
-                          : 'border-stone-200/80 hover:border-harvest-400/60 hover:bg-canvas/50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="signup-role"
-                        value={id}
-                        checked={selected}
-                        onChange={() => setRole(id)}
-                        className="sr-only"
-                        required
-                      />
-                      <Icon
-                        className={`mb-1.5 h-5 w-5 ${selected ? 'text-harvest-600' : 'text-muted-foreground'}`}
-                      />
-                      <span className="text-xs font-semibold">{label}</span>
-                      <span className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{desc}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </fieldset>
-          ) : (
-            <div className="mb-6 flex justify-center">
-              <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm">
-                {role === 'coordinator' ? (
-                  <Calendar className="h-4 w-4" aria-hidden />
-                ) : (
-                  <Store className="h-4 w-4" aria-hidden />
-                )}
-                Signing up as {selectedLabel}
-              </Badge>
-            </div>
-          )}
-          {!roleLocked ? (
-            <p className="mb-4 text-xs text-muted-foreground leading-snug">
-              Vendors can sign up directly and apply to open markets. Organizers only review applications
-              for <strong>juried</strong> events — instant-book markets approve automatically.
-            </p>
-          ) : null}
-          {role === 'vendor' ? <VendorSignupPassportPreview /> : null}
+          <SignupRolePicker role={role} onRoleChange={setRole} roleLocked={roleLocked} />
           <form onSubmit={handleSignup} className="flex flex-col space-y-4">
             <div className="space-y-1">
               <Label htmlFor="name">Full name</Label>
@@ -418,11 +347,14 @@ function SignupForm() {
               disabled={!termsAccepted}
               onSignIn={(provider) => void handleOAuthSignUp(provider)}
             />
-            <div className="sticky bottom-0 bg-white pt-2">
+            <div className="sticky bottom-0 bg-white pt-2 space-y-2">
               <Button type="submit" className="w-full min-h-11 touch-manipulation" disabled={!canSubmit}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Create Account as <Badge className="ml-1 bg-white/20 text-white">{selectedLabel}</Badge>
               </Button>
+              {submitHint ? (
+                <p className="text-center text-xs text-muted-foreground">{submitHint}</p>
+              ) : null}
             </div>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">

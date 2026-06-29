@@ -94,7 +94,7 @@ export function MarketAreaFilter({
 
       <HomeAddressPicker
         id="market-area-home-address"
-        label="Or enter an address"
+        label="Or enter an address or postal code"
         placeholder="Address or postal code…"
         onSelect={({ lat, lng, label }) => onAddressSelect(lat, lng, label)}
       />

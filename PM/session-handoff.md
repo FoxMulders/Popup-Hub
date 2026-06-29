@@ -2,6 +2,57 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Signup role selection + questionnaire (local, not deployed)
+- **Goal:** Make vendor and coordinator signup obvious; explain role hierarchy (vendor/coordinator include patron access); offer a help-me-choose questionnaire.
+- **Personas:** All users · `/signup` (Patron · Vendor · Coordinator).
+- **Shipped locally:**
+  - **`components/auth/signup-role-picker.tsx`** — hierarchy callout, enriched role cards (includes/bestFor), per-role context panel, vendor passport preview, questionnaire trigger.
+  - **`components/auth/signup-role-questionnaire.tsx`** — Dialog wizard (goal → follow-ups → recommendation); apply role when unlocked; read-only recommendation when `?role=` locked.
+  - **`lib/auth/signup-role-questionnaire.ts`** — `recommendSignupRole()`, step progression, submit hints, role labels.
+  - **`lib/auth/signup-role-questionnaire.test.ts`** — unit tests for all questionnaire branches.
+  - **`app/(auth)/signup/page.tsx`** — uses `SignupRolePicker`; submit hint under button for vendor/coordinator.
+- **Verify:** `npx tsx lib/auth/signup-role-questionnaire.test.ts` PASS; `npx tsc --noEmit` PASS. Smoke: `/signup` (Patron default, hierarchy copy, questionnaire → each role); `/signup?role=vendor`; `/signup?role=coordinator` (locked badge + questionnaire without apply); OAuth signup still passes `role` metadata.
+- **Next:** User commit + deploy when ready.
+
+## Shipped this session (OAuth providers + Apple S2S, commit 12e1cbd3 — deploy pending auth)
+- **Goal:** Enable Apple, Microsoft, and Facebook sign-in alongside Google; keep email/password; skip Auth0.
+- **Personas:** All users · `/login`, `/signup`, native `ca.popuphub.app`.
+- **Shipped:**
+  - **`PM/oauth-provider-setup.md`** — Supabase URL config, Google/Azure/Facebook/Apple console steps, smoke checklist, troubleshooting.
+  - **`lib/auth/apple-s2s-notifications.ts`**, **`app/api/auth/apple/notifications/route.ts`** — Apple S2S webhook (JWT verify, user delete/unlink).
+  - **`lib/auth/public-paths.ts`**, **`lib/supabase/middleware.ts`** — public Apple notification route.
+  - **`mobile/README.md`**, **`PM/ios-testflight.md`** — OAuth redirect URLs + Apple S2S registration.
+  - OAuth UI (Google, Apple, Microsoft, Facebook + email/password) already on login/signup via `OAuthProviderButtons`.
+- **Commit:** `12e1cbd3` on `master` (pushed).
+- **Deploy:** Vercel build completed but promotion failed (`Not authorized` from CLI) — user must redeploy from Vercel dashboard or re-auth CLI.
+- **Blockers (external — user action in dashboards):**
+  1. Supabase → URL Configuration + enable Apple, Azure, Facebook providers (see `PM/oauth-provider-setup.md`).
+  2. Apple Developer Services ID + JWT secret; Azure app registration; Meta Facebook app (Live mode).
+  3. Vercel production: confirm `NEXT_PUBLIC_SITE_URL=https://popuphub.ca`.
+  4. After deploy: Apple Developer → S2S URL `https://popuphub.ca/api/auth/apple/notifications`.
+- **Verify:** `npx tsx lib/auth/apple-s2s-notifications.test.ts` PASS; `npx tsc --noEmit` PASS; `/login` and `/signup` return 200 on prod.
+- **Next:** Redeploy `12e1cbd3`; complete Supabase/provider console setup; smoke each OAuth button + email/password on web and native.
+
+## Active work — Market detail footer clearance (local, not deployed)
+- **Personas:** Patron · Market detail (`/events/[id]`).
+- **Shipped locally:**
+  - **`components/shopper/event-action-bar.tsx`** — sets `document.body.dataset.eventActionBar` while mounted (mirrors `ShopperBottomNav` pattern).
+  - **`app/globals.css`** — footer `padding-bottom` clearance when action bar is present: `5rem` desktop, `9rem` mobile (clears bottom nav + action bar stack).
+- **Verify:** `npx tsc --noEmit` PASS; code review confirms footer padding applies only on pages with `EventActionBar` mounted. Smoke: scroll to bottom on `/events/[id]` at mobile and desktop — full footer link row visible above Directions/Remind bar.
+- **Next:** User commit + deploy when ready.
+
+## Active work — Scenario test market cover images (applied to prod DB, code uncommitted)
+- **Goal:** Give each of the 14 `is_test` scenario markets a distinct themed cover image so `/discover` shows real-looking cards instead of placeholder pins.
+- **Personas:** Patron · Discover (`/discover`); Coordinator markets list.
+- **Shipped:**
+  - **`public/scenario-markets/scenario-<id>.jpg`** — 14 AI-generated, cohesive flat-illustration covers (Popup Hub palette), compressed to ~140–290KB JPG (1600px wide).
+  - **`scripts/apply-scenario-market-covers.ts`** — idempotent: matches each `is_test` event by name, uploads `public/scenario-markets/scenario-<id>.jpg` to the `event-covers` bucket at `${coordinatorId}/${eventId}/cover.jpg`, sets `events.cover_image_url` (cache-busted `?v=`). Supports `--dry-run`.
+  - **`scripts/compress-scenario-covers.mjs`** — one-off PNG→JPG compressor (sharp) used to stage the public images.
+- **Applied to production:** ran the apply script — 14/14 markets now have covers; verified `cover_image_url` set on all and a served URL returns `200 image/jpeg`. Covers are live (no deploy needed since images live in Supabase storage).
+- **Verify:** Open `/discover` → scenario market cards show themed covers (e.g. Cancelled Market = empty hall, Outdoor Tent = park tents, HubGrid = overhead booth grid).
+- **Note:** Future `npm run seed:scenario-markets` re-runs do NOT clear covers (seed payload omits `cover_image_url`); re-run the apply script if markets are purged + re-seeded.
+- **Next:** User commit + deploy when ready (commits the public images + scripts; the cover_image_url values are already live in prod DB).
+
 ## Active work — Center loader logo and animation (local, not deployed)
 - **Goal:** Center the worded logo and loader animation as a single vertically-centered group on the full-screen loader overlay, preserving the gap between them.
 - **Personas:** All users · initial page-load loader and replay overlay.
@@ -163,19 +214,6 @@
   - Coordinator moderation reuses existing **`POST /api/admin/coordinator-verification`** from detail panel.
 - **Verify:** `npx tsc --noEmit` PASS. Smoke (as `is_admin`): search by email → select user → detail loads wallet/auth; toggle beta tester; coordinator approve/suspend; send password reset; grant admin clears prior sole admin.
 - **Blockers:** None.
-- **Next:** User commit + deploy when ready.
-
-## Active work — OAuth sign-up: Apple, Microsoft, Facebook (local, not deployed)
-- **Goal:** Offer Apple, Microsoft, and Facebook alongside Google on login and signup.
-- **Personas:** Patron · Vendor · Coordinator · `/login`, `/signup`.
-- **Shipped locally:**
-  - **`lib/auth/oauth-providers.ts`** — provider registry (Google, Apple, Azure/Microsoft, Facebook).
-  - **`lib/auth/native-oauth.ts`** — generalized `signInWithOAuth()`; Google wrapper retained.
-  - **`components/auth/oauth-provider-buttons.tsx`** — shared Continue-with buttons + icons.
-  - **`Login_qa.tsx`**, **`signup/page.tsx`** — four OAuth providers on login and signup (signup still requires terms acceptance).
-  - **`capacitor.config.ts`** — Facebook domains in `allowNavigation`.
-- **Verify:** `npx tsc --noEmit` PASS. Smoke: `/login` and `/signup` show Google, Apple, Microsoft, Facebook; each opens provider OAuth when enabled in Supabase.
-- **Blockers:** Enable providers in **Supabase Dashboard → Authentication → Providers** (Apple, Azure, Facebook) with client IDs/secrets; add redirect URLs `https://popuphub.ca/api/auth/callback` and `ca.popuphub.app://auth/callback` if not already listed.
 - **Next:** User commit + deploy when ready.
 
 ## Active work — Native home-screen widgets (local, not deployed)

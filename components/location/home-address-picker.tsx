@@ -157,104 +157,107 @@ function HomeAddressPickerInner({
       <Label htmlFor={id} className="text-sm">
         {label}
       </Label>
-      <div className="relative">
-        <MapPin
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden
-        />
-        <Input
-          ref={inputRef}
-          id={id}
-          value={input}
-          disabled={disabled || geocoding}
-          placeholder={placeholder}
-          className="border-2 border-stone-300 bg-white pl-9 pr-10 text-base font-medium text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/25"
-          autoComplete="street-address"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          onChange={(e) => {
-            setInput(e.target.value)
-            setError(null)
-          }}
-          onKeyDown={(e) => {
-            if (!open || predictions.length === 0) {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                void geocodeManual()
-              }
-              return
-            }
-            if (e.key === 'ArrowDown') {
-              e.preventDefault()
-              setHighlightIndex((i) => Math.min(i + 1, predictions.length - 1))
-            } else if (e.key === 'ArrowUp') {
-              e.preventDefault()
-              setHighlightIndex((i) => Math.max(i - 1, 0))
-            } else if (e.key === 'Enter' && highlightIndex >= 0) {
-              e.preventDefault()
-              const pick = predictions[highlightIndex]
-              if (pick) void selectPrediction(pick.place_id, pick.description)
-            } else if (e.key === 'Escape') {
-              setOpen(false)
-            }
-          }}
-          onBlur={() => {
-            window.setTimeout(() => setOpen(false), 150)
-          }}
-          onFocus={() => {
-            if (predictions.length > 0) setOpen(true)
-          }}
-        />
-        {(loading || geocoding) && (
-          <Loader2
-            className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+      <div className="flex items-start gap-2">
+        <div className="relative flex-1">
+          <MapPin
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
-        )}
-        {open && predictions.length > 0 ? (
-          <ul
-            id={listboxId}
-            role="listbox"
-            className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border bg-white py-1 shadow-lg"
-          >
-            {predictions.map((prediction, index) => (
-              <li key={prediction.place_id} role="option" aria-selected={index === highlightIndex}>
-                <button
-                  type="button"
-                  className={cn(
-                    'w-full px-3 py-2 text-left text-sm hover:bg-canvas',
-                    index === highlightIndex && 'bg-canvas'
-                  )}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() =>
-                    void selectPrediction(prediction.place_id, prediction.description)
-                  }
-                >
-                  {prediction.description}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+          <Input
+            ref={inputRef}
+            id={id}
+            value={input}
+            disabled={disabled || geocoding}
+            placeholder={placeholder}
+            className="border-2 border-stone-300 bg-white pl-9 pr-10 text-base font-medium text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/25"
+            autoComplete="street-address"
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            onChange={(e) => {
+              setInput(e.target.value)
+              setError(null)
+            }}
+            onKeyDown={(e) => {
+              if (!open || predictions.length === 0) {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  void geocodeManual()
+                }
+                return
+              }
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setHighlightIndex((i) => Math.min(i + 1, predictions.length - 1))
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setHighlightIndex((i) => Math.max(i - 1, 0))
+              } else if (e.key === 'Enter' && highlightIndex >= 0) {
+                e.preventDefault()
+                const pick = predictions[highlightIndex]
+                if (pick) void selectPrediction(pick.place_id, pick.description)
+              } else if (e.key === 'Escape') {
+                setOpen(false)
+              }
+            }}
+            onBlur={() => {
+              window.setTimeout(() => setOpen(false), 150)
+            }}
+            onFocus={() => {
+              if (predictions.length > 0) setOpen(true)
+            }}
+          />
+          {(loading || geocoding) && (
+            <Loader2
+              className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+              aria-hidden
+            />
+          )}
+          {open && predictions.length > 0 ? (
+            <ul
+              id={listboxId}
+              role="listbox"
+              className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border bg-white py-1 shadow-lg"
+            >
+              {predictions.map((prediction, index) => (
+                <li key={prediction.place_id} role="option" aria-selected={index === highlightIndex}>
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full px-3 py-2 text-left text-sm hover:bg-canvas',
+                      index === highlightIndex && 'bg-canvas'
+                    )}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() =>
+                      void selectPrediction(prediction.place_id, prediction.description)
+                    }
+                  >
+                    {prediction.description}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          className="min-h-11 shrink-0 gap-1.5"
+          disabled={disabled || geocoding || input.trim().length < 3}
+          onClick={() => void geocodeManual()}
+        >
+          {geocoding ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Search className="h-4 w-4" aria-hidden />
+          )}
+          Search
+        </Button>
       </div>
       {apiUnavailable ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-xs text-muted-foreground">
-            Address search unavailable — enter a postal code instead.
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="min-h-9"
-            disabled={disabled || geocoding}
-            onClick={() => void geocodeManual()}
-          >
-            Find address
-          </Button>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Address autocomplete unavailable — type an address or postal code and tap Search.
+        </p>
       ) : null}
       {error ? <p className="text-xs text-red-700">{error}</p> : null}
     </div>

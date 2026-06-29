@@ -1242,6 +1242,10 @@
     display: none !important;
   }
 
+  body[data-event-action-bar='true'] .popup-hub-chrome-footer {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
   @media (max-width: 767px) {
     .popup-hub-chrome-footer {
       font-size: 0.6875rem;
@@ -1261,6 +1265,10 @@
     body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {
       margin-top: auto;
       padding-bottom: calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
+    }
+
+    body[data-event-action-bar='true'] .popup-hub-chrome-footer {
+      padding-bottom: calc(9rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
     }
 
     body[data-mobile-bottom-nav='shopper'] .site-app-shell #site-main {

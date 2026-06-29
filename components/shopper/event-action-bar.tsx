@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigation, Share2, Bell, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { openDirections } from '@/lib/shopper/geo'
@@ -24,6 +24,13 @@ export function EventActionBar({
   existingReminderOffsets,
 }: EventActionBarProps) {
   const [reminderOpen, setReminderOpen] = useState(false)
+
+  useEffect(() => {
+    document.body.dataset.eventActionBar = 'true'
+    return () => {
+      delete document.body.dataset.eventActionBar
+    }
+  }, [])
 
   async function shareEvent() {
     const url = `${window.location.origin}/events/${event.id}`
