@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug scan: is_test catalog leak (branch `cursor/critical-bug-investigation-8951`)
+- **Trigger:** Push to `master` at `ad27a2d1` (merge + ship 46 CI profile hardening); scan found recurring unmerged `is_test` filter fix.
+- **Bug:** Published QA scenario markets (`events.is_test = true`) leak to `/discover`, vendor directory, widget feed, public event pages, coordinator profiles, and vendor apply — sitemap already excluded them.
+- **Impact:** Patrons/vendors see fake QA markets; vendors could apply to test events before this fix.
+- **Fix:** `excludeTestMarkets()` helper in `lib/queries/public-market-catalog.ts`; applied across cached public queries, browse pages, widget feed, coordinator profile, vendor event detail, and vendor apply API guard. Unit test: `lib/queries/public-market-catalog.test.ts`.
+- **Verify:** `npx tsx lib/queries/public-market-catalog.test.ts` PASS.
+- **Next:** Merge PR → deploy → confirm `/discover` and `/vendor/events` omit scenario test markets.
+
 ## Active work — iOS TestFlight completion (build 12, merged PR #122 + #123)
 - **Goal:** Land repo fixes for internal TestFlight upload via GitHub Actions manual signing.
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight internal.
