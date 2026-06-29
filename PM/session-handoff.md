@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Critical bug scan — `is_test` catalog leak (branch `cursor/critical-bug-investigation-6e78`)
+- **Trigger:** Push `3fb0fde1` (iOS .p12 import hardening) — deep scan also found pre-existing leak on `master`.
+- **Bug:** QA scenario markets (`events.is_test = true`, status `published`/`active`) visible on `/discover`, vendor directory, iOS widget feed, public event pages, coordinator profiles, and vendor apply (sitemap already excluded them).
+- **Impact:** Patrons/vendors see fake QA markets; vendors could submit real applications to test events.
+- **Fix:** `excludeTestMarkets()` helper + `.eq('is_test', false)` on cached catalog/widget queries; block `POST /api/vendor/apply` for `is_test` events; unit test `lib/queries/public-market-catalog.test.ts`.
+- **TS note:** `excludeTestMarkets()` wrapper triggers TS2589 on simple Supabase selects — use inline `.eq('is_test', false)` in `cached-public-markets.ts` and `lib/widget/fetch-data.ts`.
+- **Next:** Merge PR → verify seeded scenario markets no longer appear on `/discover`.
+
 ## Verified this session — `npx tsc --noEmit` clean (stale CI errors not reproducible)
 - **Trigger:** CI reported `app/(browse)/favorites/page.tsx(71,47): TS18047 'e' is possibly 'null'` and `lib/queries/cached-public-markets.ts(45,5): TS2589 type instantiation excessively deep`.
 - **Result:** Current `master` (`31d04ed2`) passes `npx tsc --noEmit` (exit 0), confirmed twice including a **fresh** run after deleting `tsconfig.tsbuildinfo` (tsconfig has `incremental: true`, so local runs can skip cached files).

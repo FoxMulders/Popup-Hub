@@ -21,6 +21,7 @@ async function fetchDiscoverMarkets(): Promise<Event[]> {
       '*, event_days(*), coordinator:profiles!events_coordinator_id_fkey(id, full_name, reliability_score, recent_late_cancellation_at, coordinator_is_verified)'
     )
     .in('status', OPEN_MARKET_STATUSES)
+    .eq('is_test', false)
     .order('start_at', { ascending: true })
 
   if (error) throw new Error(`discover markets: ${error.message}`)
@@ -33,6 +34,7 @@ async function fetchVendorDirectoryMarkets(): Promise<Event[]> {
     .from('events')
     .select(VENDOR_EVENT_SELECT)
     .in('status', VENDOR_MARKET_STATUSES)
+    .eq('is_test', false)
     .order('start_at', { ascending: true })
 
   if (error) throw new Error(`vendor directory markets: ${error.message}`)
@@ -45,6 +47,7 @@ async function fetchApprovedVendorCounts(): Promise<Record<string, number>> {
     .from('events')
     .select('id')
     .in('status', OPEN_MARKET_STATUSES)
+    .eq('is_test', false)
 
   if (eventsError) throw new Error(`vendor counts events: ${eventsError.message}`)
 
