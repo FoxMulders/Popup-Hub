@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Critical bug scan — Ship 45 (f4a4ea75) — 2026-06-29
+
+- **Finding:** `is_test` scenario markets still leak to `/discover`, vendor directory, and patron widgets (pre-existing; worsened by ship 45 cover images).
+- **Fix PR:** #113 on `cursor/critical-bug-investigation-3dd3` — adds `PUBLIC_MARKET_CATALOG_EXCLUDE_TEST` filter to cached public queries + widget.
+- **Ship 45 changes reviewed (no other critical bugs):** signup role questionnaire (UI only), home-address Search button, event footer clearance CSS, logo lockup.
+
 ## Active work — Signup role selection + questionnaire (local, not deployed)
 - **Goal:** Make vendor and coordinator signup obvious; explain role hierarchy (vendor/coordinator include patron access); offer a help-me-choose questionnaire.
 - **Personas:** All users · `/signup` (Patron · Vendor · Coordinator).
