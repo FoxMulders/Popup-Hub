@@ -1,1 +1,1 @@
-feat: ship 45 session updates (Signup role selection + questionnaire; Market detail footer clearance; Center loader logo and animation; Popup Hub empty-state copy; +41 more)
+feat: ship 45 session updates (iOS code signing hardening; Market detail footer clearance; Center loader logo and animation; Popup Hub empty-state copy; +41 more)

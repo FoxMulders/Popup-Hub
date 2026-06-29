@@ -2,7 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Signup role selection + questionnaire (local, not deployed)
+## Active work — iOS code signing hardening (local, not deployed)
+- **Goal:** Fix ITMS-90035 (invalid signature) on TestFlight build 10 / v1.120.0.
+- **Shipped locally:**
+  - **`.github/workflows/deploy.yml`** — archive step forces `CODE_SIGN_IDENTITY="Apple Distribution"` so CI cannot fall back to a development identity.
+  - **`ios/App/App.xcodeproj/project.pbxproj`** — removed legacy project-level `CODE_SIGN_IDENTITY = "iPhone Developer"` from Debug config.
+- **Blockers (external):** Confirm `BUILD_CERTIFICATE_BASE64` secret exports an **Apple Distribution** identity (not Apple Development). Check failed workflow log: `security find-identity -v -p codesigning` must list `Apple Distribution: … (6ACBDTX7T7)`.
+- **Next:** User commit + push to `master` to trigger Deploy to TestFlight; bump build number if re-uploading same marketing version.
+
 - **Goal:** Make vendor and coordinator signup obvious; explain role hierarchy (vendor/coordinator include patron access); offer a help-me-choose questionnaire.
 - **Personas:** All users · `/signup` (Patron · Vendor · Coordinator).
 - **Shipped locally:**
