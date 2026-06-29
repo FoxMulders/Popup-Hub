@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { EventCard } from '@/components/events/event-card'
 import { FavoriteButton } from '@/components/shopper/favorite-button'
 import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
@@ -67,7 +68,7 @@ export default async function FavoritesPage() {
       const ev = Array.isArray(f.events) ? f.events[0] : f.events
       return ev as Event | null
     })
-    .filter(Boolean) as Event[]
+    .filter((e): e is Event => Boolean(e) && !e.is_test)
 
   const upcomingEvents = allEvents
     .filter((e) => new Date(e.end_at) >= new Date())
@@ -80,12 +81,14 @@ export default async function FavoritesPage() {
   let coordinatorRecs: Event[] = []
   if (followedCoordinatorIds.length > 0) {
     const favoritedIds = new Set(upcomingEvents.map((e) => e.id))
-    const { data: recRows } = await supabase
-      .from('events')
-      .select('*, event_days(*)')
-      .in('coordinator_id', followedCoordinatorIds)
-      .in('status', ['published', 'active'])
-      .gte('end_at', nowIso)
+    const { data: recRows } = await excludeTestMarkets(
+      supabase
+        .from('events')
+        .select('*, event_days(*)')
+        .in('coordinator_id', followedCoordinatorIds)
+        .in('status', ['published', 'active'])
+        .gte('end_at', nowIso)
+    )
       .order('start_at', { ascending: true })
       .limit(12)
 
