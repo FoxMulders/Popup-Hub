@@ -2606,8 +2606,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `ad27a2d1` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.185.0 build 1** | commit `b5712470` (handoff updated 2026-06-29 15:27)
+- Branch: `master` @ `d5b3212b` (pushed to `origin/master`)
+- Last deploy commit: `d5b3212b` - feat: ship 46 session updates (Public event TypeScript CI fix; Signup role selection + questionnaire; Market detail footer clearance; Center loader logo and animation; +42 more)
+- Production: https://popuphub.ca - **v1.186.0 build 1** | commit `ad27a2d1` (handoff updated 2026-06-29 17:52)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2984,7 +2985,7 @@
 
 
 ## Last deploy
-- 2026-06-28 16:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 44 session updates (Center loader logo and animation; Popup Hub empty-state copy; Uniform platform feature cards; Scenario test markets (`is_test`); +40 more)` (40a1571a)
+- 2026-06-29 17:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 46 session updates (Public event TypeScript CI fix; Signup role selection + questionnaire; Market detail footer clearance; Center loader logo and animation; +42 more)` (d5b3212b)
 
 
 ## Goal
