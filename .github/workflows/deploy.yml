@@ -149,8 +149,20 @@ jobs:
             fi
             local raw="$RUNNER_TEMP/$label.mobileprovision"
             local plist="$RUNNER_TEMP/$label.plist"
-            echo "$b64" | base64 --decode > "$raw"
-            security cms -D -i "$raw" > "$plist"
+            # Strip whitespace a copy-paste into the GitHub secret UI may have introduced —
+            # a single stray char makes the profile unparseable and produces the same
+            # "security: problem decoding ... (-8183)" failure as a bad .p12 secret.
+            printf '%s' "$b64" | tr -d '[:space:]' | base64 --decode > "$raw" 2>/dev/null || true
+            if [ ! -s "$raw" ]; then
+              echo "::error::Decoded $label profile is empty. The $label secret is not valid base64 of a .mobileprovision — re-run 'base64 -i <file>.mobileprovision | pbcopy' and paste the full output into BUILD_PROVISION_PROFILE_BASE64 or BUILD_WIDGET_PROVISION_PROFILE_BASE64."
+              exit 1
+            fi
+            echo "Decoded $label profile size: $(wc -c < "$raw") bytes ($(file -b "$raw"))"
+            if ! security cms -D -i "$raw" > "$plist" 2>"$RUNNER_TEMP/$label-cms.log"; then
+              cat "$RUNNER_TEMP/$label-cms.log" >&2
+              echo "::error::$label profile is not a valid .mobileprovision (security cms decode failed). Re-download from Apple Developer portal and re-encode with 'base64 -i <file>.mobileprovision'."
+              exit 1
+            fi
             local uuid name
             uuid=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$plist")
             name=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$plist")
