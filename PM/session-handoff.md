@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — is_test catalog leak fix (PR pending)
+- **Goal:** Stop QA scenario markets (`events.is_test = true`) from appearing on public discovery, vendor directory, widget feed, event detail pages, and coordinator profiles.
+- **Persona:** Patron · Vendor · public catalog surfaces.
+- **Baseline:** `master` at `c6bba7f4` (docs-only TestFlight handoff).
+- **Root cause:** Ship 44 introduced published `is_test` scenario markets; sitemap already filtered them but catalog queries did not. Prior fix on investigation branch `6e78` never merged.
+- **Shipped (branch `cursor/critical-bug-investigation-0134`):**
+  - **`lib/queries/public-market-catalog.ts`** — `excludeTestMarkets()` helper.
+  - **`lib/queries/cached-public-markets.ts`** — inline `.eq('is_test', false)` on discover/vendor/count queries (avoids TS2589).
+  - **Public event pages + `public-event-detail.tsx`** — exclude test markets.
+  - **`lib/widget/fetch-data.ts`**, **`app/coordinators/[id]/page.tsx`**, **`app/(browse)/favorites/page.tsx`**, **`app/api/vendor/apply/route.ts`** — same filter / reject applications.
+  - **`lib/queries/public-market-catalog.test.ts`** — unit test for helper.
+- **Verify:** `npx tsx lib/queries/public-market-catalog.test.ts` PASS.
+- **Next:** Merge PR → deploy → confirm `/discover` omits scenario test markets.
+
 ## Active work — iOS TestFlight completion (build 12, merged PR #122 + #123)
 - **Goal:** Land repo fixes for internal TestFlight upload via GitHub Actions manual signing.
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight internal.
