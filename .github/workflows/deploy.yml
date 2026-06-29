@@ -3,6 +3,7 @@ name: Deploy to TestFlight
 on:
   push:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -197,6 +198,8 @@ jobs:
       - name: Build Web App and Sync Capacitor
         run: |
           npm run build
+          npm run assets:logo
+          npm run mobile:assets
           npx cap sync ios
 
       - name: Build and Archive Xcode Project

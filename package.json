@@ -65,6 +65,7 @@
         "test:e2e:ui": "playwright test --ui",
         "seo:sitemap": "npx tsx scripts/generate-sitemap.ts",
         "mobile:assets": "node scripts/mobile/generate-ios-resources.mjs",
+        "mobile:verify-signing": "node scripts/mobile/verify-testflight-signing-config.mjs",
         "mobile:sync": "powershell -ExecutionPolicy Bypass -File ./scripts/mobile/sync-mobile.ps1",
         "mobile:sync:ios": "powershell -ExecutionPolicy Bypass -File ./scripts/mobile/sync-ios.ps1",
         "mobile:ios:open": "npx cap open ios",

@@ -65,14 +65,16 @@ In Xcode (**App** target):
 |---------|-------|
 | Display Name | Popup Hub |
 | Bundle Identifier | `ca.popuphub.app` |
-| Version | `1.100.0` (match `package.json`; auto-bumps on deploy from commit prefix) |
-| Build | increment each upload (e.g. `165` to match web build or independent iOS counter) |
+| Version | `1.184.0` (match `package.json`; auto-synced via `mobile:assets`) |
+| Build | increment each upload via `build-number.json` → `iosBuild` (e.g. `12`; independent from web build counter) |
 | Signing | Automatic + correct Team |
 | Deployment Target | iOS 15+ (Capacitor 7 default) |
 
 **Product → Archive** → **Distribute App** → **App Store Connect** → Upload.
 
 Processing in App Store Connect usually takes 5–30 minutes.
+
+**iOS build counter:** `build-number.json` → `iosBuild` (independent from the web `build` counter). `npm run mobile:assets` syncs `CURRENT_PROJECT_VERSION` from `iosBuild` and `MARKETING_VERSION` from `package.json`. Bump `iosBuild` before each TestFlight upload if App Store Connect rejects a duplicate build.
 
 ## 5. TestFlight — internal testing
 
@@ -170,6 +172,7 @@ The **Deploy to TestFlight** workflow uses **manual** distribution signing. This
 | “Untrusted Developer” on device | Settings → General → VPN & Device Management → trust developer cert (dev builds only) |
 | Archive fails signing | Xcode → Settings → Accounts → Download Manual Profiles; select correct Team |
 | GitHub Actions: `No signing certificate "iOS Distribution" found` | `BUILD_CERTIFICATE_BASE64` is missing the private key. On Mac: Keychain Access → My Certificates → expand `Apple Distribution: … (6ACBDTX7T7)` — must show a **private key** beneath. Right-click the identity → Export `.p12` (not the portal `.cer`). `base64 -i dist.p12 | pbcopy` → update repo secrets `BUILD_CERTIFICATE_BASE64` + `P12_PASSWORD`. Confirm `BUILD_PROVISION_PROFILE_BASE64` is an App Store profile for `ca.popuphub.app` on team `6ACBDTX7T7`. Re-run **Deploy to TestFlight**. |
+| GitHub Actions: `security: problem decoding` on **Install App Store provisioning profiles** | `BUILD_PROVISION_PROFILE_BASE64` or `BUILD_WIDGET_PROVISION_PROFILE_BASE64` is invalid base64 or has stray whitespace from copy-paste. On Mac: `base64 -i PopupHub_App_Store.mobileprovision | pbcopy` → paste into the secret. Profile must be **App Store** type, named exactly `PopupHub App Store` / `PopupHub Widget App Store`. |
 | GitHub Actions: `Your team has no devices` / `No profiles for 'ca.popuphub.app' were found` / `iOS App Development provisioning profiles` during **Release** archive | Automatic signing resolved to a **Development** profile. Common causes: `App.entitlements` has `aps-environment` set to `development` (remove until push is configured, or set `production` once Push is enabled on the App ID); stale manual profiles in `~/Library/MobileDevice/Provisioning Profiles/` (CI clears these before archive); missing explicit `CODE_SIGN_IDENTITY=Apple Distribution` on the Release target or archive step. Do not run `npm run mobile:assets` before shipping without confirming `App.entitlements` — `generate-ios-resources.mjs` must not re-add `aps-environment=development`. |
 | App Store Connect: **ITMS-90035** (invalid signature) after upload | Binary was signed with a **Development** or **Ad Hoc** certificate, not **Apple Distribution**. In Xcode: target **Signing & Capabilities** → Release uses your team with Automatic signing; **Product → Scheme → Edit Scheme → Archive → Build Configuration = Release**; clean build folder; archive with **Any iOS Device (arm64)** (not a plugged-in device); **Distribute App → App Store Connect**. Bump **Build** (e.g. 10 → 11) before re-upload. Verify `App.entitlements` has no `aps-environment=development`. |
 | TestFlight build missing | Check email for Apple processing errors; verify bundle id matches App Store Connect |
@@ -179,3 +182,45 @@ The **Deploy to TestFlight** workflow uses **manual** distribution signing. This
 1. Universal links + `apple-app-site-association` on production domain.
 2. Push notifications (APNs) for market-day alerts.
 3. Evaluate bundled static export or live-update for App Store compliance long term.
+
+## 10. Manual completion checklist (after repo merge)
+
+Use this once `node scripts/mobile/verify-testflight-signing-config.mjs` passes locally.
+
+### A. Fix GitHub secrets (if CI fails at profile install)
+
+1. Apple Developer → **Profiles** → download **App Store** profiles (not Development):
+   - `PopupHub App Store` → `ca.popuphub.app`
+   - `PopupHub Widget App Store` → `ca.popuphub.app.PopupHubWidget`
+2. On Mac, for each file:
+   ```bash
+   base64 -i PopupHub_App_Store.mobileprovision | pbcopy
+   ```
+   Paste into `BUILD_PROVISION_PROFILE_BASE64` (repeat for widget → `BUILD_WIDGET_PROVISION_PROFILE_BASE64`).
+3. Re-run **Actions → Deploy to TestFlight → Run workflow** (`workflow_dispatch` on `master`).
+
+### B. Supabase (required for native sign-in)
+
+Supabase Dashboard → **Authentication → URL Configuration**:
+
+- Site URL: `https://popuphub.ca`
+- Redirect URLs: `https://popuphub.ca/**`, `https://popuphub.ca/api/auth/callback`, `ca.popuphub.app://auth/callback`
+
+### C. App Store Connect (after successful upload)
+
+- [ ] **App Information** → upload [`mobile/ios/routing-app-coverage.geojson`](mobile/ios/routing-app-coverage.geojson)
+- [ ] **TestFlight** → wait for build **12** / v**1.184.0** to finish processing
+- [ ] Answer **Export Compliance** (typically No)
+- [ ] **Internal Testing** → create group → add team Apple IDs → send invites
+
+### D. Apple Sign in with Apple S2S (post-deploy)
+
+Apple Developer → App ID `ca.popuphub.app` → Sign in with Apple → **Server-to-Server Notification Endpoint**:
+
+`https://popuphub.ca/api/auth/apple/notifications`
+
+Verify: `curl -s -o /dev/null -w "%{http_code}" -X POST https://popuphub.ca/api/auth/apple/notifications -H "Content-Type: application/json" -d '{}'` → expect **400** (not 404).
+
+### E. Device smoke tests (`PM/ios-testflight.md` §5)
+
+Install via TestFlight, then run flows 1–8 (required). Flows 9–10 (push/instant-book) are **v1 deferred** until APNs is enabled.
