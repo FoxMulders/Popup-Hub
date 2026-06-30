@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   DEFAULT_DISTANCE_RADIUS_KM,
   MARKET_RADIUS_STORAGE_KEY,

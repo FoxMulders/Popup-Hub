@@ -10,7 +10,7 @@ import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/intera
 import { buttonVariants } from '@/components/ui/button'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
 import {

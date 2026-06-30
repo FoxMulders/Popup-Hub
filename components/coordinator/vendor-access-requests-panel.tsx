@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2 } from 'lucide-react'
 import type { VendorAccessRequest } from '@/types/database'
 

@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select'
 import { MarketPanel, MarketPanelHeader, MarketPanelTitle } from '@/components/ui/market-panel'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import type { Category, Event, EventCategoryLimit, PetPolicy } from '@/types/database'
 
 interface PreFlightReviewClientProps {

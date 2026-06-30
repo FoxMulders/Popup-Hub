@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 
 interface MarkClearedWithoutPhotoProps {

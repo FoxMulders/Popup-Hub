@@ -11,7 +11,7 @@ import { BuildVersionFooter } from '@/components/brand/build-version-footer'
 import { InstallPrompt } from '@/components/navigation/install-prompt'
 import { CapacitorInit } from '@/components/mobile/capacitor-init'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
-import { Toaster } from '@/components/ui/sonner'
+import { AppToaster } from '@/components/ui/app-toaster'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { SiteJsonLd } from '@/components/seo/site-json-ld'
 import { getSessionRoleForTitle } from '@/lib/auth/session-role-for-title'
@@ -116,7 +116,7 @@ export default async function RootLayout({
             </div>
           </div>
           <InstallPrompt />
-          <Toaster richColors position="top-right" />
+          <AppToaster />
           <Analytics />
         </PopupLoaderProvider>
       </body>

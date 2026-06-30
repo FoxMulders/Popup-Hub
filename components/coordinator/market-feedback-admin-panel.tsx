@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { CheckCircle2, Inbox, Loader2, RefreshCw } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
 import { WIZARD_SECTION_LABEL } from '@/lib/wizard/wizard-panel-styles'

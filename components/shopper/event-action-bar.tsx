@@ -7,7 +7,7 @@ import { openDirections } from '@/lib/shopper/geo'
 import { AddToCalendarButton } from '@/components/shopper/add-to-calendar-button'
 import { FavoriteButton } from '@/components/shopper/favorite-button'
 import { ReminderPicker } from '@/components/shopper/reminder-picker'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import type { Event } from '@/types/database'
 
 interface EventActionBarProps {

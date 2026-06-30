@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { HelpCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { CLEARANCE_POLICY_OPTIONS } from '@/lib/booth-clearance-policy'
 import type { BoothClearancePolicy } from '@/types/database'

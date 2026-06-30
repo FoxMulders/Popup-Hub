@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Star } from 'lucide-react'
 
 interface ReviewSectionProps {

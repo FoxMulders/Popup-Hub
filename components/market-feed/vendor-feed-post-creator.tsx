@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { uploadMarketFeedMedia } from '@/lib/market-feed/upload-feed-media'
 import type { MarketFeedMediaType } from '@/types/database'
 

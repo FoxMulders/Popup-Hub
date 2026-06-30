@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { vendorMarketInviteUrl } from '@/lib/coordinator/vendor-outreach'
 import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { marketTheme } from '@/lib/theme/market'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import type { Event, EventCategoryLimit } from '@/types/database'
 

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Loader2, Save } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   AlertDialog,
   AlertDialogAction,

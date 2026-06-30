@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle, FileText, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { safeFormatDistanceToNow } from '@/lib/format/safe-event-date'

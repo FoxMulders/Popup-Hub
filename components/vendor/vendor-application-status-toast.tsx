@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 import { dispatchNotificationsChanged } from '@/lib/notifications/sync'
 import { APPLICATION_STATUS_NOTIFICATION_TYPES } from '@/lib/vendor/fetch-application-status-notifications'

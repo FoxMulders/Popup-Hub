@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useDebugLog } from './debug-log-context'
 import { formatDebugLogText } from './format-debug-log-text'

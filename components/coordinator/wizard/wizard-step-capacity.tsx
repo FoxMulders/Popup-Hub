@@ -17,7 +17,7 @@ import {
 } from '@/lib/wizard/quarter-auction-vendor-presets'
 import type { Category, VenueElement, VenueProfile } from '@/types/database'
 import { MarketBoothPricingFields } from '@/components/coordinator/wizard/market-booth-pricing-fields'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export interface WizardStepCapacityProps {
   categories: Category[]

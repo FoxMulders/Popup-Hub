@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BookmarkPlus, Loader2, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { VENUE_PRESET_OPTIONS, type VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import {

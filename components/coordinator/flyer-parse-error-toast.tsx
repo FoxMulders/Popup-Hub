@@ -1,6 +1,6 @@
 'use client'
 
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 const FLYER_PARSE_ERROR_TOAST_CLASS =
@@ -31,10 +31,10 @@ function FlyerParseErrorToast({ message, toastId }: FlyerParseErrorToastProps) {
   )
 }
 
-/** Rose-themed flyer parse fallback toast — auto-dismisses after 5s with manual close. */
+/** Rose-themed flyer parse fallback toast — stays visible until dismissed. */
 export function showFlyerParseErrorToast(message: string) {
   return toast.custom((t) => <FlyerParseErrorToast message={message} toastId={t} />, {
-    duration: 5000,
+    duration: Infinity,
     unstyled: true,
   })
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import type { Role, VendorPassport } from '@/types/database'
 import { normalizeUrl, normalizeTikTokUrl } from '@/lib/vendor/normalize-url'
 import {
