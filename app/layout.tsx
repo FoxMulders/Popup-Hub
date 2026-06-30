@@ -46,12 +46,12 @@ const baseMetadata = {
   appleWebApp: {
     capable: true,
     title: 'Popup Hub',
-    statusBarStyle: 'black-translucent' as const,
+    statusBarStyle: 'default' as const,
   },
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'apple-mobile-web-app-status-bar-style': 'default',
     'apple-mobile-web-app-title': 'Popup Hub',
   },
 } satisfies Omit<Metadata, 'title'>

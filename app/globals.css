@@ -148,7 +148,7 @@
   --sidebar-ring: #8fb892;
 
   --app-nav-height: 3.25rem;
-  --app-nav-height-stacked: 5.5rem;
+  --app-nav-height-stacked: 6rem;
   --build-strip-height: 1.17rem;
   --command-center-left: 320px;
   --command-center-right: 360px;
@@ -262,7 +262,15 @@
   }
 
   .app-nav--stacked ~ .page-back-bar {
-    top: var(--app-nav-height-stacked, 5.5rem);
+    top: var(--app-nav-height-stacked, 6rem);
+  }
+
+  .popup-hub-chrome-header.safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  html[data-native-app='true'] .popup-hub-chrome-header.safe-top {
+    padding-top: 0;
   }
 
   /*

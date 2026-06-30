@@ -239,26 +239,39 @@ export function AppNav({
       )}
       style={{
         minHeight: stackedHeader
-          ? 'var(--app-nav-height-stacked, 5.5rem)'
+          ? 'var(--app-nav-height-stacked, 6rem)'
           : 'var(--app-nav-height, 3.25rem)',
       }}
     >
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-2 sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
+      <div className="relative mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-2 sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
         {stackedHeader ? (
           <>
-            <div className="flex w-full min-w-0 items-center justify-between gap-2">
-              <div className="min-w-0 shrink">{brandLogo}</div>
-              <div className="flex shrink-0 items-center justify-end gap-2 overflow-x-hidden">
+            <div className="relative flex w-full min-w-0 items-center justify-center">
+              {brandLogo}
+              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-2 overflow-x-hidden">
                 {rightActions}
               </div>
             </div>
-            <div className="flex w-full min-w-0 items-center gap-2 overflow-x-hidden">
-              <NavBackButton />
-              <div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+            <div
+              className={cn(
+                'flex w-full min-w-0 items-center gap-2 overflow-x-hidden',
+                mobile ? 'justify-center' : 'justify-start'
+              )}
+            >
+              {!mobile ? <NavBackButton /> : null}
+              <div
+                className={cn(
+                  'min-w-0',
+                  mobile
+                    ? 'flex justify-center'
+                    : 'flex-1 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]'
+                )}
+              >
                 <PortalTabs
                   availablePortals={availablePortals}
                   activePortal={activePortal}
                   compact
+                  className={mobile ? 'mx-auto max-w-full' : undefined}
                 />
               </div>
               <DesktopNavLinks links={links} pathname={pathname} />

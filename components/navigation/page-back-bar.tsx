@@ -18,6 +18,7 @@ export function PageBackBar({ className }: PageBackBarProps) {
       className={cn(
         'page-back-bar shrink-0 border-b border-stone-200/60 bg-cream/90 px-[var(--page-gutter,0.75rem)] py-1.5 backdrop-blur-sm',
         'max-md:sticky max-md:top-[var(--app-nav-height,3.25rem)] max-md:z-40',
+        'max-md:[.app-nav--stacked~&]:top-[var(--app-nav-height-stacked,6rem)]',
         className
       )}
     >

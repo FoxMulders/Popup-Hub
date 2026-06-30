@@ -35,8 +35,18 @@ export function CapacitorInit() {
     markNativeAppCookie()
 
     if (isNativeApp()) {
+      document.documentElement.dataset.nativeApp = 'true'
+
       void import('@capacitor/splash-screen')
         .then(({ SplashScreen }) => SplashScreen.hide())
+        .catch(() => undefined)
+
+      void import('@capacitor/status-bar')
+        .then(({ StatusBar, Style }) => {
+          void StatusBar.setOverlaysWebView({ overlay: false })
+          void StatusBar.setStyle({ style: Style.Dark })
+          void StatusBar.setBackgroundColor({ color: '#faf8f5' })
+        })
         .catch(() => undefined)
     }
 

@@ -20,6 +20,7 @@ import {
 } from '@/components/nav/site-ribbon-links'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
+import { useIsMobileNav } from '@/hooks/use-is-mobile-nav'
 import { Button } from '@/components/ui/button'
 import type { Profile } from '@/types/database'
 import { cn } from '@/lib/utils'
@@ -75,6 +76,7 @@ export function ShopperTopBar({
   const pathname = usePathname()
   const supabase = createClient()
   const [menuOpen, setMenuOpen] = useState(false)
+  const mobile = useIsMobileNav()
 
   const activePortal = profile
     ? resolveActivePortal(portalCookie, profile, pathname)
@@ -109,103 +111,129 @@ export function ShopperTopBar({
     </>
   )
 
+  const stackedHeader = Boolean(profile && availablePortals.length > 1 && mobile)
+
+  const signedInRightActions = profile ? (
+    <>
+      <AppAccountMenuTrigger
+        menuOpen={menuOpen}
+        onToggle={() => setMenuOpen((open) => !open)}
+        userId={profile.id}
+        profile={avatarProfile!}
+        adminPendingCount={adminPendingCounts.total}
+        mobileClassName="min-h-11 min-w-11"
+        desktopClassName="min-h-11 min-w-11"
+      />
+
+      <AppMenuSheet
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        links={navLinks}
+        pathname={pathname}
+        profileName={profile.full_name}
+        menuProfile={
+          avatarProfile ? { userId: profile.id, profile: avatarProfile } : undefined
+        }
+        onSignOut={signOut}
+        extraLinks={buildAppMenuExtraLinks(profile, adminPendingCounts)}
+        onSuggestImprovement={onSuggestImprovement}
+      />
+    </>
+  ) : null
+
+  const guestRightActions = (
+    <>
+      <Link
+        href="/login"
+        className="app-tap-target inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        aria-label="Sign in"
+      >
+        <User className="h-5 w-5 text-foreground" aria-hidden />
+      </Link>
+
+      <div className="hidden items-center gap-2 md:flex">
+        <Link href="/login">
+          <Button variant="outline" size="sm" className="min-h-9 rounded-full px-4">
+            Sign in
+          </Button>
+        </Link>
+        <Link href="/signup">
+          <Button size="sm" className="min-h-9 rounded-full px-5">
+            Get started
+          </Button>
+        </Link>
+      </div>
+
+      <button
+        type="button"
+        className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <Menu className="h-5 w-5 text-foreground" />
+      </button>
+
+      <AppMenuSheet
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        links={navLinks}
+        pathname={pathname}
+        footer={guestFooter}
+      />
+    </>
+  )
+
+  const rightActions = profile ? signedInRightActions : guestRightActions
+
   return (
     <header
-      className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top"
-      style={{ minHeight: 'var(--app-nav-height, 3.25rem)' }}
+      className={cn(
+        'popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top',
+        stackedHeader && 'app-nav--stacked'
+      )}
+      style={{
+        minHeight: stackedHeader
+          ? 'var(--app-nav-height-stacked, 6rem)'
+          : 'var(--app-nav-height, 3.25rem)',
+      }}
     >
       <div className="mx-auto flex max-w-full overflow-x-hidden px-4 py-2 sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
-        <CenteredHeaderRow
-          centerAlign="start"
-          left={
-            <BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />
-          }
-          center={
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-hidden">
-              {profile && availablePortals.length > 1 ? (
-                <PortalTabs
-                  availablePortals={availablePortals}
-                  activePortal={activePortal}
-                  compact
-                  className="shrink-0"
-                />
-              ) : null}
-              <RibbonLinks links={navLinks} pathname={pathname} />
+        {stackedHeader ? (
+          <div className="flex w-full min-w-0 flex-col items-center gap-2">
+            <div className="relative flex w-full min-w-0 items-center justify-center">
+              <BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />
+              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-2">
+                {rightActions}
+              </div>
             </div>
-          }
-          right={
-            profile ? (
-              <>
-                <AppAccountMenuTrigger
-                  menuOpen={menuOpen}
-                  onToggle={() => setMenuOpen((open) => !open)}
-                  userId={profile.id}
-                  profile={avatarProfile!}
-                  adminPendingCount={adminPendingCounts.total}
-                  mobileClassName="min-h-11 min-w-11"
-                  desktopClassName="min-h-11 min-w-11"
-                />
-
-                <AppMenuSheet
-                  open={menuOpen}
-                  onOpenChange={setMenuOpen}
-                  links={navLinks}
-                  pathname={pathname}
-                  profileName={profile.full_name}
-                  menuProfile={
-                    avatarProfile
-                      ? { userId: profile.id, profile: avatarProfile }
-                      : undefined
-                  }
-                  onSignOut={signOut}
-                  extraLinks={buildAppMenuExtraLinks(profile, adminPendingCounts)}
-                  onSuggestImprovement={onSuggestImprovement}
-                />
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="app-tap-target inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                  aria-label="Sign in"
-                >
-                  <User className="h-5 w-5 text-foreground" aria-hidden />
-                </Link>
-
-                <div className="hidden items-center gap-2 md:flex">
-                  <Link href="/login">
-                    <Button variant="outline" size="sm" className="min-h-9 rounded-full px-4">
-                      Sign in
-                    </Button>
-                  </Link>
-                  <Link href="/signup">
-                    <Button size="sm" className="min-h-9 rounded-full px-5">
-                      Get started
-                    </Button>
-                  </Link>
-                </div>
-
-                <button
-                  type="button"
-                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                  aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-                  aria-expanded={menuOpen}
-                  onClick={() => setMenuOpen((open) => !open)}
-                >
-                  <Menu className="h-5 w-5 text-foreground" />
-                </button>
-
-                <AppMenuSheet
-                  open={menuOpen}
-                  onOpenChange={setMenuOpen}
-                  links={navLinks}
-                  pathname={pathname}
-                  footer={guestFooter}
-                />
-              </>
-            )
-          }
-        />
+            <PortalTabs
+              availablePortals={availablePortals}
+              activePortal={activePortal}
+              compact
+              className="mx-auto max-w-full"
+            />
+          </div>
+        ) : (
+          <CenteredHeaderRow
+            centerAlign="start"
+            left={<BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />}
+            center={
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-hidden">
+                {profile && availablePortals.length > 1 ? (
+                  <PortalTabs
+                    availablePortals={availablePortals}
+                    activePortal={activePortal}
+                    compact
+                    className="shrink-0"
+                  />
+                ) : null}
+                <RibbonLinks links={navLinks} pathname={pathname} />
+              </div>
+            }
+            right={rightActions}
+          />
+        )}
       </div>
     </header>
   )
