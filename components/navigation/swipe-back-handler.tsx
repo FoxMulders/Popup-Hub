@@ -3,13 +3,15 @@
 import { usePageBack } from '@/hooks/use-page-back'
 import { useSwipeBack } from '@/hooks/use-swipe-back'
 
-/** Enables edge swipe-to-go-back on mobile when back navigation is available. */
+/** Enables bidirectional edge swipe history on mobile (left = back, right = forward). */
 export function SwipeBackHandler() {
-  const { canGoBack, goBack } = usePageBack()
+  const { canSwipeBack, goBack, canSwipeForward, goForward } = usePageBack()
 
   useSwipeBack({
-    enabled: canGoBack,
+    enabledBack: canSwipeBack,
     onSwipeBack: goBack,
+    enabledForward: canSwipeForward,
+    onSwipeForward: goForward,
   })
 
   return null

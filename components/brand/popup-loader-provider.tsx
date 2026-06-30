@@ -131,7 +131,6 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
       aria-label={session.mode === 'initial' ? 'Popup Hub loading' : 'Popup Hub market animation'}
     >
       <div className="flex h-full w-full max-w-[min(92vw,520px)] flex-col items-center justify-center gap-3 px-4">
-        <BrandLogoLockup className="shrink-0" size="header" />
         <div className="loader-screen__lottie w-full shrink-0">
           {session.mode === 'initial' ? (
             <InitialLoaderReveal onReadyToDismiss={dismiss} />
@@ -144,6 +143,7 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
             />
           )}
         </div>
+        <BrandLogoLockup className="shrink-0" size="header" />
       </div>
     </div>
   ) : null

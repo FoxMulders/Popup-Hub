@@ -4,28 +4,43 @@ import { useEffect, useRef } from 'react'
 import { useMobileViewport } from '@/hooks/use-mobile-viewport'
 import {
   readSafeAreaInsetLeft,
+  readSafeAreaInsetRight,
   shouldCancelSwipeBack,
   shouldCompleteSwipeBack,
+  shouldCompleteSwipeForward,
   shouldStartSwipeBack,
+  shouldStartSwipeForward,
   swipeBackEdgeZonePx,
+  swipeForwardEdgeZonePx,
 } from '@/lib/navigation/swipe-back-gesture'
 
+type SwipeDirection = 'back' | 'forward'
+
 interface UseSwipeBackOptions {
-  enabled: boolean
+  enabledBack: boolean
   onSwipeBack: () => void
+  enabledForward: boolean
+  onSwipeForward: () => void
 }
 
-export function useSwipeBack({ enabled, onSwipeBack }: UseSwipeBackOptions) {
+export function useSwipeBack({
+  enabledBack,
+  onSwipeBack,
+  enabledForward,
+  onSwipeForward,
+}: UseSwipeBackOptions) {
   const isMobile = useMobileViewport()
   const onSwipeBackRef = useRef(onSwipeBack)
+  const onSwipeForwardRef = useRef(onSwipeForward)
   onSwipeBackRef.current = onSwipeBack
+  onSwipeForwardRef.current = onSwipeForward
 
   const activeRef = useRef(false)
+  const directionRef = useRef<SwipeDirection | null>(null)
   const startRef = useRef({ x: 0, y: 0 })
-  const trackingRef = useRef(false)
 
   useEffect(() => {
-    if (!enabled || !isMobile) return
+    if ((!enabledBack && !enabledForward) || !isMobile) return
 
     function onTouchStart(event: TouchEvent) {
       if (event.touches.length !== 1) return
@@ -33,11 +48,23 @@ export function useSwipeBack({ enabled, onSwipeBack }: UseSwipeBackOptions) {
       const touch = event.touches[0]
       if (shouldCancelSwipeBack(event.target)) return
 
-      const edgeZone = swipeBackEdgeZonePx(readSafeAreaInsetLeft())
-      if (!shouldStartSwipeBack(touch, edgeZone)) return
+      const viewportWidth = window.innerWidth
+      const backEdgeZone = swipeBackEdgeZonePx(readSafeAreaInsetLeft())
+      const forwardEdgeZone = swipeForwardEdgeZonePx(readSafeAreaInsetRight())
+
+      let direction: SwipeDirection | null = null
+      if (enabledBack && shouldStartSwipeBack(touch, backEdgeZone)) {
+        direction = 'back'
+      } else if (
+        enabledForward &&
+        shouldStartSwipeForward(touch, forwardEdgeZone, viewportWidth)
+      ) {
+        direction = 'forward'
+      }
+      if (!direction) return
 
       activeRef.current = true
-      trackingRef.current = true
+      directionRef.current = direction
       startRef.current = { x: touch.clientX, y: touch.clientY }
     }
 
@@ -50,11 +77,14 @@ export function useSwipeBack({ enabled, onSwipeBack }: UseSwipeBackOptions) {
 
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 12) {
         activeRef.current = false
-        trackingRef.current = false
+        directionRef.current = null
         return
       }
 
-      if (deltaX > 8) {
+      const direction = directionRef.current
+      if (direction === 'back' && deltaX > 8) {
+        event.preventDefault()
+      } else if (direction === 'forward' && deltaX < -8) {
         event.preventDefault()
       }
     }
@@ -65,18 +95,21 @@ export function useSwipeBack({ enabled, onSwipeBack }: UseSwipeBackOptions) {
       const touch = event.changedTouches[0]
       const deltaX = touch.clientX - startRef.current.x
       const deltaY = touch.clientY - startRef.current.y
+      const direction = directionRef.current
 
       activeRef.current = false
-      trackingRef.current = false
+      directionRef.current = null
 
-      if (shouldCompleteSwipeBack(deltaX, deltaY)) {
+      if (direction === 'back' && shouldCompleteSwipeBack(deltaX, deltaY)) {
         onSwipeBackRef.current()
+      } else if (direction === 'forward' && shouldCompleteSwipeForward(deltaX, deltaY)) {
+        onSwipeForwardRef.current()
       }
     }
 
     function onTouchCancel() {
       activeRef.current = false
-      trackingRef.current = false
+      directionRef.current = null
     }
 
     document.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -90,5 +123,5 @@ export function useSwipeBack({ enabled, onSwipeBack }: UseSwipeBackOptions) {
       document.removeEventListener('touchend', onTouchEnd)
       document.removeEventListener('touchcancel', onTouchCancel)
     }
-  }, [enabled, isMobile])
+  }, [enabledBack, enabledForward, isMobile])
 }

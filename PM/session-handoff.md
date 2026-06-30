@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Loader wordmark below animation (local, not committed)
+- **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
+- **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
+- **Shipped locally:** Reordered flex column in `components/brand/popup-loader-provider.tsx` — animation (`loader-screen__lottie`) first, `BrandLogoLockup` second. Applies to initial loader and replay variants.
+- **Verify:** Hard refresh (or clear `popup-hub-initial-loader-shown` session key) — booth-deal / walk-to-market animation appears above the storefront + wordmark lockup.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Organizer claim approval silently failing (shipped `e88bab69`)
 - **Persona:** Admin · HubGuard organizer claims queue (`/admin/organizer-claims`).
 - **Symptom:** Approved organizer claims kept showing in the pending queue; `organizers.claimed_by` never got set.
@@ -39,18 +46,19 @@
 - **Verify:** `npx tsc --noEmit` PASS; `npx tsx lib/vendor/verification.test.ts` PASS. Smoke: save passport without handle, apply to open market — no social-handle block.
 - **Next:** Commit + deploy when user asks; vendors can leave handle blank and apply (risk +25, under 75 threshold).
 
-## Active work — Mobile swipe-back + sticky Back bar (local, not committed)
-- **Goal:** Patron PWA users can swipe from the left edge to go back (standalone mode has no browser gesture) and keep the Back bar visible while scrolled.
+## Active work — Mobile bidirectional edge swipe + sticky Back bar (local, not committed)
+- **Goal:** Patron PWA users can swipe from screen edges for history back/forward (standalone mode has no browser gesture). Gestures work on **all screens except the session’s first history entry**; Back bar visibility still follows route rules.
 - **Persona:** Patron (primary), vendor/multi-portal mobile shells.
 - **Shipped locally:**
-  - **`hooks/use-page-back.ts`** — shared `goBack` / `canGoBack` (history + fallback).
-  - **`lib/navigation/swipe-back-gesture.ts`** — edge zone, threshold, cancel guards.
-  - **`hooks/use-swipe-back.ts`**, **`components/navigation/swipe-back-handler.tsx`** — mobile touch listener; mounted in `shopper-shell-client` + `site-app-shell`.
+  - **`hooks/use-page-back.ts`** — `canGoBack` (Back bar UI) + `canSwipeBack` / `canSwipeForward` (history-only via Navigation API or stack fallback).
+  - **`lib/navigation/history-forward.ts`** — stack + Navigation API helpers for both directions.
+  - **`lib/navigation/swipe-back-gesture.ts`** — left/right edge zones, thresholds, shared cancel guards.
+  - **`hooks/use-swipe-back.ts`**, **`components/navigation/swipe-back-handler.tsx`** — dual-edge touch listener; mounted in `shopper-shell-client` + `site-app-shell`.
   - **`page-back-bar.tsx`** — sticky on mobile below header; stacked-nav offset in `globals.css`.
   - **Map opt-out:** `data-swipe-back="off"` on `public-floorplan`, `event-map`, `card-location-map`.
-  - **Tests:** `lib/navigation/swipe-back-gesture.test.ts`, `lib/navigation/page-back.test.ts`; e2e extended in `patron-mobile-chrome.spec.ts`.
-- **Verify:** `npx tsx lib/navigation/swipe-back-gesture.test.ts` PASS; `npx tsx lib/navigation/page-back.test.ts` PASS. Playwright e2e needs running dev server.
-- **Next:** Commit + deploy when user asks; manual PWA smoke — edge swipe on event detail, sticky Back while scrolled, no back on `/discover`.
+  - **Tests:** `swipe-back-gesture.test.ts`, `history-forward.test.ts`, `page-back.test.ts`; e2e in `patron-mobile-chrome.spec.ts`.
+- **Verify:** `npx tsx lib/navigation/swipe-back-gesture.test.ts` PASS; `npx tsx lib/navigation/history-forward.test.ts` PASS; `npx tsx lib/navigation/page-back.test.ts` PASS.
+- **Next:** Commit + deploy when user asks; manual PWA smoke — no swipe on cold-open first screen; Discover → event → swipe back → swipe forward; map opt-out unchanged.
 
 ## Active work — Vendor passport wizard save bar hidden by bottom nav (local, not committed)
 - **Goal:** Fix mobile `/vendor/passport` wizard so the fixed **Save Passport** action bar is fully visible above the vendor bottom nav.
