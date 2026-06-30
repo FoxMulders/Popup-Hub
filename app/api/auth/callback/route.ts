@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import { findDuplicateProfilesByEmail } from '@/lib/auth/duplicate-account'
+import { isGenuineOAuthLinkFlow } from '@/lib/auth/oauth-link-flow'
 import { createAdminClient } from '@/lib/supabase/server'
 
 function safeRedirectPath(value: string | null, fallback = '/discover'): string {
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const next = safeRedirectPath(requestUrl.searchParams.get('next'))
   const roleParam = requestUrl.searchParams.get('role')
-  const isLinkFlow = requestUrl.searchParams.get('link') === '1'
+  const linkFlag = requestUrl.searchParams.get('link') === '1'
 
   const oauthError = requestUrl.searchParams.get('error')
   if (oauthError) {
@@ -97,6 +98,10 @@ export async function GET(request: NextRequest) {
     }
   )
 
+  const {
+    data: { user: userBeforeExchange },
+  } = await supabase.auth.getUser()
+
   const { error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
@@ -115,6 +120,8 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  const isLinkFlow = isGenuineOAuthLinkFlow(linkFlag, userBeforeExchange?.id, user.id)
+
   if (!isLinkFlow && user.email) {
     const admin = createAdminClient()
     const duplicates = await findDuplicateProfilesByEmail(admin, user.email, user.id)
@@ -125,13 +132,10 @@ export async function GET(request: NextRequest) {
       accountLinkUrl.searchParams.set('email', user.email)
       accountLinkUrl.searchParams.set('duplicateOf', duplicates[0].id)
 
-      const response = NextResponse.redirect(accountLinkUrl.toString())
-      response.cookies.getAll().forEach((cookie) => {
-        if (cookie.name.startsWith('sb-')) {
-          response.cookies.delete(cookie.name)
-        }
-      })
-      return response
+      return attachCookies(
+        NextResponse.redirect(accountLinkUrl.toString()),
+        sessionCookies
+      )
     }
   }
 
