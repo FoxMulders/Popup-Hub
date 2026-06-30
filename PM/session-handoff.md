@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Admin Operations Console back + swipe + nav (local, not committed)
+- **Goal:** Uniform Back affordance on admin Operations Console; enable bidirectional edge-swipe history; replace custom `← HubGrid` exit; organize queue nav pills.
+- **Persona:** Admin · `/admin/*` Operations Console.
+- **Shipped locally:**
+  - **`components/admin/admin-shell-chrome.tsx`** — mounts `SwipeBackHandler` + sticky `PageBackBar` (label **Back**, history-based) above console title.
+  - **`app/admin/layout.tsx`** — uses `AdminShellChrome`; removed hardcoded HubGrid link.
+  - **`components/admin/admin-queue-nav.tsx`** — horizontal scroll pill bar with active-route highlight + pending badges (matches market-day shell pattern).
+- **Verify:** `npx tsx lib/navigation/*.test.ts` PASS. Smoke `/admin/users` — Back bar top-left; swipe between admin queues on mobile PWA; no `← HubGrid` in header.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Unified auth accounts (OAuth + email) (local, not committed)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
 - **Shipped locally:**
