@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug sweep: organizer claim approval race (local, not deployed)
+- **Goal:** Deep bug sweep after `e88bab69` (organizer claim RLS fix on `master`).
+- **Finding:** Concurrent admin approvals of different pending claims for the same organizer could both succeed — `claimed_by` last-write-wins while multiple requests ended `approved`.
+- **Fix (branch `cursor/critical-bug-investigation-de88`, commit `cabcaa24`):** Atomic `claimed_by.is.null / claimed_by.eq.<requester>` guard on organizer update; verify claim row still `pending`; rollback organizer on claim-update failure; unit test.
+- **PR:** https://github.com/FoxMulders/Popup-Hub/pull/132
+- **Next:** Merge + deploy when approved.
+
 ## Active work — iOS archive fix: remove crashing AppIcon.icon (shipped `a815dfb5`)
 - **Goal:** Stop TestFlight `CompileAssetCatalogVariant` / `actool` crash (`attempt to insert nil object` in Icon Composer path) on Xcode 26.6 CI.
 - **Root cause:** Hand-authored `ios/App/App/AppIcon.icon` (Liquid Glass Icon Composer doc from `writeIosGlassIcon`) was passed to `actool` alongside `Assets.xcassets`; Xcode 26.6 RC crashes parsing it. Classic `AppIcon.appiconset` is complete and valid.
