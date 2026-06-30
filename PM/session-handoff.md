@@ -2,7 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — browser tab favicon tent logo (local, not committed)
+## Critical bug scan — is_test catalog leak (2026-06-30)
+
+- **Trigger:** Push `0a0bd46e` (ship 46 branding/assets); scan covered recent substantive changes on `master`.
+- **Finding:** QA scenario markets (`events.is_test = true`) were still exposed on public catalog surfaces despite sitemap filtering. Blast radius: `/discover`, vendor directory, widget feed, public event detail/map/auction pages, coordinator profiles, favorites recommendations, and vendor apply API.
+- **Fix:** Branch `cursor/critical-bug-investigation-5cb6` commit `4fdf3886` — `excludeTestMarkets()` helper + filters on all public catalog queries; API guard on `POST /api/vendor/apply`.
+- **Verify:** `npx tsx lib/queries/public-market-catalog.test.ts` PASS.
+- **Blockers:** None for merge; prior automation PRs (#119, #126, #127) never landed on `master`.
+- **Next:** Merge PR; deploy; confirm seeded `is_test` markets no longer appear on `/discover` or `/vendor/events`.
+
 - **Goal:** Replace the default Next.js black-triangle tab icon with the Popup Hub tent (stall+pin) mark.
 - **Persona:** All personas · browser tab / Cursor in-app browser.
 - **Root cause:** `app/favicon.ico` was still the stock create-next-app ICO (~25 KB, 16/32/48/256). `scripts/process-logo.mjs` only regenerated `public/favicon.ico` (misnamed PNG), while Next.js App Router serves `/favicon.ico` from `app/favicon.ico` via file-based metadata — so metadata links in `app/layout.tsx` never overrode the triangle.
