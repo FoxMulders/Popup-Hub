@@ -1,5 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Role } from '@/types/database'
+import {
+  findDuplicateDeletionBlockers,
+  findDuplicateProfilesByEmail,
+  type DuplicateProfileSummary,
+} from '@/lib/auth/duplicate-account'
+import { identityProviderLabel } from '@/lib/auth/connected-identities'
+
+export interface AdminLinkedProvider {
+  provider: string
+  label: string
+  created_at: string | null
+}
 
 export interface AdminUserDetail {
   id: string
@@ -22,11 +34,36 @@ export interface AdminUserDetail {
   walletPaddleId: string | null
   vendorBusinessName: string | null
   ownedEventCount: number
+  linkedProviders: AdminLinkedProvider[]
+  duplicateEmailProfiles: DuplicateProfileSummary[]
   auth: {
     emailConfirmedAt: string | null
     lastSignInAt: string | null
     isBanned: boolean
   }
+}
+
+async function fetchLinkedProviders(
+  db: SupabaseClient,
+  userId: string
+): Promise<AdminLinkedProvider[]> {
+  const { data, error } = await db
+    .schema('auth')
+    .from('identities')
+    .select('provider, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[admin user-detail] identity lookup failed:', error.message)
+    return []
+  }
+
+  return (data ?? []).map((row) => ({
+    provider: row.provider as string,
+    label: identityProviderLabel(row.provider as string),
+    created_at: (row.created_at as string | null) ?? null,
+  }))
 }
 
 export async function fetchAdminUserDetail(
@@ -60,16 +97,26 @@ export async function fetchAdminUserDetail(
 
   if (!profile) return null
 
-  const [{ data: wallet }, { count: ownedEventCount }, { data: passport }, authResult] =
-    await Promise.all([
-      db.from('wallets').select('balance, paddle_id').eq('user_id', userId).maybeSingle(),
-      db
-        .from('events')
-        .select('id', { count: 'exact', head: true })
-        .eq('coordinator_id', userId),
-      db.from('vendor_passports').select('business_name').eq('user_id', userId).maybeSingle(),
-      db.auth.admin.getUserById(userId),
-    ])
+  const email = profile.email as string | null
+
+  const [
+    { data: wallet },
+    { count: ownedEventCount },
+    { data: passport },
+    authResult,
+    linkedProviders,
+    duplicateEmailProfiles,
+  ] = await Promise.all([
+    db.from('wallets').select('balance, paddle_id').eq('user_id', userId).maybeSingle(),
+    db
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', userId),
+    db.from('vendor_passports').select('business_name').eq('user_id', userId).maybeSingle(),
+    db.auth.admin.getUserById(userId),
+    fetchLinkedProviders(db, userId),
+    email ? findDuplicateProfilesByEmail(db, email, userId) : Promise.resolve([]),
+  ])
 
   const authUser = authResult.data.user
   const bannedUntil = authUser?.banned_until
@@ -78,7 +125,7 @@ export async function fetchAdminUserDetail(
 
   return {
     id: profile.id as string,
-    email: profile.email as string | null,
+    email,
     full_name: profile.full_name as string | null,
     role: profile.role as Role,
     is_admin: profile.is_admin === true,
@@ -99,10 +146,59 @@ export async function fetchAdminUserDetail(
     walletPaddleId: (wallet?.paddle_id as string | null) ?? null,
     vendorBusinessName: (passport?.business_name as string | null) ?? null,
     ownedEventCount: ownedEventCount ?? 0,
+    linkedProviders,
+    duplicateEmailProfiles,
     auth: {
       emailConfirmedAt: authUser?.email_confirmed_at ?? null,
       lastSignInAt: authUser?.last_sign_in_at ?? null,
       isBanned,
     },
   }
+}
+
+export async function canSafelyDeleteDuplicateAccount(
+  db: SupabaseClient,
+  duplicateUserId: string,
+  keepUserId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (duplicateUserId === keepUserId) {
+    return { ok: false, error: 'Cannot resolve an account with itself' }
+  }
+
+  const [{ data: duplicateProfile }, { data: keepProfile }] = await Promise.all([
+    db
+      .from('profiles')
+      .select('id, email, is_admin')
+      .eq('id', duplicateUserId)
+      .maybeSingle(),
+    db
+      .from('profiles')
+      .select('id, email')
+      .eq('id', keepUserId)
+      .maybeSingle(),
+  ])
+
+  if (!duplicateProfile) {
+    return { ok: false, error: 'Duplicate account not found' }
+  }
+  if (!keepProfile) {
+    return { ok: false, error: 'Account to keep was not found' }
+  }
+
+  const duplicateEmail = (duplicateProfile.email as string | null)?.trim().toLowerCase() ?? ''
+  const keepEmail = (keepProfile.email as string | null)?.trim().toLowerCase() ?? ''
+
+  if (!duplicateEmail || duplicateEmail !== keepEmail) {
+    return {
+      ok: false,
+      error: 'Both accounts must share the same email address to resolve as duplicates',
+    }
+  }
+
+  const blockers = await findDuplicateDeletionBlockers(db, duplicateUserId)
+  if (blockers.length > 0) {
+    return { ok: false, error: blockers.map((blocker) => blocker.message).join(' ') }
+  }
+
+  return { ok: true }
 }

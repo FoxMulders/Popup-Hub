@@ -24,6 +24,10 @@ import {
 import { type OAuthProviderId } from '@/lib/auth/oauth-providers'
 import { OAuthProviderButtons } from '@/components/auth/oauth-provider-buttons'
 import { isEmailNotConfirmedAuthError } from '@/lib/auth/email-confirmation'
+import {
+  formatExistingAccountAuthMessage,
+  formatOAuthAuthCallbackError,
+} from '@/lib/auth/auth-error-messages'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import {
   clearNedryLockoutState,
@@ -165,9 +169,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
           ? ' If you opened the sign-in link in a different browser or cleared cookies, try again in the same window.'
           : ''
       setError(
-        authErrorDetail
-          ? `Sign-in could not be completed: ${authErrorDetail}${pkceHint}`
-          : `Sign-in could not be completed. Please try again.${pkceHint}`
+        `${formatOAuthAuthCallbackError(authErrorDetail)}${pkceHint}`
       )
       return
     }
@@ -180,11 +182,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
       return
     }
     if (authError === 'oauth_failed') {
-      setError(
-        authErrorDetail
-          ? `Sign-in failed: ${authErrorDetail}`
-          : 'Sign-in failed. Please try again or use email sign-in.'
-      )
+      setError(formatExistingAccountAuthMessage(authErrorDetail))
       return
     }
     setError(authError)
@@ -353,7 +351,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
 
     if (result.mode === 'error') {
       setOauthPendingProvider(null)
-      setError(result.message)
+      setError(formatExistingAccountAuthMessage(result.message))
       return
     }
 
@@ -391,6 +389,12 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
               disabled={isLockedOut || loading}
               onSignIn={(provider) => void handleOAuthSignIn(provider)}
             />
+            <p className="text-center text-xs text-muted-foreground leading-relaxed">
+              If you signed up with email, open the confirmation link in your inbox before using
+              social login — otherwise the same address may create a separate account. Use the same
+              email as your existing account, or sign in here first and connect providers from
+              Profile → Account Security.
+            </p>
 
             <div className="relative flex items-center">
               <Separator className="flex-1" />

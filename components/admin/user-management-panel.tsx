@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { ExternalLink, Loader2, Search } from 'lucide-react'
+import { ExternalLink, Loader2, Search, AlertTriangle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { roleDisplayLabel } from '@/lib/auth/account-access'
 import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
@@ -39,6 +39,7 @@ type ConfirmAction =
   | { type: 'set_role'; role: Role }
   | { type: 'set_admin'; value: boolean }
   | { type: 'ban_auth' }
+  | { type: 'resolve_duplicate'; keepUserId: string; deleteUserId: string; keepLabel: string }
   | { type: 'coordinator'; action: 'approve' | 'reject' | 'suspend' | 'reinstate' | 'ban' }
 
 const ROLES: Role[] = ['shopper', 'vendor', 'coordinator']
@@ -126,10 +127,10 @@ export function UserManagementPanel() {
     return ROLE_LEVEL[draftRole] < ROLE_LEVEL[detail.role]
   }, [detail, draftRole])
 
-  async function postAction(body: Record<string, unknown>) {
-    if (!selectedId) return false
+  async function postAction(body: Record<string, unknown>, targetUserId = selectedId) {
+    if (!targetUserId) return false
 
-    const res = await fetch(`/api/admin/users/${selectedId}/actions`, {
+    const res = await fetch(`/api/admin/users/${targetUserId}/actions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -143,7 +144,7 @@ export function UserManagementPanel() {
     }
 
     toast.success(json.message ?? 'Updated')
-    await loadDetail(selectedId)
+    await loadDetail(selectedId ?? targetUserId)
     if (debouncedQuery.length >= 2) {
       void runSearch(debouncedQuery)
     }
@@ -185,6 +186,17 @@ export function UserManagementPanel() {
         ok = await postAction({ action: 'set_admin', value: confirmAction.value })
       } else if (confirmAction.type === 'ban_auth') {
         ok = await postAction({ action: 'ban_auth' })
+      } else if (confirmAction.type === 'resolve_duplicate') {
+        ok = await postAction(
+          {
+            action: 'resolve_duplicate',
+            keepUserId: confirmAction.keepUserId,
+          },
+          confirmAction.deleteUserId
+        )
+        if (ok) {
+          setSelectedId(confirmAction.keepUserId)
+        }
       }
 
       if (ok) setConfirmAction(null)
@@ -315,6 +327,30 @@ export function UserManagementPanel() {
                       <dt className="text-muted-foreground">Auth status</dt>
                       <dd>
                         <Badge variant="destructive">Banned</Badge>
+                      </dd>
+                    </div>
+                  ) : null}
+                  {detail.duplicateEmailProfiles.length > 0 ? (
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+                      <dt className="flex items-center gap-1.5 text-amber-900 font-medium">
+                        <AlertTriangle className="size-3.5" aria-hidden />
+                        Duplicate email detected
+                      </dt>
+                      <dd className="mt-1 space-y-1 text-xs text-amber-950">
+                        {detail.duplicateEmailProfiles.map((duplicate) => (
+                          <p key={duplicate.id}>
+                            <button
+                              type="button"
+                              className="font-medium underline"
+                              onClick={() => setSelectedId(duplicate.id)}
+                            >
+                              {duplicate.full_name || duplicate.email || duplicate.id}
+                            </button>
+                            {' · '}
+                            {roleDisplayLabel(duplicate.role as Role)}
+                            {duplicate.is_admin ? ' · admin' : ''}
+                          </p>
+                        ))}
                       </dd>
                     </div>
                   ) : null}
@@ -450,6 +486,72 @@ export function UserManagementPanel() {
 
               <section className="space-y-3">
                 <h3 className="font-heading text-lg font-semibold text-foreground">Auth</h3>
+                {detail.linkedProviders.length > 0 ? (
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                    <p className="text-sm font-medium">Sign-in methods</p>
+                    <ul className="space-y-1 text-sm">
+                      {detail.linkedProviders.map((provider) => (
+                        <li key={provider.provider} className="flex items-center justify-between gap-2">
+                          <span>{provider.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {provider.created_at ? formatDate(provider.created_at) : '—'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No linked sign-in methods found.</p>
+                )}
+                {detail.duplicateEmailProfiles.length > 0 ? (
+                  <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-950">Resolve duplicate account</p>
+                    <p className="text-xs text-amber-900 leading-relaxed">
+                      Remove empty duplicate accounts that share this email. The kept account should
+                      connect OAuth from Profile → Account Security.
+                    </p>
+                    {detail.duplicateEmailProfiles.map((duplicate) => (
+                      <Button
+                        key={`delete-${duplicate.id}`}
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        disabled={pending}
+                        onClick={() =>
+                          setConfirmAction({
+                            type: 'resolve_duplicate',
+                            keepUserId: selectedId!,
+                            deleteUserId: duplicate.id,
+                            keepLabel: detail.full_name || detail.email || 'this account',
+                          })
+                        }
+                      >
+                        Delete {duplicate.full_name || duplicate.email || 'duplicate'}, keep this
+                        account
+                      </Button>
+                    ))}
+                    {detail.duplicateEmailProfiles.map((duplicate) => (
+                      <Button
+                        key={`keep-${duplicate.id}`}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-amber-400 text-amber-950"
+                        disabled={pending || detail.is_admin}
+                        onClick={() =>
+                          setConfirmAction({
+                            type: 'resolve_duplicate',
+                            keepUserId: duplicate.id,
+                            deleteUserId: selectedId!,
+                            keepLabel: duplicate.full_name || duplicate.email || duplicate.id,
+                          })
+                        }
+                      >
+                        Delete this account, keep {duplicate.full_name || duplicate.email || 'other'}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -530,7 +632,9 @@ export function UserManagementPanel() {
                     : 'Revoke platform admin access from this user?'
                   : confirmAction?.type === 'ban_auth'
                     ? 'Ban this auth account? The user will not be able to sign in.'
-                    : confirmAction?.type === 'coordinator'
+                    : confirmAction?.type === 'resolve_duplicate'
+                      ? `Delete this account and keep ${confirmAction.keepLabel}? The user should sign into the kept account and connect OAuth from Profile settings.`
+                      : confirmAction?.type === 'coordinator'
                       ? `Apply coordinator action "${confirmAction.action}" to this account?`
                       : 'Proceed with this action?'}
             </AlertDialogDescription>
