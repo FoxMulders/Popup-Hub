@@ -1,9 +1,9 @@
 {
-  "version": "1.190.0",
+  "version": "1.191.0",
   "major": 1,
-  "minor": 190,
+  "minor": 191,
   "patch": 0,
   "build": 1,
-  "commit": "550f329b",
+  "commit": "90088cee",
   "iosBuild": 12
 }
