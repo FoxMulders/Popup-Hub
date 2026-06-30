@@ -1,6 +1,6 @@
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { validateOrganizerClaimVerificationNote } from '@/lib/organizers/claim-verification'
 
 export async function assertOrganizerClaimHolder(
@@ -150,7 +150,7 @@ export async function approveOrganizerClaimRequest(
   requestId: string,
   adminUserId: string
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
-  const admin = await createServiceClient()
+  const admin = createAdminClient()
 
   const { data: request } = await admin
     .from('organizer_claim_requests')
@@ -194,7 +194,7 @@ export async function approveOrganizerClaimRequest(
     return { ok: false, status: 500, error: orgError.message }
   }
 
-  await admin
+  const { error: approveError } = await admin
     .from('organizer_claim_requests')
     .update({
       status: 'approved',
@@ -203,6 +203,10 @@ export async function approveOrganizerClaimRequest(
       updated_at: now,
     })
     .eq('id', requestId)
+
+  if (approveError) {
+    return { ok: false, status: 500, error: approveError.message }
+  }
 
   await admin
     .from('organizer_claim_requests')
@@ -223,7 +227,7 @@ export async function rejectOrganizerClaimRequest(
   requestId: string,
   adminUserId: string
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
-  const admin = await createServiceClient()
+  const admin = createAdminClient()
 
   const { data: request } = await admin
     .from('organizer_claim_requests')
