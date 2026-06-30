@@ -29,6 +29,7 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/patrons/') ||
     pathname.startsWith('/checkin/') ||
     pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/discover/') ||
     pathname.startsWith('/api/square/webhook') ||
     pathname.startsWith('/api/square/oauth/callback') ||
     pathname.startsWith('/api/reminders/') ||

@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation: discover vendor search (PR `cursor/critical-bug-investigation-0237`)
+- **Goal:** Daily automation audit of recent `master` commits for high-severity correctness bugs.
+- **Found & fixed (commit `9ee8aa22`):**
+  1. **Middleware blocked public vendor search API** — `/api/discover/vendors` returned 401 for unsigned patrons while `/discover` is public; category chips failed silently, search showed misleading session error.
+  2. **Unbounded booth_applications query** — single PostgREST call could silently truncate at 1000 rows as vendor/event volume grows.
+- **Fix:** Added `/api/discover/` to `isPublicPath`; paginated `fetchDiscoverVendorApplications` with chunked event IDs; added `lib/auth/public-paths.test.ts`.
+- **Verify:** `npx tsx lib/auth/public-paths.test.ts` PASS; `npx tsx lib/shopper/discover-vendor-search.test.ts` PASS.
+- **Next:** Merge PR; smoke `/discover?view=vendors` logged out; deploy.
+
 ## Active work — iOS archive fix: remove crashing AppIcon.icon (shipped `a815dfb5`)
 - **Goal:** Stop TestFlight `CompileAssetCatalogVariant` / `actool` crash (`attempt to insert nil object` in Icon Composer path) on Xcode 26.6 CI.
 - **Root cause:** Hand-authored `ios/App/App/AppIcon.icon` (Liquid Glass Icon Composer doc from `writeIosGlassIcon`) was passed to `actool` alongside `Assets.xcassets`; Xcode 26.6 RC crashes parsing it. Classic `AppIcon.appiconset` is complete and valid.

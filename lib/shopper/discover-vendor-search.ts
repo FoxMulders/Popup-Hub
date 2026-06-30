@@ -120,43 +120,67 @@ function mapApplicationRows(raw: Record<string, unknown>[]): DiscoverVendorAppli
   })
 }
 
+const DISCOVER_VENDOR_APPLICATION_SELECT = `
+  vendor_id,
+  event_id,
+  booth_number,
+  category_id,
+  category:categories(id, name),
+  passport:vendor_passports(
+    business_name,
+    bio,
+    logo_url,
+    primary_category_id,
+    category_ids,
+    primary_category:categories(name)
+  ),
+  event:events(
+    id,
+    name,
+    start_at,
+    end_at,
+    city,
+    latitude,
+    longitude
+  )
+`
+
+/** PostgREST default max rows; paginate to avoid silent truncation. */
+const DISCOVER_VENDOR_PAGE_SIZE = 1000
+/** Keep `.in(event_id, …)` URL payloads bounded. */
+const DISCOVER_VENDOR_EVENT_ID_CHUNK = 80
+
 export async function fetchDiscoverVendorApplications(
   supabase: SupabaseClient,
   eventIds: string[]
 ): Promise<DiscoverVendorApplicationRow[]> {
   if (eventIds.length === 0) return []
 
-  const { data, error } = await supabase
-    .from('booth_applications')
-    .select(`
-      vendor_id,
-      event_id,
-      booth_number,
-      category_id,
-      category:categories(id, name),
-      passport:vendor_passports(
-        business_name,
-        bio,
-        logo_url,
-        primary_category_id,
-        category_ids,
-        primary_category:categories(name)
-      ),
-      event:events(
-        id,
-        name,
-        start_at,
-        end_at,
-        city,
-        latitude,
-        longitude
-      )
-    `)
-    .in('event_id', eventIds)
-    .eq('status', 'approved')
+  const rows: DiscoverVendorApplicationRow[] = []
 
-  if (error) throw new Error(`discover vendor applications: ${error.message}`)
-  return mapApplicationRows((data ?? []) as Record<string, unknown>[])
+  for (let chunkStart = 0; chunkStart < eventIds.length; chunkStart += DISCOVER_VENDOR_EVENT_ID_CHUNK) {
+    const eventIdChunk = eventIds.slice(chunkStart, chunkStart + DISCOVER_VENDOR_EVENT_ID_CHUNK)
+    let offset = 0
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('booth_applications')
+        .select(DISCOVER_VENDOR_APPLICATION_SELECT)
+        .in('event_id', eventIdChunk)
+        .eq('status', 'approved')
+        .range(offset, offset + DISCOVER_VENDOR_PAGE_SIZE - 1)
+
+      if (error) throw new Error(`discover vendor applications: ${error.message}`)
+
+      const page = mapApplicationRows((data ?? []) as Record<string, unknown>[])
+      rows.push(...page)
+
+      if (!data || data.length < DISCOVER_VENDOR_PAGE_SIZE) break
+      offset += DISCOVER_VENDOR_PAGE_SIZE
+    }
+  }
+
+  return rows
 }
 
 export function groupRowsIntoVendorHits(
