@@ -6,6 +6,16 @@ import { markNativeAppCookie, isNativeApp } from '@/lib/mobile/native-app'
 import { closeNativeOAuthBrowser, markNativeOAuthDeepLinkReturn } from '@/lib/auth/native-oauth'
 import { NativePushRegister } from '@/components/mobile/native-push-register'
 import { syncNativeWidgetSession } from '@/lib/mobile/widget-sync'
+import { createClient } from '@/lib/supabase/client'
+
+function syncWidgetIfAuthenticated(): void {
+  void fetch('/api/mobile/session-bootstrap')
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data: { authenticated?: boolean } | null) => {
+      if (data?.authenticated) void syncNativeWidgetSession()
+    })
+    .catch(() => undefined)
+}
 
 function resolveNativeLaunchPath(input: {
   role: string
@@ -56,6 +66,12 @@ export function CapacitorInit() {
               router.push(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
               return
             }
+            // Widget sign-in tap: ca.popuphub.app://login
+            if (url.host === 'login') {
+              const query = url.searchParams.toString()
+              router.push(query ? `/login?${query}` : '/login')
+              return
+            }
             const path = `${url.pathname}${url.search}${url.hash}`
             if (path.startsWith('/')) {
               router.push(path)
@@ -75,6 +91,41 @@ export function CapacitorInit() {
       removeUrlListener?.()
     }
   }, [router])
+
+  useEffect(() => {
+    if (!isNativeApp()) return
+
+    const supabase = createClient()
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        void syncNativeWidgetSession()
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!isNativeApp()) return
+
+    let removeStateListener: (() => void) | undefined
+
+    void import('@capacitor/app')
+      .then(({ App }) => {
+        void App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) syncWidgetIfAuthenticated()
+        }).then((handle) => {
+          removeStateListener = () => void handle.remove()
+        })
+      })
+      .catch(() => undefined)
+
+    return () => {
+      removeStateListener?.()
+    }
+  }, [])
 
   useEffect(() => {
     if (!isNativeApp()) return

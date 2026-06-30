@@ -2,7 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Venue approval no longer gates market publish (shipped `a79f75e6`)
+## Active work — iOS widget auth sync (branch `cursor/ios-widget-auth-sync-0eff`)
+- **Persona:** Patron / Vendor / Coordinator · native iOS home-screen widgets.
+- **Problem:** Widgets showed "Sign in to see your markets" even after logging in; tapping widget opened the app but widget stayed signed out.
+- **Root cause:** `syncNativeWidgetSession()` only ran on cold start at `/discover` or `/`. Post-login redirects go to role dashboards, so the widget token was never written to the App Group.
+- **Shipped:**
+  - `capacitor-init.tsx` — sync widget session on `SIGNED_IN`, on app resume (`appStateChange`), and handle `ca.popuphub.app://login` deep link from signed-out widget.
+  - `WidgetBridgePlugin.swift` — reject `save` when App Group suite is unavailable (surfaces misconfiguration instead of silent no-op).
+  - `PopupHubWidget.swift` — signed-out widget tap uses `ca.popuphub.app://login` instead of HTTPS (opens native app reliably).
+- **Verify:** Install new TestFlight build → sign in → widget should show feed within ~30s (or immediately after leaving app). Tap signed-out widget → opens in-app login.
+- **Next:** Merge PR; new TestFlight build required for native Swift changes.
+
 - **Persona:** Coordinator · market setup wizard (`/coordinator/events/[id]/setup`).
 - **Goal:** Pending venue admin approval should not block coordinators from saving or publishing markets; approval only adds the venue to the shared dropdown.
 - **Shipped:**
