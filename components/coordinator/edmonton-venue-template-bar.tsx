@@ -19,6 +19,8 @@ import {
   shouldSubmitPlatformVenue,
   submitPlatformVenue,
   alertAdminsOfVenueSubmission,
+  listApprovedPlatformVenues,
+  type ApprovedPlatformVenue,
 } from '@/lib/venues/platform-venue-submissions'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -33,6 +35,8 @@ const selectClassName = cn(
 
 /** Prefix used to encode saved-venue rows in the unified template <select>. */
 const SAVED_VENUE_VALUE_PREFIX = 'saved::'
+/** Prefix used to encode admin-approved platform venues in the template <select>. */
+const PLATFORM_VENUE_VALUE_PREFIX = 'platform::'
 
 interface EdmontonVenueTemplateBarProps {
   value: VenuePresetId
@@ -48,6 +52,7 @@ interface EdmontonVenueTemplateBarProps {
    */
   coordinatorId?: string
   onApplySavedVenue?: (venue: CoordinatorSavedVenue) => void
+  onApplyPlatformVenue?: (venue: ApprovedPlatformVenue) => void
   /** Live form context — required to enable the inline "Save for future" action. */
   locationName?: string
   address?: string
@@ -65,6 +70,7 @@ export function EdmontonVenueTemplateBar({
   className,
   coordinatorId,
   onApplySavedVenue,
+  onApplyPlatformVenue,
   locationName = '',
   address = '',
   lat = 0,
@@ -77,8 +83,15 @@ export function EdmontonVenueTemplateBar({
 
   const savedVenuesEnabled = Boolean(coordinatorId && onApplySavedVenue)
   const [savedVenues, setSavedVenues] = useState<CoordinatorSavedVenue[]>([])
+  const [platformVenues, setPlatformVenues] = useState<ApprovedPlatformVenue[]>([])
   const [savedLoading, setSavedLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  const refreshPlatformVenues = useCallback(async () => {
+    const { venues, error } = await listApprovedPlatformVenues(supabase)
+    if (error) return
+    setPlatformVenues(venues)
+  }, [supabase])
 
   const refreshSavedVenues = useCallback(async () => {
     if (!coordinatorId) return
@@ -91,6 +104,10 @@ export function EdmontonVenueTemplateBar({
     }
     setSavedVenues(venues)
   }, [coordinatorId, supabase])
+
+  useEffect(() => {
+    void refreshPlatformVenues()
+  }, [refreshPlatformVenues])
 
   useEffect(() => {
     if (!savedVenuesEnabled) return
@@ -111,6 +128,14 @@ export function EdmontonVenueTemplateBar({
   const selectValue = selectedStillVisible ? value : 'blank'
 
   async function handleSelectChange(raw: string) {
+    if (raw.startsWith(PLATFORM_VENUE_VALUE_PREFIX)) {
+      const venueId = raw.slice(PLATFORM_VENUE_VALUE_PREFIX.length)
+      const venue = platformVenues.find((v) => v.id === venueId)
+      if (!venue || !onApplyPlatformVenue) return
+      onApplyPlatformVenue(venue)
+      toast.success(`Loaded ${venue.location_name}`)
+      return
+    }
     if (raw.startsWith(SAVED_VENUE_VALUE_PREFIX)) {
       const venueId = raw.slice(SAVED_VENUE_VALUE_PREFIX.length)
       const venue = savedVenues.find((v) => v.id === venueId)
@@ -239,6 +264,19 @@ export function EdmontonVenueTemplateBar({
             onChange={(e) => void handleSelectChange(e.target.value)}
             className={cn(selectClassName, 'w-full')}
           >
+            {platformVenues.length > 0 ? (
+              <optgroup label="Approved venues">
+                {platformVenues.map((venue) => (
+                  <option
+                    key={venue.id}
+                    value={`${PLATFORM_VENUE_VALUE_PREFIX}${venue.id}`}
+                    className="whitespace-normal break-words"
+                  >
+                    ✓ {venue.location_name} — {venue.address}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
             {savedVenuesEnabled && savedVenues.length > 0 ? (
               <optgroup label="Your saved venues">
                 {savedVenues.map((venue) => (

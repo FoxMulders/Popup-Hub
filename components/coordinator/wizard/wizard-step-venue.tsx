@@ -20,6 +20,7 @@ import {
 } from '@/components/coordinator/wizard/wizard-ui'
 import { VenuePlacesAutocomplete } from '@/components/coordinator/wizard/venue-places-autocomplete'
 import type { CoordinatorSavedVenue } from '@/types/database'
+import type { ApprovedPlatformVenue } from '@/lib/venues/platform-venue-submissions'
 import {
   formatPlaceAddress,
   isNamedEstablishmentPlace,
@@ -146,6 +147,7 @@ export interface WizardStepVenueProps {
   lockSkipVenueLayout?: boolean
   coordinatorId: string
   onApplySavedVenue: (venue: CoordinatorSavedVenue) => void
+  onApplyPlatformVenue: (venue: ApprovedPlatformVenue) => void
   onPlaceSelect: (place: PlaceResult) => void
 }
 
@@ -170,6 +172,7 @@ export function WizardStepVenue({
   lockSkipVenueLayout = false,
   coordinatorId,
   onApplySavedVenue,
+  onApplyPlatformVenue,
   onPlaceSelect,
 }: WizardStepVenueProps) {
   const apiLoaded = useApiIsLoaded()
@@ -427,6 +430,7 @@ export function WizardStepVenue({
         onCityChange={onCityChange}
         coordinatorId={coordinatorId}
         onApplySavedVenue={onApplySavedVenue}
+        onApplyPlatformVenue={onApplyPlatformVenue}
         locationName={locationName}
         address={address}
         lat={lat}

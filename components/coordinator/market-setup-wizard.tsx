@@ -32,6 +32,7 @@ import {
   shouldSubmitPlatformVenue,
   submitPlatformVenue,
   alertAdminsOfVenueSubmission,
+  type ApprovedPlatformVenue,
 } from '@/lib/venues/platform-venue-submissions'
 import { isEdmontonVenueId } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
@@ -619,13 +620,6 @@ export function MarketSetupWizard({
           )
           return { ok: false as const, reason: 'fees' as const }
         }
-        const venueRow = await findVenueSubmissionByAddress(supabase, locationName, address)
-        if (venueRow?.status === 'pending') {
-          toast.error(
-            'This venue is pending admin approval. You can save a draft, but publishing is blocked until approved.'
-          )
-          return { ok: false as const, reason: 'venue' as const }
-        }
       }
 
       setAutosaveStatus('saving')
@@ -924,6 +918,24 @@ export function MarketSetupWizard({
 
   function handleApplySavedVenue(venue: CoordinatorSavedVenue) {
     setSkipVenueLayout(venue.skip_venue_layout)
+    applyVenuePresetToRoom('blank')
+
+    setLocationName(venue.location_name)
+    setAddress(venue.address)
+    setLat(venue.latitude)
+    setLng(venue.longitude)
+    setPinDropped(true)
+    setMarketCity(resolveMarketCityId(venue.market_city, venue.address))
+    syncVenueTemplateFromSelection({
+      venueName: venue.location_name,
+      address: venue.address,
+      lat: venue.latitude,
+      lng: venue.longitude,
+      cityId: resolveMarketCityId(venue.market_city, venue.address),
+    })
+  }
+
+  function handleApplyPlatformVenue(venue: ApprovedPlatformVenue) {
     applyVenuePresetToRoom('blank')
 
     setLocationName(venue.location_name)
@@ -1468,6 +1480,7 @@ export function MarketSetupWizard({
                 lockSkipVenueLayout={isQuarterAuction}
                 coordinatorId={coordinatorId}
                 onApplySavedVenue={handleApplySavedVenue}
+                onApplyPlatformVenue={handleApplyPlatformVenue}
                 onPlaceSelect={handleGooglePlaceSelect}
               />
             </div>

@@ -317,8 +317,8 @@ export function WizardStepCapacity({
 
           {venueSubmissionPending ? (
             <p className="rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-              This venue was submitted for admin review. You can save drafts, but publishing stays
-              blocked until it is approved.
+              This venue was submitted for admin review. You can keep building your market — once
+              approved, it will appear in the shared venue dropdown for other coordinators.
             </p>
           ) : null}
 
