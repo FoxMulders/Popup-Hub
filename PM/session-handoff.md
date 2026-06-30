@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Admin Operations Console swipe-back (shipped `8ff5250c`)
+- **Goal:** Mobile edge swipe-left to go back on `/admin/*` (Operations Console).
+- **Persona:** Platform admin · Operations Console (`/admin/*`).
+- **Root cause:** Admin layout is a standalone shell — unlike patron/vendor/coordinator routes it never mounted `SwipeBackHandler`.
+- **Fix:** `app/admin/layout.tsx` — mount `<SwipeBackHandler />` (same dual-edge history gesture as `site-app-shell` / `shopper-shell-client`).
+- **Verify:** `npx tsx lib/navigation/swipe-back-gesture.test.ts` PASS; on phone/PWA open an admin sub-route after navigating in-session → swipe from left edge goes back.
+- **Next:** Deploy when merged; smoke `/admin/feedback` → `/admin/users` → edge swipe back.
+
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
