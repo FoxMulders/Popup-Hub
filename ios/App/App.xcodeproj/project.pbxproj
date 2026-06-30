@@ -20,6 +20,7 @@
 		W1DGE00A1FED796500168601 /* WidgetFeedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0051FED796500168601 /* WidgetFeedClient.swift */; };
 		W1DGE00B1FED796500168601 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1DGE0061FED796500168601 /* WidgetIntents.swift */; };
 		W1DGE0131FED796500168601 /* PopupHubWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = W1DGE00D1FED796500168601 /* PopupHubWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		W1DGE01A1FED796500168601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = W1DGE0191FED796500168601 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 		W1DGE0071FED796500168601 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		W1DGE0081FED796500168601 /* PopupHubWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PopupHubWidget.entitlements; sourceTree = "<group>"; };
 		W1DGE00D1FED796500168601 /* PopupHubWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PopupHubWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		W1DGE0191FED796500168601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +126,7 @@
 				W1DGE0041FED796500168601 /* PopupHubWidget.swift */,
 				W1DGE0051FED796500168601 /* WidgetFeedClient.swift */,
 				W1DGE0061FED796500168601 /* WidgetIntents.swift */,
+				W1DGE0191FED796500168601 /* Assets.xcassets */,
 				W1DGE0071FED796500168601 /* Info.plist */,
 				W1DGE0081FED796500168601 /* PopupHubWidget.entitlements */,
 			);
@@ -229,6 +232,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				W1DGE01A1FED796500168601 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

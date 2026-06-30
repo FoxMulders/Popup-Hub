@@ -436,13 +436,13 @@
 - **Personas:** Patron · Vendor · Coordinator · native Capacitor shell.
 - **Shipped locally:**
   - **Backend:** Migrations `130_widget_tokens.sql`, `131_widget_backfill.sql`; `/api/widget/token`, `/api/widget/feed`, `/api/widget/action`; `lib/widget/*` feed builders + tests.
-  - **Bridge:** `WidgetBridge` Capacitor plugin (iOS App Group + Android SharedPreferences); `syncNativeWidgetSession` on auth; revoke on sign-out.
-  - **iOS:** `ios/PopupHubWidget/` extension (small/medium/large, dynamic background, App Intents); `scripts/mobile/patch-ios-widget.mjs`.
-  - **Android:** `PopupHubWidgetProvider` + WorkManager refresh + Glance stub; manifest receiver.
+  - **Bridge:** `WidgetBridge` Capacitor plugin (iOS App Group + Android SharedPreferences); `syncNativeWidgetSession` on any authenticated route + app resume (not only `/discover`); revoke on sign-out. Token mint uses `rotate: false` so a failed native persist cannot revoke the working widget token.
+  - **iOS:** `ios/PopupHubWidget/` extension (small/medium/large, dynamic background, App Intents, forest-green brand header + tent logo asset); `scripts/mobile/patch-ios-widget.mjs`.
+  - **Android:** `PopupHubWidgetProvider` + WorkManager refresh; signed-out vs load-error vs feed states; cream background + brand logo/colors in layout.
   - **Docs:** `PM/mobile-native-widgets.md`; AASA paths expanded for wallet/coordinator/vendor deep links.
-- **Verify:** `npx tsx lib/widget/feed.test.ts` PASS. Apply DB: `npm run db:push`. iOS: Mac archive after `npm run mobile:sync:ios`. Android: add widget from launcher after debug build.
-- **Blockers:** iOS widget requires Mac/Xcode + App Group capability in Apple Developer portal. Android App Links need release SHA256 in `assetlinks.json`.
-- **Next:** User commit + deploy when ready.
+- **Verify:** `npx tsx lib/widget/feed.test.ts` PASS. Apply DB: `npm run db:push`. iOS: Mac archive after `npm run mobile:sync:ios`. Android: add widget from launcher after debug build; sign in as vendor/coordinator without visiting `/discover` — widget should populate.
+- **Blockers:** iOS widget requires Mac/Xcode + App Group capability in Apple Developer portal. Android App Links need release SHA256 in `assetlinks.json`. Requires new native build to ship widget auth + branding fixes.
+- **Next:** User commit + deploy when ready; rebuild iOS/Android native shells.
 
 ## Active work — Mobile QA: notifications, profile email, Popup Funds branding (local, not deployed)
 - **Goal:** Close mobile QA feedback — SMS/push notification toggles, profile email editing, Popup Funds wordmark + coin logo on wallet.
