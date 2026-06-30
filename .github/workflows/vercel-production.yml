@@ -1,0 +1,92 @@
+name: Deploy to Vercel Production
+
+# Sole automated production path for the web app (vercel.json disables Vercel git
+# deploys on master to avoid duplicate builds). Trigger from GitHub mobile/desktop
+# via Actions → Deploy to Vercel Production → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      skip_smoke:
+        description: Skip post-deploy build-info smoke check
+        required: false
+        default: false
+        type: boolean
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'master')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Validate Vercel secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name is not set. See PM/vercel-github-actions.md for setup."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Deploy to Vercel (production)
+        id: deploy
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          url=$(npx vercel@latest deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}")
+          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url"
+
+      - name: Verify production build-info
+        if: >-
+          github.event_name == 'workflow_run' ||
+          (github.event_name == 'workflow_dispatch' && inputs.skip_smoke != true)
+        run: |
+          set -euo pipefail
+          expected=$(git rev-parse --short HEAD)
+          echo "Expecting production commit $expected on https://popuphub.ca/api/build-info"
+          for attempt in $(seq 1 30); do
+            body=$(curl -sf https://popuphub.ca/api/build-info || true)
+            if [ -n "$body" ]; then
+              deployed=$(printf '%s' "$body" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).commit||'')}catch{console.log('')}})")
+              echo "Attempt $attempt: deployed=$deployed expected=$expected"
+              if [ "$deployed" = "$expected" ]; then
+                echo "Production is live at commit $expected"
+                exit 0
+              fi
+            else
+              echo "Attempt $attempt: build-info not ready"
+            fi
+            sleep 20
+          done
+          echo "::warning::popuphub.ca still reports commit ${deployed:-unknown}; expected $expected. Deployment may still be propagating — check Vercel dashboard."

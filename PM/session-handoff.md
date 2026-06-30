@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — GitHub Actions Vercel production deploy (local, not committed)
+- **Goal:** Ship web production from Cursor mobile / GitHub without local `vercel deploy`.
+- **Shipped locally:**
+  - **`.github/workflows/vercel-production.yml`** — auto-deploy after CI passes on `master`; manual `workflow_dispatch` for on-demand prod deploy.
+  - **`PM/vercel-github-actions.md`** — one-time `VERCEL_TOKEN` + org/project ID secret setup.
+  - **`docs/PRODUCTION_NEXT_STEPS.md`** — mobile-friendly deploy row.
+- **Blockers:** User must add GitHub secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (see doc).
+- **Next:** Merge + push; add secrets; run workflow to ship pending web commits (`a79f75e6` venue approval fix).
+
 ## Active work — Venue approval no longer gates market publish (shipped `a79f75e6`)
 - **Persona:** Coordinator · market setup wizard (`/coordinator/events/[id]/setup`).
 - **Goal:** Pending venue admin approval should not block coordinators from saving or publishing markets; approval only adds the venue to the shared dropdown.
@@ -12,9 +21,9 @@
   - Admin venues panel copy clarifies approval purpose.
 - **Merge:** PR #147 → `master` @ `a79f75e6`.
 - **TestFlight:** **Deploy to TestFlight** run https://github.com/FoxMulders/Popup-Hub/actions/runs/28467286409 — `EXPORT SUCCEEDED`, upload succeeded (build 12).
-- **Web prod:** Pending manual `vercel deploy --prod` (git deploy disabled on `master` in `vercel.json`; cloud agent has no Vercel credentials). Prod still on `20712b2` until deploy.
+- **Web prod:** Pending first **Deploy to Vercel Production** GitHub Action run (secrets required — `PM/vercel-github-actions.md`). Still on `20712b2` until then.
 - **Verify:** Create market with new custom venue → save/deploy succeeds while pending; after admin approves, venue in "Approved venues" dropdown.
-- **Next:** Run `PM\Deploy-popuphub.bat` or `npx vercel deploy --prod --yes` from authenticated machine to ship web.
+- **Next:** Add Vercel GitHub secrets; run **Deploy to Vercel Production** workflow.
 
 ## Active work — Unified auth accounts (OAuth + email) (local, not committed)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
