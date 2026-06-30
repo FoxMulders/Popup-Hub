@@ -19,8 +19,10 @@
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
-- **Shipped locally:** Reordered flex column in `components/brand/popup-loader-provider.tsx` — animation (`loader-screen__lottie`) first, `BrandLogoLockup` second. Applies to initial loader and replay variants.
-- **Verify:** Hard refresh (or clear `popup-hub-initial-loader-shown` session key) — booth-deal / walk-to-market animation appears above the storefront + wordmark lockup.
+- **Shipped locally:**
+  - Reordered flex column in `components/brand/popup-loader-provider.tsx` — animation (`loader-screen__lottie`) first, `BrandLogoLockup` second.
+  - **Wordmark 2.5×** — new `loader` size on `BrandLogoLockup` (`h-[5.625rem]` / `sm:h-[6.25rem]`, 2.5× header `h-9` / `sm:h-10`); provider uses `size="loader"`.
+- **Verify:** Hard refresh (or clear `popup-hub-initial-loader-shown` session key) — booth-deal / walk-to-market animation appears above a larger storefront + wordmark lockup.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — Organizer claim approval silently failing (shipped `e88bab69`)
