@@ -109,13 +109,19 @@ export async function publishCoordinatorEvent(
     }
   }
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from('events')
     .update({ status: 'published' })
     .eq('id', event.id)
+    .select('id')
+    .maybeSingle()
 
-  if (updateError) {
-    return { ok: false, error: updateError.message, status: 500 }
+  if (updateError || !updated) {
+    return {
+      ok: false,
+      error: updateError?.message ?? 'Could not publish market.',
+      status: 500,
+    }
   }
 
   void dispatchPublishMarketAlerts(service, event.id).catch((err) => {
