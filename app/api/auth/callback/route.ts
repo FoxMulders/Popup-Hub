@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
+import { findDuplicateProfilesByEmail } from '@/lib/auth/duplicate-account'
+import { createAdminClient } from '@/lib/supabase/server'
 
 function safeRedirectPath(value: string | null, fallback = '/discover'): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
@@ -58,6 +60,7 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const next = safeRedirectPath(requestUrl.searchParams.get('next'))
   const roleParam = requestUrl.searchParams.get('role')
+  const isLinkFlow = requestUrl.searchParams.get('link') === '1'
 
   const oauthError = requestUrl.searchParams.get('error')
   if (oauthError) {
@@ -109,6 +112,33 @@ export async function GET(request: NextRequest) {
       origin,
       'auth_callback_failed',
       'No user returned after sign-in.'
+    )
+  }
+
+  if (!isLinkFlow && user.email) {
+    const admin = createAdminClient()
+    const duplicates = await findDuplicateProfilesByEmail(admin, user.email, user.id)
+    if (duplicates.length > 0) {
+      await supabase.auth.signOut()
+
+      const accountLinkUrl = new URL('/account-link', origin)
+      accountLinkUrl.searchParams.set('email', user.email)
+      accountLinkUrl.searchParams.set('duplicateOf', duplicates[0].id)
+
+      const response = NextResponse.redirect(accountLinkUrl.toString())
+      response.cookies.getAll().forEach((cookie) => {
+        if (cookie.name.startsWith('sb-')) {
+          response.cookies.delete(cookie.name)
+        }
+      })
+      return response
+    }
+  }
+
+  if (isLinkFlow) {
+    return attachCookies(
+      NextResponse.redirect(`${origin}/profile?linked=1`),
+      sessionCookies
     )
   }
 
