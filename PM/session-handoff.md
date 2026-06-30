@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (is_test catalog leak fix, branch `cursor/critical-bug-investigation-7034`)
+- **Trigger:** Push `a79f75e6` (venue approval no longer gates publish) — no critical bugs in that diff; RLS already allows coordinators to read approved platform venues.
+- **Found on master:** QA scenario markets (`events.is_test = true`) were still listed on `/discover`, vendor directory, widget feed, public event pages, coordinator profiles, and favorites. Sitemap already excluded them.
+- **Shipped on branch:** Cherry-picked `excludeTestMarkets()` helper across catalog queries + vendor apply API guard; unit test in `lib/queries/public-market-catalog.test.ts`.
+- **Next:** Merge PR, deploy, purge or unpublish any live `is_test` markets if patrons already applied.
+
 ## Active work — Venue approval no longer gates market publish (local, not committed)
 - **Persona:** Coordinator · market setup wizard (`/coordinator/events/[id]/setup`).
 - **Goal:** Pending venue admin approval should not block coordinators from saving or publishing markets; approval only adds the venue to the shared dropdown.
