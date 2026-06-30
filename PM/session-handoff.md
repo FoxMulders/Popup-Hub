@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug scan: is_test catalog leak (PR #127)
+- **Trigger:** Push `bb22eaab` (session handoff docs); substantive recent surface area is ship 45/46 scenario test markets + public catalog queries.
+- **Bug:** QA scenario markets (`events.is_test = true`) appear on `/discover`, vendor directory, widget feed, public event detail/map/vendors, coordinator public profiles, and favorites recommendations. Sitemap already excluded them; catalog queries did not.
+- **Impact:** Patrons/vendors see fake QA markets; vendors can apply to test markets via API until blocked.
+- **Fix:** `excludeTestMarkets()` helper + `.eq('is_test', false)` on all public catalog queries; vendor apply route rejects `is_test` events. Unit test in `lib/queries/public-market-catalog.test.ts`.
+- **Branch:** `cursor/critical-bug-investigation-5bdb` @ `d612e311`
+- **Next:** Merge PR #127 → deploy → confirm scenario markets absent from `/discover`.
+
 ## Active work — iOS archive fix: duplicate widget Info.plist (local, not committed)
 - **Goal:** Stop the TestFlight `archive` failure (`CreateBuildDirectory … (1 failure)`, exit code 65) caused by the `duplicate output file … PopupHubWidgetExtension.appex/Info.plist` warning.
 - **Root cause:** The widget's `Info.plist` was listed in the **PopupHubWidgetExtension Copy Bundle Resources** phase **and** processed as the target's `INFOPLIST_FILE`, so `Info.plist` was emitted to the `.appex` twice. The new build system promotes that duplicate to a hard error during `archive` (it is only a warning in plain `build`). This invalidates the earlier handoff note (Attempt #61) that called the duplicate "a warning, not the failure."
