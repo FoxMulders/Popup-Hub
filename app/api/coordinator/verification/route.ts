@@ -33,18 +33,7 @@ export async function GET() {
 
   const profile = roleProfile
 
-  const { data: squareEvent } = await supabase
-    .from('events')
-    .select('id')
-    .eq('coordinator_id', user.id)
-    .not('square_merchant_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
-
-  const gate = {
-    ...profile,
-    has_square_event: !!squareEvent,
-  }
+  const gate = profile
 
   return NextResponse.json({
     verificationStatus: profile?.coordinator_verification_status ?? 'unverified',

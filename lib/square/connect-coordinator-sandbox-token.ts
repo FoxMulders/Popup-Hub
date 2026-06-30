@@ -67,11 +67,5 @@ export async function connectCoordinatorSandboxFromEnv(
     throw new SquareSandboxConnectError('square_api_failed', profileError.message)
   }
 
-  await supabase
-    .from('events')
-    .update({ square_merchant_id: merchantId })
-    .eq('coordinator_id', coordinatorId)
-    .is('square_merchant_id', null)
-
   return { merchantId, locationId }
 }

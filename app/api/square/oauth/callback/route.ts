@@ -120,12 +120,6 @@ export async function GET(request: Request) {
         })
         .eq('id', user.id)
 
-      await supabase
-        .from('events')
-        .update({ square_merchant_id: merchantId })
-        .eq('coordinator_id', user.id)
-        .is('square_merchant_id', null)
-
       const base = resolveAppBaseUrl(request)
       if (!base) {
         console.error(

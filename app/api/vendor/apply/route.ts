@@ -481,8 +481,7 @@ export async function POST(request: Request) {
       event.coordinator_id as string
     )
     const squareReady =
-      !!event.square_merchant_id ||
-      (!!credentials?.accessToken && !!credentials.merchantId)
+      !!credentials?.accessToken && !!credentials.merchantId
     const stripeReady =
       !!coordinator?.stripe_connected_id && coordinator?.stripe_onboarding_complete === true
 

@@ -20,15 +20,15 @@ export type CoordinatorFraudGate = {
   stripe_onboarding_complete?: boolean | null
   square_access_token?: string | null
   payout_onboarding_status?: PayoutOnboardingStatus | null
-  /** Set when caller knows the coordinator has an event with square_merchant_id. */
-  has_square_event?: boolean
+  payout_account_id?: string | null
 }
 
+/** Square OAuth is stored on the coordinator profile and applies to all markets. */
 export function isSquareConnectedCoordinator(profile: CoordinatorFraudGate | null | undefined): boolean {
   if (!profile) return false
   return (
     (!!profile.square_access_token && profile.payout_onboarding_status === 'complete') ||
-    profile.has_square_event === true
+    (!!profile.payout_account_id && profile.payout_onboarding_status === 'complete')
   )
 }
 
@@ -186,4 +186,4 @@ export async function evaluateCoordinatorVerification(input: CoordinatorVerifica
 }
 
 export const COORDINATOR_FRAUD_PROFILE_SELECT =
-  'coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status, stripe_onboarding_complete, square_access_token, payout_onboarding_status'
+  'coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status, stripe_onboarding_complete, square_access_token, payout_onboarding_status, payout_account_id'

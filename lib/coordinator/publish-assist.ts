@@ -60,18 +60,7 @@ export async function createPublishAssistRequest(
     .eq('id', args.coordinatorId)
     .single()
 
-  const { data: squareEvent } = await supabase
-    .from('events')
-    .select('id')
-    .eq('coordinator_id', args.coordinatorId)
-    .not('square_merchant_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
-
-  const blockReason = coordinatorPublishBlockReason({
-    ...profile,
-    has_square_event: !!squareEvent,
-  })
+  const blockReason = coordinatorPublishBlockReason(profile)
 
   const { data: inserted, error } = await supabase
     .from('event_publish_assist_requests')

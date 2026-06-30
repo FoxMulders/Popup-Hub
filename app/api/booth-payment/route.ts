@@ -103,7 +103,6 @@ export async function POST(request: Request) {
       table_count,
       event:events(
         coordinator_id,
-        square_merchant_id,
         listing_type,
         booth_price_cents,
         multi_table_discount_percent,
@@ -205,10 +204,7 @@ export async function POST(request: Request) {
     .eq('id', coordinatorId)
     .single()
 
-  const paymentBlock = coordinatorPaymentCollectionBlockReason({
-    ...coordinatorProfile,
-    has_square_event: !!eventRow?.square_merchant_id,
-  })
+  const paymentBlock = coordinatorPaymentCollectionBlockReason(coordinatorProfile)
   if (paymentBlock) {
     return NextResponse.json({ error: paymentBlock }, { status: 403 })
   }

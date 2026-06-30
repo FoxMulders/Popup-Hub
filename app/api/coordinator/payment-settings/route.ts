@@ -3,6 +3,7 @@ import { canActAsCoordinator } from '@/lib/auth/rbac'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
   coordinatorPaymentCollectionBlockReason,
+  isSquareConnectedCoordinator,
 } from '@/lib/coordinator/verification'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -43,16 +44,14 @@ export async function GET() {
   const { data: connectedEvent } = await supabase
     .from('events')
     .select(
-      'square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash'
+      'accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash'
     )
     .eq('coordinator_id', user.id)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  const squareConnected =
-    !!connectedEvent?.square_merchant_id ||
-    (!!profile.square_access_token && profile.payout_onboarding_status === 'complete')
+  const squareConnected = isSquareConnectedCoordinator(profile)
 
   const unifiedFlags = readUnifiedEventPaymentFlags(connectedEvent ?? {})
 
@@ -124,18 +123,7 @@ export async function PATCH(request: Request) {
       body.defaultEventPaymentFlags.accepts_offline_cash === true)
 
   if (enablingAcceptanceFlags) {
-    const { data: squareEvent } = await supabase
-      .from('events')
-      .select('id')
-      .eq('coordinator_id', user.id)
-      .not('square_merchant_id', 'is', null)
-      .limit(1)
-      .maybeSingle()
-
-    const paymentBlock = coordinatorPaymentCollectionBlockReason({
-      ...profile,
-      has_square_event: !!squareEvent,
-    })
+    const paymentBlock = coordinatorPaymentCollectionBlockReason(profile)
     if (paymentBlock) {
       return NextResponse.json({ error: paymentBlock }, { status: 403 })
     }
