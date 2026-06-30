@@ -37,10 +37,15 @@ cert_fingerprint() {
 
 profile_fingerprint() {
   local profile="$1"
-  security cms -D -i "$profile" 2>/dev/null \
-    | plutil -extract DeveloperCertificates.0 raw -o - - 2>/dev/null \
-    | openssl x509 -inform DER -noout -fingerprint -sha1 \
+  local plist
+  plist=$(mktemp)
+  local cert_der
+  cert_der=$(mktemp)
+  security cms -D -i "$profile" > "$plist"
+  /usr/libexec/PlistBuddy -x -c 'Print DeveloperCertificates:0' "$plist" > "$cert_der"
+  openssl x509 -inform DER -in "$cert_der" -noout -fingerprint -sha1 \
     | sed 's/SHA1 Fingerprint=//;s/://g' | tr '[:lower:]' '[:upper:]'
+  rm -f "$plist" "$cert_der"
 }
 
 audit_profile() {
