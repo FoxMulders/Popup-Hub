@@ -9,7 +9,8 @@ Use this checklist after pushing code to GitHub. Live site: [popup-hub.vercel.ap
 | Sync env → Vercel | `npm run env:vercel` |
 | Apply DB migrations | `npm run db:push` |
 | Pre-ship automated QA | `npm run qa:launch` |
-| Build + commit + deploy | `npm run ship -- "your message"` |
+| Build + commit + deploy (local) | `npm run ship -- "your message"` |
+| **Deploy web from GitHub (mobile / no CLI)** | Actions → **Deploy to Vercel Production** → Run workflow (see `PM/vercel-github-actions.md`) |
 | Smoke-check production | `npm run verify:prod` |
 
 ---
@@ -32,9 +33,8 @@ Use this checklist after pushing code to GitHub. Live site: [popup-hub.vercel.ap
    .\scripts\sync-vercel-env.ps1 -DryRun
    ```
 4. Redeploy so functions pick up changed vars:
-   ```powershell
-   npx vercel deploy --prod --yes
-   ```
+   - **GitHub (recommended):** Actions → **Deploy to Vercel Production** → Run workflow (`PM/vercel-github-actions.md`)
+   - **Local CLI:** `npx vercel deploy --prod --yes`
 
 ### Gaps to verify manually
 

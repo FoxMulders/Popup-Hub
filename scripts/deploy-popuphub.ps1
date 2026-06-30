@@ -1,5 +1,8 @@
 # One-click deploy: build, commit, sync with origin, push, Vercel prod, session handoff.
 #
+# GitHub Actions alternative (Cursor mobile / no local CLI):
+#   Actions → Deploy to Vercel Production — see PM/vercel-github-actions.md
+#
 # Usage:
 #   .\scripts\deploy-popuphub.ps1
 #   .\scripts\deploy-popuphub.ps1 -Message "fix: footer version row"
