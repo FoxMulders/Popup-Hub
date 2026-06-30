@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Mobile discover header safe area + stacked portal tabs (local)
+- **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
+- **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
+- **Shipped (branch `cursor/mobile-header-safe-area-stack-5858`):**
+  - **`shopper-top-bar.tsx`** — mobile multi-portal users get stacked header: centered `BrandLogoLockup` row above centered `PortalTabs`; hamburger stays top-right; `app-nav--stacked` height token.
+  - **`app-nav.tsx`** — same centered stacked mobile layout for vendor/coordinator shells.
+  - **`capacitor-init.tsx`** — native `StatusBar` overlay off + dark style on cream background; `data-native-app` on `<html>`.
+  - **`app/layout.tsx`** — PWA status bar style `default` (was `black-translucent`) so system chrome stays visible.
+  - **`globals.css`** — `--app-nav-height-stacked` 6rem; native app chrome headers skip duplicate safe-top padding.
+  - **`page-back-bar.tsx`** — sticky offset when stacked header precedes back bar on mobile.
+- **Verify:** iPhone / Capacitor discover — status bar visible; all three portal labels readable; logo centered above tabs.
+- **Next:** Merge PR; `npx vercel deploy --prod --yes` from authenticated machine.
+
 ## Active work — iOS ITMS-90035 resubmit (shipped `eef7ef06`, TestFlight upload OK)
 - **Goal:** Fix App Store Connect **ITMS-90035** (invalid signature) after rejected build **10** / v1.120.0; upload new build **13** / v1.191.0.
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
