@@ -104,6 +104,7 @@ async function fetchOpenMarkets(supabase: SupabaseClient): Promise<Event[]> {
     .from('events')
     .select('id, name, status, start_at, end_at, location_name, latitude, longitude')
     .in('status', [...OPEN_STATUSES])
+    .eq('is_test', false)
     .order('start_at', { ascending: true })
     .limit(20)
   return (data ?? []) as Event[]
