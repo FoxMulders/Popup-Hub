@@ -1,20 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { ChangePasswordDialog } from '@/components/profile/change-password-dialog'
 import { ChangeEmailDialog } from '@/components/profile/change-email-dialog'
-import { ChevronDown, KeyRound, Mail, Shield } from 'lucide-react'
+import { ConnectedSignInMethods } from '@/components/profile/connected-sign-in-methods'
+import { SetPasswordDialog } from '@/components/profile/set-password-dialog'
+import {
+  fetchUserIdentities,
+  hasEmailPasswordIdentity,
+} from '@/lib/auth/connected-identities'
+import { ChevronDown, KeyRound, Loader2, Mail, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AccountSecurityCardProps {
   email: string
 }
 
-export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
+function AccountSecurityCardInner({ email }: AccountSecurityCardProps) {
+  const supabase = createClient()
   const [open, setOpen] = useState(true)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [setPasswordDialogOpen, setSetPasswordDialogOpen] = useState(false)
   const [emailDialogOpen, setEmailDialogOpen] = useState(false)
+  const [hasEmailIdentity, setHasEmailIdentity] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    void fetchUserIdentities(supabase).then(({ identities }) => {
+      setHasEmailIdentity(hasEmailPasswordIdentity(identities))
+    })
+  }, [supabase])
 
   return (
     <>
@@ -30,7 +46,7 @@ export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
             <div className="min-w-0">
               <h3 className="font-semibold text-foreground">Account Security</h3>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Manage sign-in credentials and protect your account.
+                Manage sign-in methods, credentials, and account protection.
               </p>
             </div>
           </div>
@@ -44,30 +60,52 @@ export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
         </button>
 
         {open ? (
-          <div className="border-t px-6 py-5 space-y-4">
+          <div className="border-t px-6 py-5 space-y-6">
+            <ConnectedSignInMethods />
+
             <div className="rounded-xl border bg-canvas/50 px-4 py-3">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Use a strong, unique password. Popup Hub never stores your password in plain text.
               </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-2 h-11 w-full sm:w-auto"
-              onClick={() => setEmailDialogOpen(true)}
-            >
-              <Mail className="h-4 w-4" />
-              Change Email
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-2 h-11 w-full sm:w-auto"
-              onClick={() => setPasswordDialogOpen(true)}
-            >
-              <KeyRound className="h-4 w-4" />
-              Change Password
-            </Button>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2 h-11 w-full sm:w-auto"
+                onClick={() => setEmailDialogOpen(true)}
+              >
+                <Mail className="h-4 w-4" />
+                Change Email
+              </Button>
+              {hasEmailIdentity === false ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 h-11 w-full sm:w-auto"
+                  onClick={() => setSetPasswordDialogOpen(true)}
+                >
+                  <KeyRound className="h-4 w-4" />
+                  Set a password
+                </Button>
+              ) : hasEmailIdentity === true ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 h-11 w-full sm:w-auto"
+                  onClick={() => setPasswordDialogOpen(true)}
+                >
+                  <KeyRound className="h-4 w-4" />
+                  Change Password
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" className="gap-2 h-11" disabled>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Loading…
+                </Button>
+              )}
+            </div>
           </div>
         ) : null}
       </div>
@@ -82,6 +120,25 @@ export function AccountSecurityCard({ email }: AccountSecurityCardProps) {
         open={passwordDialogOpen}
         onOpenChange={setPasswordDialogOpen}
       />
+      <SetPasswordDialog
+        email={email}
+        open={setPasswordDialogOpen}
+        onOpenChange={setSetPasswordDialogOpen}
+      />
     </>
+  )
+}
+
+export function AccountSecurityCard(props: AccountSecurityCardProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-2xl border bg-white px-6 py-5 text-sm text-muted-foreground">
+          Loading account security…
+        </div>
+      }
+    >
+      <AccountSecurityCardInner {...props} />
+    </Suspense>
   )
 }
