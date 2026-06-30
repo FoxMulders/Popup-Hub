@@ -13,7 +13,8 @@
   - **`canvas-context-toolbar.tsx`** — repositioned to `top-2 left-2` inside grid area.
   - **`globals.css`** — `--canvas-top-toolbar-height`, `.canvas-top-tool-strip` styles.
 - **Verify:** HubGrid blueprint — toolbar above grid; chevron collapses whole strip; per-row chevrons on Room & tools / Patron & vendor; undo/zoom/dual-screen in top strip; context toolbar when drawing booths.
-- **Next:** Commit + deploy when user asks.
+- **CI fix (`771abd53`):** Missing `</div>` in canvas column caused JSX parse error (build + Vercel fail); `CanvasTopToolStrip` localStorage hydration moved to `useSyncExternalStore`.
+- **Next:** Monitor PR #144 CI green; deploy when user asks.
 
 ## Active work — Unified auth accounts (OAuth + email) (local, not committed)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
