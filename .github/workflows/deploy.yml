@@ -173,6 +173,11 @@ jobs:
               exit 1
             fi
             cp "$raw" "$PROFILES_DIR/$uuid.mobileprovision"
+            if [ "$label" = "App" ]; then
+              echo "APP_PROFILE_PATH=$PROFILES_DIR/$uuid.mobileprovision" >> "$GITHUB_ENV"
+            elif [ "$label" = "Widget" ]; then
+              echo "WIDGET_PROFILE_PATH=$PROFILES_DIR/$uuid.mobileprovision" >> "$GITHUB_ENV"
+            fi
           }
 
           install_profile "$APP_PROFILE_BASE64" "App" "PopupHub App Store"
@@ -242,26 +247,9 @@ jobs:
           fi
 
           echo "Imported Distribution cert SHA-1: $DIST_FP"
-          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          APP_PROFILE_PATH=$(find "$PROFILES_DIR" -name '*.mobileprovision' -exec sh -c '
-            for f; do
-              if security cms -D -i "$f" 2>/dev/null | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin 2>/dev/null | grep -qx "PopupHub App Store"; then
-                echo "$f"
-                exit 0
-              fi
-            done
-          ' sh {} + 2>/dev/null | head -1)
-          WIDGET_PROFILE_PATH=$(find "$PROFILES_DIR" -name '*.mobileprovision' -exec sh -c '
-            for f; do
-              if security cms -D -i "$f" 2>/dev/null | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin 2>/dev/null | grep -qx "PopupHub Widget App Store"; then
-                echo "$f"
-                exit 0
-              fi
-            done
-          ' sh {} + 2>/dev/null | head -1)
 
           if [ -z "${APP_PROFILE_PATH:-}" ] || [ -z "${WIDGET_PROFILE_PATH:-}" ]; then
-            echo "::error::Installed App Store profiles not found in $PROFILES_DIR"
+            echo "::error::Profile paths missing from install step (APP_PROFILE_PATH / WIDGET_PROFILE_PATH)."
             exit 1
           fi
 
