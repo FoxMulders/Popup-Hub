@@ -2,7 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Mobile discover header safe area + stacked portal tabs (local)
+## Active work — Critical bug scan c7141c61 (branch `cursor/critical-bug-investigation-083e`)
+- **Trigger:** Push `c7141c61` (mobile header safe area + session handoff docs).
+- **Recent commit reviewed:** `248f5249` mobile stacked header — no data/auth/security critical issues in diff; one UX regression noted (NavBackButton hidden on mobile multi-portal in `app-nav`; swipe-back still works).
+- **Critical bugs fixed (still on master, predating push):**
+  1. **Publish-assist approve/reject RLS no-op** — admin routes used `createServiceClient()` (cookie-bound JWT); no admin UPDATE on `event_publish_assist_requests` and admin read-only on `events`, so approvals could not publish or clear queue. → `createAdminClient()`.
+  2. **`is_test` catalog leak** — QA scenario markets visible on `/discover`, vendor directory, widget feed, public event pages. → `excludeTestMarkets()` helper + API vendor-apply guard.
+  3. **Native OAuth session drop** — `CapacitorInit` used `router.push` for `/api/auth/callback`; Set-Cookie may not persist. → `window.location.replace` (matches login/signup).
+- **Validation:** `npx tsx lib/queries/public-market-catalog.test.ts` passed.
+- **Next:** Merge PR; deploy prod; manual smoke — admin publish-assist approve, discover excludes `is_test` markets, native Google OAuth sign-in.
+
+## Active work — Mobile discover header safe area + stacked portal tabs (shipped `248f5249`)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
 - **Shipped (branch `cursor/mobile-header-safe-area-stack-5858`):**
