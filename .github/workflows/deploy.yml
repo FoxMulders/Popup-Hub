@@ -179,22 +179,11 @@ jobs:
           install_profile "$WIDGET_PROFILE_BASE64" "Widget" "PopupHub Widget App Store"
 
       - name: Validate signing assets (ITMS-90035 guard)
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          APP_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
-          WIDGET_PROFILE_BASE64: ${{ secrets.BUILD_WIDGET_PROVISION_PROFILE_BASE64 }}
         run: |
           set -euo pipefail
-          # Fail fast before archive when secrets would produce a binary Apple rejects
-          # (Development/Ad Hoc profile, or profile cert ≠ .p12 cert).
-
-          cert_fingerprint_from_p12() {
-            local p12="$1"
-            openssl pkcs12 -in "$p12" -clcerts -nokeys -passin "pass:${P12_PASSWORD:-}" 2>/dev/null \
-              | openssl x509 -noout -fingerprint -sha1 \
-              | sed 's/SHA1 Fingerprint=//;s/://g' | tr '[:lower:]' '[:upper:]'
-          }
+          # Fail fast before archive when secrets would produce a binary Apple rejects.
+          # Use the keychain identity imported in the previous step (openssl may not read
+          # modern .p12 encryption directly — same reason import re-encodes when needed).
 
           profile_fingerprint() {
             local profile="$1"
@@ -205,13 +194,11 @@ jobs:
           }
 
           audit_profile() {
-            local b64="$1" label="$2" expected_fp="$3"
-            local raw="$RUNNER_TEMP/validate-$label.mobileprovision"
-            local plist="$RUNNER_TEMP/validate-$label.plist"
-            local name fp
+            local profile_path="$1" label="$2" expected_fp="$3"
+            local plist name fp
 
-            printf '%s' "$b64" | tr -d '[:space:]' | base64 --decode > "$raw"
-            security cms -D -i "$raw" > "$plist"
+            plist="$RUNNER_TEMP/validate-$label.plist"
+            security cms -D -i "$profile_path" > "$plist"
             name=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$plist")
             echo "[$label] profile name='$name'"
 
@@ -225,31 +212,61 @@ jobs:
               exit 1
             fi
 
-            fp=$(profile_fingerprint "$raw")
+            fp=$(profile_fingerprint "$profile_path")
             echo "[$label] embedded cert SHA-1: $fp"
+            if [ -z "$fp" ]; then
+              echo "::error::[$label] could not read embedded certificate fingerprint from profile."
+              exit 1
+            fi
             if [ "$fp" != "$expected_fp" ]; then
-              echo "::error::[$label] profile cert ($fp) does not match BUILD_CERTIFICATE_BASE64 ($expected_fp). Regenerate both App Store profiles against the same Apple Distribution certificate as the .p12 — see scripts/mobile/audit-apple-signing-assets.sh."
+              echo "::error::[$label] profile cert ($fp) does not match imported Distribution cert ($expected_fp). Regenerate both App Store profiles against the same Apple Distribution certificate as BUILD_CERTIFICATE_BASE64 — see scripts/mobile/audit-apple-signing-assets.sh."
               exit 1
             fi
           }
 
-          P12_PATH="$RUNNER_TEMP/validate_cert.p12"
-          printf '%s' "$BUILD_CERTIFICATE_BASE64" | tr -d '[:space:]' | base64 --decode > "$P12_PATH"
+          DIST_FP=$(security find-certificate -c "Apple Distribution" -Z "$KEYCHAIN_PATH" 2>/dev/null \
+            | awk '/SHA-1 hash:/ {print $3; exit}' | tr '[:lower:]' '[:upper:]')
+          if [ -z "${DIST_FP:-}" ]; then
+            echo "::error::No Apple Distribution certificate in keychain after import. BUILD_CERTIFICATE_BASE64 may be wrong type, revoked, or P12_PASSWORD incorrect."
+            exit 1
+          fi
 
-          SUBJECT=$(openssl pkcs12 -in "$P12_PATH" -clcerts -nokeys -passin "pass:${P12_PASSWORD:-}" 2>/dev/null \
+          SUBJECT=$(security find-certificate -c "Apple Distribution" -p "$KEYCHAIN_PATH" 2>/dev/null \
             | openssl x509 -noout -subject 2>/dev/null || true)
           if echo "$SUBJECT" | grep -qi 'Apple Development'; then
-            echo "::error::BUILD_CERTIFICATE_BASE64 is an Apple Development certificate. Export Apple Distribution from Keychain Access (My Certificates → expand identity → Export .p12)."
+            echo "::error::Imported identity is Apple Development, not Apple Distribution. Re-export the Distribution .p12 from Keychain Access."
             exit 1
           fi
           if ! echo "$SUBJECT" | grep -qi 'Apple Distribution'; then
-            echo "::warning::Could not confirm Apple Distribution in .p12 subject: $SUBJECT"
+            echo "::warning::Could not confirm Apple Distribution in keychain cert subject: $SUBJECT"
           fi
 
-          P12_FP=$(cert_fingerprint_from_p12 "$P12_PATH")
-          echo "Distribution .p12 SHA-1: $P12_FP"
-          audit_profile "$APP_PROFILE_BASE64" "App" "$P12_FP"
-          audit_profile "$WIDGET_PROFILE_BASE64" "Widget" "$P12_FP"
+          echo "Imported Distribution cert SHA-1: $DIST_FP"
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          APP_PROFILE_PATH=$(find "$PROFILES_DIR" -name '*.mobileprovision' -exec sh -c '
+            for f; do
+              if security cms -D -i "$f" 2>/dev/null | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin 2>/dev/null | grep -qx "PopupHub App Store"; then
+                echo "$f"
+                exit 0
+              fi
+            done
+          ' sh {} + 2>/dev/null | head -1)
+          WIDGET_PROFILE_PATH=$(find "$PROFILES_DIR" -name '*.mobileprovision' -exec sh -c '
+            for f; do
+              if security cms -D -i "$f" 2>/dev/null | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin 2>/dev/null | grep -qx "PopupHub Widget App Store"; then
+                echo "$f"
+                exit 0
+              fi
+            done
+          ' sh {} + 2>/dev/null | head -1)
+
+          if [ -z "${APP_PROFILE_PATH:-}" ] || [ -z "${WIDGET_PROFILE_PATH:-}" ]; then
+            echo "::error::Installed App Store profiles not found in $PROFILES_DIR"
+            exit 1
+          fi
+
+          audit_profile "$APP_PROFILE_PATH" "App" "$DIST_FP"
+          audit_profile "$WIDGET_PROFILE_PATH" "Widget" "$DIST_FP"
           echo "Signing asset validation passed."
 
       - name: Prepare App Store Connect API key
