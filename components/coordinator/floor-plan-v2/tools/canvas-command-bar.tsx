@@ -35,6 +35,8 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   verticalRailLayout?: boolean
   /** HubGrid focus — floating bottom dock on canvas. */
   floatingDockLayout?: boolean
+  /** HubGrid focus — horizontal strip above the canvas grid. */
+  hubGridTopLayout?: boolean
   className?: string
   rooms?: LayoutRoom[]
   activeRoomId?: string
@@ -116,6 +118,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     headerBarLayout = false,
     verticalRailLayout = false,
     floatingDockLayout = false,
+    hubGridTopLayout = false,
     className,
     toolState,
     onToolChange,
@@ -469,13 +472,14 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
         className={cn(
           'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
           staticLayout ? 'py-0.5' : 'py-1',
-          !staticLayout && !sidebarLayout && !topBarLayout && !headerBarLayout && !verticalRailLayout && !floatingDockLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
+          !staticLayout && !sidebarLayout && !topBarLayout && !headerBarLayout && !verticalRailLayout && !floatingDockLayout && !hubGridTopLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
           !staticLayout &&
             !sidebarLayout &&
             !topBarLayout &&
             !headerBarLayout &&
             !verticalRailLayout &&
             !floatingDockLayout &&
+            !hubGridTopLayout &&
             canvasFullscreen &&
             'max-h-[min(40vh,220px)] flex-wrap overflow-y-auto',
           staticLayout &&
@@ -484,7 +488,10 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
             !headerBarLayout &&
             !verticalRailLayout &&
             !floatingDockLayout &&
+            !hubGridTopLayout &&
             'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
+          hubGridTopLayout &&
+            'max-h-none w-full min-w-0 shrink-0 overflow-x-auto overflow-y-visible border-0 bg-transparent px-0 py-0 shadow-none',
           verticalRailLayout &&
             'max-h-none w-full min-w-0 shrink-0 overflow-visible border-0 bg-transparent px-0 py-0 shadow-none',
           floatingDockLayout &&

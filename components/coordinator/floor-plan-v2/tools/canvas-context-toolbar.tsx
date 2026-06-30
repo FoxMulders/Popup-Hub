@@ -72,7 +72,7 @@ export function CanvasContextToolbar({
       <PopoverTrigger
         nativeButton={false}
         className={cn(
-          'canvas-context-toolbar pointer-events-auto absolute bottom-16 left-[calc(var(--canvas-tool-rail-width,2.75rem)+0.5rem)] z-20 inline-flex h-8 items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2.5 text-[11px] font-semibold text-stone-800 shadow-md backdrop-blur-sm',
+          'canvas-context-toolbar pointer-events-auto absolute top-2 left-2 z-20 inline-flex h-8 items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2.5 text-[11px] font-semibold text-stone-800 shadow-md backdrop-blur-sm',
           className
         )}
         aria-label={label}

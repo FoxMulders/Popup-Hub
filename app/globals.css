@@ -490,6 +490,7 @@
     --hub-grid-header-height: 2.5rem;
     --hub-grid-nav-rail-width: 3rem;
     --canvas-tool-rail-width: 2.75rem;
+    --canvas-top-toolbar-height: 1.75rem;
     --canvas-floating-dock-height: 2.5rem;
     --dashboard-panel-gap: 0.25rem;
     --dashboard-gutter: 0.5rem;
@@ -507,6 +508,19 @@
 
   .canvas-vertical-tool-rail {
     width: var(--canvas-tool-rail-width);
+  }
+
+  .canvas-top-tool-strip {
+    --canvas-top-toolbar-height: auto;
+    scrollbar-width: thin;
+  }
+
+  .canvas-top-tool-strip--collapsed {
+    --canvas-top-toolbar-height: var(--dashboard-toolbar-height);
+  }
+
+  .canvas-top-tool-strip > div:last-child {
+    scrollbar-width: thin;
   }
 
   .dashboard-split-workspace {

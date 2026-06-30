@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — HubGrid toolbar above grid + expand/collapse (local, not committed)
+- **Goal:** Move HubGrid blueprint layout tools from the left vertical rail to a horizontal strip above the canvas; add whole-strip and per-row expand/collapse so room/patron/vendor controls are readable.
+- **Persona:** Coordinator · HubGrid canvas (`hubGridFocusLayout`).
+- **Shipped locally:**
+  - **`canvas-top-tool-strip.tsx`** — new horizontal strip with whole-strip collapse (`popup-hub:hub-grid:canvas-toolbar-collapsed`).
+  - **`floor-plan-v2.tsx`** — `CanvasTopToolStrip` above grid; removed `CanvasVerticalToolRail` + `CanvasFloatingDock` from focus layout.
+  - **`toolbar-static-layout.ts`** — `dual-screen` merged into `room-tools` row (replaces floating dock).
+  - **`canvas-command-bar.tsx`** — `hubGridTopLayout` flag (no max-height cap, full-width).
+  - **`canvas-context-toolbar.tsx`** — repositioned to `top-2 left-2` inside grid area.
+  - **`globals.css`** — `--canvas-top-toolbar-height`, `.canvas-top-tool-strip` styles.
+- **Verify:** HubGrid blueprint — toolbar above grid; chevron collapses whole strip; per-row chevrons on Room & tools / Patron & vendor; undo/zoom/dual-screen in top strip; context toolbar when drawing booths.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Unified auth accounts (OAuth + email) (local, not committed)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
 - **Shipped locally:**

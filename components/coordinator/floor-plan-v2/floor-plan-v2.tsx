@@ -79,8 +79,7 @@ import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
 import { CanvasContextToolbar, type CanvasContextMode } from './tools/canvas-context-toolbar'
-import { CanvasFloatingDock } from './tools/canvas-floating-dock'
-import { CanvasVerticalToolRail } from './tools/canvas-vertical-tool-rail'
+import { CanvasTopToolStrip } from './tools/canvas-top-tool-strip'
 import {
   FairnessScenarioBar,
   FairnessScenarioCompareButton,
@@ -3173,23 +3172,23 @@ function FloorPlanV2Workspace({
                 ) : null}
                 <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 {hubGridFocusLayout && !dashboardPreview ? (
-                  <>
-                    <CanvasVerticalToolRail {...dashboardCommandBarSharedProps} />
-                    <CanvasFloatingDock {...dashboardCommandBarSharedProps} />
-                    <CanvasContextToolbar
-                      mode={contextToolbarMode}
-                      tableSizeFt={tableSizePillValue}
-                      onTableSizeChange={handleTableSizeChange}
-                      onPrepareTableDraw={handlePrepareTableDraw}
-                      roundToolActive={patronRoundDrawActive}
-                      rectToolActive={patronRectDrawActive}
-                      selectedCount={selectedCount}
-                      onAlignVertical={handleAlignVertical}
-                      onAlignHorizontal={handleAlignHorizontal}
-                      onDistributeVertical={handleDistributeVertical}
-                      onDistributeHorizontal={handleDistributeHorizontal}
-                    />
-                  </>
+                  <CanvasTopToolStrip {...dashboardCommandBarSharedProps} />
+                ) : null}
+                <div className="relative min-h-0 flex-1 overflow-hidden">
+                {hubGridFocusLayout && !dashboardPreview ? (
+                  <CanvasContextToolbar
+                    mode={contextToolbarMode}
+                    tableSizeFt={tableSizePillValue}
+                    onTableSizeChange={handleTableSizeChange}
+                    onPrepareTableDraw={handlePrepareTableDraw}
+                    roundToolActive={patronRoundDrawActive}
+                    rectToolActive={patronRectDrawActive}
+                    selectedCount={selectedCount}
+                    onAlignVertical={handleAlignVertical}
+                    onAlignHorizontal={handleAlignHorizontal}
+                    onDistributeVertical={handleDistributeVertical}
+                    onDistributeHorizontal={handleDistributeHorizontal}
+                  />
                 ) : null}
                 <CanvasRootErrorBoundary
                   onReset={() => {
