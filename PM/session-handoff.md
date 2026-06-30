@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-aeb7`, commit `80b895f9`)
+- **Goal:** Deep bug scan on recent `master` commits; fix high-severity issues that escaped review.
+- **Bugs fixed (PR pending):**
+  1. **Publish-assist RLS no-op** — `app/api/admin/publish-assist/[id]/approve|reject` used `createServiceClient()` (cookie-bound admin JWT). RLS blocks `event_publish_assist_requests` UPDATE (no admin policy) and `events` publish (admin read-only). API returned `{ ok: true }` without publishing or clearing the queue.
+  2. **`is_test` catalog leak** — QA scenario markets (`events.is_test = true`) visible on `/discover`, vendor directory, widget feed, public event pages, coordinator profiles. Added `excludeTestMarkets()` helper + vendor apply block.
+- **Validation:** `npx tsx lib/queries/public-market-catalog.test.ts` passed.
+- **Next:** Merge PR; run `PM\Deploy-popuphub.bat` for web prod; re-test admin publish-assist approval on a draft market.
+
 ## Active work — iOS ITMS-90035 resubmit (shipped `eef7ef06`, TestFlight upload OK)
 - **Goal:** Fix App Store Connect **ITMS-90035** (invalid signature) after rejected build **10** / v1.120.0; upload new build **13** / v1.191.0.
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
