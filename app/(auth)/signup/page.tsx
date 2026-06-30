@@ -25,6 +25,7 @@ import {
 import { type OAuthProviderId } from '@/lib/auth/oauth-providers'
 import { OAuthProviderButtons } from '@/components/auth/oauth-provider-buttons'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
+import { formatExistingAccountAuthMessage } from '@/lib/auth/auth-error-messages'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { LoginForm } from '@/app/(auth)/login/login-form'
 
@@ -119,7 +120,7 @@ function SignupForm() {
 
     if (result.mode === 'error') {
       setOauthPendingProvider(null)
-      toast.error(result.message)
+      toast.error(formatExistingAccountAuthMessage(result.message))
       return
     }
 
@@ -287,8 +288,8 @@ function SignupForm() {
             <LoginForm embedded />
             <p className="mt-4 text-center text-xs text-muted-foreground leading-relaxed">
               New here? Create an account first — we email a confirmation <strong>link</strong> (not
-              a code). If sign-in fails, check your inbox for that link or use Resend after signing
-              up.
+              a code). Confirm that link before using Google, Apple, or other sign-in with the same
+              email. If sign-in fails, check your inbox or use Resend after signing up.
             </p>
           </>
         ) : (
@@ -347,6 +348,12 @@ function SignupForm() {
               disabled={!termsAccepted}
               onSignIn={(provider) => void handleOAuthSignUp(provider)}
             />
+            <p className="text-center text-xs text-muted-foreground leading-relaxed">
+              Signed up with email? Open the confirmation link in your inbox before using Google,
+              Apple, or other providers — the same address can otherwise create a second account.
+              Already have an account? Sign in first, then connect providers from Profile → Account
+              Security.
+            </p>
             <div className="sticky bottom-0 bg-white pt-2 space-y-2">
               <Button type="submit" className="w-full min-h-11 touch-manipulation" disabled={!canSubmit}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
