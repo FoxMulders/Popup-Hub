@@ -49,6 +49,7 @@
         "test:shopper-routing": "npx tsx lib/shopper/qa-pathfinding.ts",
         "test:shopper-routing:live": "npx tsx lib/shopper/qa-live-layout.ts",
         "test:rbac-signup": "npx tsx lib/auth/qa-rbac-signup.ts",
+        "grant:platform-operator": "npx tsx scripts/grant-platform-operator.ts",
         "seed:test-users": "npx tsx scripts/seed-test-users.ts",
         "seed:scenario-markets": "npx tsx scripts/seed-scenario-markets.ts",
         "purge:test-markets": "npx tsx scripts/purge-test-markets.ts",
