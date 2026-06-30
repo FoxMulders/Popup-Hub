@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Publish-assist admin approve/reject silently failing (fix branch `cursor/critical-bug-investigation-ac57`, commit `568f93d0`)
+- **Persona:** Admin · publish-assist queue (`/admin/publish-assist`).
+- **Symptom:** Admin clicks Approve/Reject; API returns `{ ok: true }` but draft market stays unpublished and request stays `pending`.
+- **Root cause:** Same as organizer claims (`e88bab69`): `createServiceClient()` is cookie-bound `@supabase/ssr` → writes run under admin JWT + RLS. `event_publish_assist_requests` (migration `134`) has no admin UPDATE policy; `events` has admin read-only (`132_admin_event_read.sql`). `publishCoordinatorEvent` event status update and assist request status update match zero rows with no error.
+- **Fix:** `app/api/admin/publish-assist/[id]/approve/route.ts` and `reject/route.ts` now use `createAdminClient()` (true service role, bypasses RLS).
+- **Verify:** Approve a pending publish-assist request in staging/prod — event `status` → `published`, request `status` → `approved`.
+- **Next:** Merge PR; spot-check one real assist approval after deploy.
+
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
