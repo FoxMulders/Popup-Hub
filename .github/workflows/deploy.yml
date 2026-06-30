@@ -245,7 +245,7 @@ PY
           }
 
           DIST_FP=$(security find-certificate -c "Apple Distribution" -Z "$KEYCHAIN_PATH" 2>/dev/null \
-            | awk '/SHA-1 hash:/ {print $3; exit}' | tr '[:lower:]' '[:upper:]')
+            | sed -n 's/.*SHA-1 hash: //p' | head -1 | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
           if [ -z "${DIST_FP:-}" ]; then
             echo "::error::No Apple Distribution certificate in keychain after import. BUILD_CERTIFICATE_BASE64 may be wrong type, revoked, or P12_PASSWORD incorrect."
             exit 1
