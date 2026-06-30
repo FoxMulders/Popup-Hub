@@ -104,7 +104,7 @@ struct SignedOutWidgetView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(URL(string: "https://popuphub.ca/login"))
+        .widgetURL(URL(string: "ca.popuphub.app://login"))
     }
 }
 

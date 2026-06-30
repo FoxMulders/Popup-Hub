@@ -24,9 +24,13 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let defaults = UserDefaults(suiteName: WidgetSharedKeys.appGroup)
-        defaults?.set(token, forKey: WidgetSharedKeys.tokenKey)
-        defaults?.set(snapshotJson, forKey: WidgetSharedKeys.snapshotKey)
+        guard let defaults = UserDefaults(suiteName: WidgetSharedKeys.appGroup) else {
+            call.reject("App Group unavailable — enable group.ca.popuphub.app for app and widget targets")
+            return
+        }
+
+        defaults.set(token, forKey: WidgetSharedKeys.tokenKey)
+        defaults.set(snapshotJson, forKey: WidgetSharedKeys.snapshotKey)
 
         if #available(iOS 14.0, *) {
             WidgetCenter.shared.reloadAllTimelines()
