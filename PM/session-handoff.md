@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Mobile discover header safe area + stacked portal tabs (merged `c7141c61`, deploying via git push)
+## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
 - **Shipped (merged to `master` @ `c7141c61`, PR #153):**
@@ -12,8 +12,8 @@
   - **`app/layout.tsx`** — PWA status bar style `default` (was `black-translucent`) so system chrome stays visible.
   - **`globals.css`** — `--app-nav-height-stacked` 6rem; native app chrome headers skip duplicate safe-top padding.
   - **`page-back-bar.tsx`** — sticky offset when stacked header precedes back bar on mobile.
-- **Git:** `master` @ `c7141c61` pushed to `origin/master`.
-- **Web prod:** Re-enabled `vercel.json` git deploy on `master` to trigger production build (CLI unavailable in cloud agent).
+- **Git:** `master` @ `45dad9f8` pushed to `origin/master`.
+- **Web prod:** https://popuphub.ca — build **2** @ `45dad9f` (git deploy re-enabled briefly to trigger Vercel; `vercel.json` restored to CLI-only deploy).
 - **Verify:** iPhone / Capacitor discover — status bar visible; all three portal labels readable; logo centered above tabs.
 
 ## Active work — iOS ITMS-90035 resubmit (shipped `eef7ef06`, TestFlight upload OK)
