@@ -13,7 +13,7 @@
 - **Verify:** Install new TestFlight build → sign in → widget should show feed within ~30s (or immediately after leaving app). Tap signed-out widget → opens in-app login.
 - **Next:** Merge PR; new TestFlight build required for native Swift changes.
 
-- **Persona:** Coordinator · market setup wizard (`/coordinator/events/[id]/setup`).
+## Active work — Venue approval no longer gates market publish (shipped `a79f75e6`)
 - **Goal:** Pending venue admin approval should not block coordinators from saving or publishing markets; approval only adds the venue to the shared dropdown.
 - **Shipped:**
   - Removed publish gate in `market-setup-wizard.tsx` that blocked deploy when `platform_venue_submissions.status === 'pending'`.
