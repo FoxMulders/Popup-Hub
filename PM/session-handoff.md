@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug scan after ship 46 (`90088cee`, 2026-06-30)
+- **Scope:** Push `90088cee` on `master` (bidirectional mobile swipe navigation + loader wordmark reorder).
+- **Result:** No critical bugs found — no PR opened.
+- **Medium (not fixed):** `useHistoryNavigation` tracks `pathname+search` but only syncs on `pathname` changes. Discover filter `router.replace` leaves stack at bare `/discover`; after event visit + browser back to `/discover?…`, `applyPopstatePath` fails to match → `canSwipeBack` stays true on Discover → edge swipe can send patron back to event detail. Fix: track pathname only (or resync on popstate mismatch).
+- **Pre-existing:** Public discover/vendor catalog queries (`lib/queries/cached-public-markets.ts`) still omit `.eq('is_test', false)` — test markets can leak to patrons (PR #126 pending).
+- **Next:** Optional follow-up PR for swipe stack pathname-only tracking if patron PWA reports confusing back gestures.
+
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
