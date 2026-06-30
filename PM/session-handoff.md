@@ -166,7 +166,7 @@
   5. Physical device: §5 smoke matrix (push #9–10 deferred).
 - **Next:** Fix profile secrets → re-run workflow → ASC internal testing → device smoke.
 
-## Active work — Public event TypeScript CI fix (local, not deployed)
+## Shipped this session (Public event TypeScript CI fix, deployed 2026-06-29)
 - **Baseline:** `master` at `3fb0fde1` (`fix(ios): harden TestFlight cert import against .p12 decode failures`); production/build metadata not refreshed because this was not deployed.
 - **Trigger:** CI build failed in the TypeScript step: `app/(browse)/events/[id]/page.tsx(18,5): TS2589 Type instantiation is excessively deep and possibly infinite`.
 - **Fix:** `app/(browse)/events/[id]/page.tsx` now uses route-local public row shapes and an untyped Supabase query boundary for the metadata/JSON-LD reads, preserving the existing select strings while preventing Supabase relationship inference from recursing in `tsc`.
@@ -216,7 +216,7 @@
 - **Verify:** Signing & Capabilities shows **Apple Distribution** for Release; `App.entitlements` has App Group only (no `aps-environment`); ASC processing passes without ITMS-90035.
 - **Next:** Monitor **Deploy to TestFlight** on `master` (`7d6765a4`); confirm build 11 processes in App Store Connect without ITMS-90035.
 
-## Active work — Signup role selection + questionnaire (local, not deployed)
+## Shipped this session (Signup role selection + questionnaire, deployed 2026-06-29)
 - **Goal:** Make vendor and coordinator signup obvious; explain role hierarchy (vendor/coordinator include patron access); offer a help-me-choose questionnaire.
 - **Personas:** All users · `/signup` (Patron · Vendor · Coordinator).
 - **Shipped locally:**
@@ -247,7 +247,7 @@
 - **Verify:** `npx tsx lib/auth/apple-s2s-notifications.test.ts` PASS; `npx tsc --noEmit` PASS; `/login` and `/signup` return 200 on prod.
 - **Next:** Redeploy `12e1cbd3`; complete Supabase/provider console setup; smoke each OAuth button + email/password on web and native.
 
-## Active work — Market detail footer clearance (local, not deployed)
+## Shipped this session (Market detail footer clearance, deployed 2026-06-29)
 - **Personas:** Patron · Market detail (`/events/[id]`).
 - **Shipped locally:**
   - **`components/shopper/event-action-bar.tsx`** — sets `document.body.dataset.eventActionBar` while mounted (mirrors `ShopperBottomNav` pattern).
@@ -267,7 +267,7 @@
 - **Note:** Future `npm run seed:scenario-markets` re-runs do NOT clear covers (seed payload omits `cover_image_url`); re-run the apply script if markets are purged + re-seeded.
 - **Next:** User commit + deploy when ready (commits the public images + scripts; the cover_image_url values are already live in prod DB).
 
-## Active work — Center loader logo and animation (local, not deployed)
+## Shipped this session (Center loader logo and animation, deployed 2026-06-29)
 - **Goal:** Center the worded logo and loader animation as a single vertically-centered group on the full-screen loader overlay, preserving the gap between them.
 - **Personas:** All users · initial page-load loader and replay overlay.
 - **Shipped locally:**
@@ -284,7 +284,7 @@
 - **Verify:** Code-level checks pass: `/api/geocode` is public; `T5Z3X7` and `T5Z 3X7` both normalize to `T5Z 3X7, Canada`; mocked geocode helper returns coordinates for both formats. Full live smoke still needs a working `GOOGLE_MAPS_SERVER_API_KEY`, deploy, then `/discover` postal lookup test logged out and logged in.
 - **Next:** Enable Google Geocoding API / set `GOOGLE_MAPS_SERVER_API_KEY`; commit + deploy; smoke `POST /api/geocode` and the `/discover` address field.
 
-## Active work — Popup Hub empty-state copy (local, not deployed)
+## Shipped this session (Popup Hub empty-state copy, deployed 2026-06-29)
 - **Goal:** Clarify that empty discover/vendor lists mean no Popup Hub listings — not zero markets in the area — and encourage platform promotion.
 - **Shipped locally:**
   - **`lib/copy/popup-hub-discovery.ts`** — shared headlines + promo copy for community markets and quarter auctions.
@@ -293,7 +293,7 @@
 - **Verify:** `npx tsc --noEmit` PASS.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Uniform platform feature cards (local, not deployed)
+## Shipped this session (Uniform platform feature cards, deployed 2026-06-29)
 - **Goal:** Remove HubGuard link/CTA from homepage platform features grid so all six cards are uniform height.
 - **Personas:** Public marketing · homepage `/`.
 - **Shipped locally:**
@@ -301,7 +301,7 @@
 - **Verify:** Homepage platform section — six equal-height bubbles, no HubGuard link line.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Scenario test markets (`is_test`) (local, not deployed)
+## Shipped this session (Scenario test markets (`is_test`), deployed 2026-06-29)
 - **Goal:** Seed a catalog of published QA markets (one per product scenario), flagged `is_test` for bulk purge before go-live.
 - **Personas:** Coordinator · Vendor · Patron (`/discover`, `/events/[id]/map`).
 - **Shipped locally:**
@@ -315,7 +315,7 @@
 - **Verify:** `npx tsc --noEmit` PASS; `ReadLints` clean. DB confirms 12 visible (10 published + 1 active community + 1 quarter auction) dated today; completed/cancelled dated in the past (correctly excluded from discover). `/discover` caches 60s (`revalidate = 60`).
 - **Next:** Smoke `/discover` (default view shows scenario markets); user commit + deploy when ready.
 
-## Active work — Admin market access, publish assist, owner labels (local, not deployed)
+## Shipped this session (Admin market access, publish assist, owner labels, deployed 2026-06-29)
 - **Goal:** Fix cryptic `Could not save draft: Forbidden` for admins inspecting other coordinators' markets; enforce read-only admin inspection; coordinator publish-assist queue; owner labels on admin market listings.
 - **Personas:** Platform admin · Coordinator portal (`/coordinator/markets`, setup wizard, event hub); admin `/admin/publish-assist`.
 - **Shipped locally:**
@@ -330,7 +330,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Apply migration `134` on Supabase. Smoke: admin lists show Owner; admin opens another coordinator's draft → read-only banner, no Forbidden toast; coordinator blocked from publish → request → admin approves → market published.
 - **Next:** User commit + deploy when ready; apply `134_event_publish_assist_requests.sql` remotely.
 
-## Active work — Feature request resolution notes & reopen (local, not deployed)
+## Shipped this session (Feature request resolution notes & reopen, deployed 2026-06-29)
 - **Goal:** Admins add user-visible resolution notes; submitters view fixes on My Suggestions and can reopen completed requests; retroactive access to all historical completed items.
 - **Personas:** All portals (submit/view) · platform admin `/admin/feedback`.
 - **Shipped locally:**
@@ -361,7 +361,7 @@
 - **Verify:** Step 2 with floor plan → three stat chips in Physical zone + SmartPopulateBoothCaps in Inventory. Step 2 without floor plan → Configured limits chip shows "None yet" + helper text; subtitle omits floor suggestion. Chips are not clickable.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Category max-slots input fix (local, not deployed)
+## Shipped this session (Category max-slots input fix, deployed 2026-06-29)
 - **Goal:** Coordinators can clear and retype max slot counts (e.g. change `1` to `4`) without the leading digit snapping back and appending (`14`).
 - **Personas:** Coordinator · event setup wizard Step 2 (`CategoryLimitEditor` on `/coordinator/events/[id]/setup`).
 - **Shipped locally:**
@@ -369,7 +369,7 @@
 - **Verify:** Smoke: edit broad MLM or any category slot from `1` → clear → type `4` → blur shows `4`; per-brand MLM rows stay read-only at `1`; empty blur falls back to `1`.
 - **Next:** User commit + deploy when ready.
 
-## Active work — MLM broad category pinned first (local, not deployed)
+## Shipped this session (MLM broad category pinned first, deployed 2026-06-29)
 - **Goal:** Move **Multi Level Marketer (MLM)** to the top of coordinator MLM lists so coordinators can set broad MLM slot caps without scrolling past brand names.
 - **Personas:** Coordinator · market setup wizard Step 2 (`CategoryLimitEditor`, Commercial / MLMs accordion).
 - **Shipped locally:**
@@ -379,7 +379,7 @@
 - **Verify:** `npx tsc --noEmit` PASS; `npx tsx lib/categories/display-sort.test.ts` PASS. Smoke: wizard Step 2 with MLM allowed → Commercial / MLMs accordion shows broad parent first; Add category dropdown lists it before brands.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Capacity step skip-layout copy (local, not deployed)
+## Shipped this session (Capacity step skip-layout copy, deployed 2026-06-29)
 - **Goal:** Clarify Step 2 when coordinators skip venue space planning — avoid "CAD layout" confusion next to CAD currency fields and "Physical" title when no floor plan is used.
 - **Personas:** Coordinator · event setup wizard Step 2 (`/coordinator/events/[id]/setup?step=2`).
 - **Shipped locally:**
@@ -388,7 +388,7 @@
 - **Verify:** Enable "No venue space planning required" on Step 1 → Step 2 zone title is **Capacity & pricing** (not Physical), grey info box unchanged; normal markets still show floor dimension stats and Physical & pricing setup zone.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Vendor teardown copy clarity (local, not deployed)
+## Shipped this session (Vendor teardown copy clarity, deployed 2026-06-29)
 - **Goal:** First-time coordinators understand the "Clean up and/or tear down" policy selector in event setup.
 - **Personas:** Coordinator · event setup wizard + event form.
 - **Shipped locally:**
@@ -407,7 +407,7 @@
 - **Verify:** Open draft event hub on https://popuphub.ca; Market readiness "Market setup" row shows link; click scrolls to Event Setup checklist.
 - **Prod:** https://popuphub.ca (build v1.176.0, commit `135034d`).
 
-## Active work — Admin visibility for all markets (local, not deployed)
+## Shipped this session (Admin visibility for all markets, deployed 2026-06-29)
 - **Goal:** Platform admins can list and inspect every coordinator market, including drafts.
 - **Personas:** Platform operator · Coordinator portal (`/coordinator/markets`, HubGrid, event hubs).
 - **Shipped locally:**
@@ -418,7 +418,7 @@
 - **Blockers:** Remote DB push stalled on pre-existing `126_push_subscriptions` policy conflict — migration `132` not yet applied remotely.
 - **Next:** User commit + deploy when ready; fix `126` push conflict or run `132_admin_event_read.sql` in Supabase SQL editor.
 
-## Active work — Admin console user management (local, not deployed)
+## Shipped this session (Admin console user management, deployed 2026-06-29)
 - **Goal:** Search-driven user management in Platform Admin console — roles, flags, coordinator moderation, auth controls.
 - **Personas:** Platform operator · `/admin/users`.
 - **Shipped locally:**
@@ -431,7 +431,7 @@
 - **Blockers:** None.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Native home-screen widgets (local, not deployed)
+## Shipped this session (Native home-screen widgets, deployed 2026-06-29)
 - **Goal:** Role-aware iOS WidgetKit + Android home widgets — funds, application/payment status, notifications; patron discovery + coordinator command center.
 - **Personas:** Patron · Vendor · Coordinator · native Capacitor shell.
 - **Shipped locally:**
@@ -444,7 +444,7 @@
 - **Blockers:** iOS widget requires Mac/Xcode + App Group capability in Apple Developer portal. Android App Links need release SHA256 in `assetlinks.json`.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Mobile QA: notifications, profile email, Popup Funds branding (local, not deployed)
+## Shipped this session (Mobile QA: notifications, profile email, Popup Funds branding, deployed 2026-06-29)
 - **Goal:** Close mobile QA feedback — SMS/push notification toggles, profile email editing, Popup Funds wordmark + coin logo on wallet.
 - **Personas:** Vendor/Patron · `/notifications`, `/profile`, `/wallet`.
 - **Shipped locally:**
@@ -456,7 +456,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: `/notifications` mobile — toggle SMS/push per event; `/profile` — Change email visible; `/wallet` — large wordmark header, coin logo at bottom + QR section.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Chrome audit + HubGuard patron gate (local, not deployed)
+## Shipped this session (Chrome audit + HubGuard patron gate, deployed 2026-06-29)
 - **Goal:** Fix header/footer/bottom-nav sizing and spacing across surfaces; remove HubGuard from logged-in patron ribbon.
 - **Personas:** All personas · sticky headers + global footer + mobile bottom navs; Patron browse shell · HubGuard nav gate.
 - **Shipped locally:**
@@ -467,7 +467,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: logged-in patron ribbon has no HubGuard; guest/vendor/footer still link to `/check`; mobile footer readable; header height steady guest ↔ patron.
 - **Next:** User commit + deploy when ready.
 
-## Active work — Patron postal-code search + list-view maps (local, not deployed)
+## Shipped this session (Patron postal-code search + list-view maps, deployed 2026-06-29)
 - **Goal:** Fix postal-code/address search on Discover and show inline Google maps on list cards without requiring Maps Static API.
 - **Personas:** Patron · `/discover` list view + area filter.
 - **Shipped locally:**
@@ -509,7 +509,7 @@
 - **SEO ops (manual post-deploy):** Submit `https://popuphub.ca/sitemap.xml` in GSC; set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca`; inspect `/markets/edmonton/vendor-applications`, `/for-vendors`, `/legal/guides`.
 - **Next:** User commit + deploy when ready.
 
-## Active work — HubGuard / global header cleanup (local, not deployed)
+## Shipped this session (HubGuard / global header cleanup, deployed 2026-06-29)
 - **Goal:** Tighten top chrome globally — remove top gap, pin header on scroll, move Back inline before Patron/Vendor tabs, drop "Popup Hub" from HubGuard tagline.
 - **Persona:** All personas · sticky header; Patron/Vendor multi-portal · HubGuard `/check`.
 - **Shipped locally:**
@@ -521,7 +521,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: `/check` multi-portal — tighter top, Back left of Patron/Vendor, tagline "SECURITY & FRAUD PREVENTION"; single-portal/guest still get standalone back bar.
 - **Next:** User commit + deploy when ready.
 
-## Active work — SEO growth roadmap implementation (local, not deployed)
+## Shipped this session (SEO growth roadmap implementation, deployed 2026-06-29)
 - **Goal:** Implement PopupHub.ca SEO audit plan — technical indexing, local landing pages, schema, guides, embed badges, CRO for organic visitors.
 - **Persona:** Patron discovery · Vendor applications · Coordinator software · HubGuard trust.
 - **Shipped locally:**
@@ -535,7 +535,7 @@
 - **Blockers:** Production `/sitemap.xml` 500 needs deploy to verify fix. Google Search Console + analytics instrumentation still manual post-deploy.
 - **Next:** User commit + deploy; submit sitemap in GSC; monitor indexed city/guide pages.
 
-## Active work — QA sprint: navigation, auth, branding (local, not deployed)
+## Shipped this session (QA sprint: navigation, auth, branding, deployed 2026-06-29)
 - **Goal:** Close 15 QA items — global back button, mobile gutters/menu notch, HubGrid mobile loop, auth/menu/Google Docs, stacked header, per-market menu links, organizer claim approval, PopupFunds rebrand, payment instruction templates, loader wordmark.
 - **Personas:** Patron/Vendor/Coordinator chrome; HubGuard claims; PopupFunds wallet.
 - **Shipped locally:**
@@ -552,7 +552,7 @@
 - **Blockers:** Production Google Docs import needs `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET` in Vercel. Apply migrations **127** + **128** via `npm run db:push`.
 - **Next:** User commit + deploy; set Vercel Google OAuth env vars; native PKCE smoke on Capacitor.
 
-## Active work — Logo revert to attachment artwork + auth logo removal (local, not deployed)
+## Shipped this session (Logo revert to attachment artwork + auth logo removal, deployed 2026-06-29)
 - **Goal:** The vector recreation (`popup-hub-mark.svg`) deviated too much from the intended storefront mark. Revert every storefront-icon instance (and the loader animation) to the supplied PNG artwork, and remove the large logo above the auth heading. Leave all wordmark/text logos untouched.
 - **Persona:** All personas · nav rail/footer/auth marks, initial + replay loader animations, favicons/PWA/app icons; Guest · `/login`.
 - **Shipped locally:**
@@ -566,7 +566,7 @@
 - **Verify:** `/login` shows no storefront logo above "Welcome back"; footer/auth/rail marks + loader animation render the new glossy storefront+pin; favicons/PWA/app icon updated.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Auth + native splash cleanup (local, not deployed)
+## Shipped this session (Auth + native splash cleanup, deployed 2026-06-29)
 - **Goal:** Remove duplicate branding on signup and skip the native launch splash so only the booth-table web loader animation plays on first open.
 - **Persona:** Guest · signup/login; all personas · native mobile cold launch.
 - **Shipped locally:**
@@ -579,7 +579,7 @@
 - **Verify:** Rebuild native app (`npm run mobile:sync` + Xcode/Android Studio archive). Cold launch should go straight to web content → booth deal animation (no standalone logo screen).
 - **Next:** Commit + native rebuild when user asks.
 
-## Active work — Header wordmark swap (local, not deployed)
+## Shipped this session (Header wordmark swap, deployed 2026-06-29)
 - **Goal:** Replace the single storefront/tent icon in the sticky headers with the new horizontal "PopupHub" wordmark.
 - **Persona:** All personas · sticky header chrome (`AppNav`, `ShopperTopBar`, `GuestNav`).
 - **Shipped locally:**
@@ -589,7 +589,7 @@
 - **Verify:** `npx tsc --noEmit` clean for brand modules. Headers show the wordmark left-aligned, linking home; transparent bg over `bg-cream/80`.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Popup Hub logo vector recreation (local, not deployed)
+## Shipped this session (Popup Hub logo vector recreation, deployed 2026-06-29)
 - **Goal:** Fix jagged/soft edges on the storefront + pin logo by redrawing as clean vector art.
 - **Persona:** All personas · nav header, auth, rail, footer, favicons, loader.
 - **Root cause:** `popup-hub-brand.png` was upscaled from a ~158×145 px raster; aliasing was baked into the pixels.
@@ -601,7 +601,7 @@
 - **Verify:** SVG renders sharp at header (`h-9`/`h-10`), auth, rail, footer; favicon 32×32 and brand PNG 994×994 have smooth curves (no stair-stepping).
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Mobile footer link trim (local, not deployed)
+## Shipped this session (Mobile footer link trim, deployed 2026-06-29)
 - **Goal:** Reduce clutter on mobile site footer — keep About Us + copyright only.
 - **Persona:** Patron & guest chrome · global site footer (`BuildVersionFooter`).
 - **Shipped locally:**
@@ -610,7 +610,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Mobile viewport: footer nav shows About Us + copyright; desktop unchanged.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Native Google OAuth (local, not deployed)
+## Shipped this session (Native Google OAuth, deployed 2026-06-29)
 - **Goal:** Fix "Access blocked: Popup Hub's request does not comply with Google's policies" when signing in with Google inside the Capacitor app.
 - **Persona:** All personas · Login (`/login`) and Signup (`/signup`) in native shell.
 - **Root cause:** `signInWithOAuth` navigated the embedded WebView to Google; Google blocks OAuth in WebViews.
@@ -625,12 +625,12 @@
 - **Verify:** Native app → `/login` → Continue with Google → system browser opens (Done/close visible) → account picker → returns signed in. Web `popuphub.ca/login` regression unchanged.
 - **Next:** Commit + deploy web when user asks; rebuild native binaries for store.
 
-## Active work — iOS routing coverage GeoJSON (local, not deployed)
+## Shipped this session (iOS routing coverage GeoJSON, deployed 2026-06-29)
 - **Goal:** App Store Connect geographic coverage file for location-based market discovery.
 - **Shipped locally:** `mobile/ios/routing-app-coverage.geojson` — single `MultiPolygon` bounding Canada for national coverage; upload instructions in `PM/ios-testflight.md` §6.
 - **Next:** Upload to App Store Connect → App Information → Routing App Coverage File.
 
-## Active work — Three Operational Vectors (local, not deployed)
+## Shipped this session (Three Operational Vectors, deployed 2026-06-29)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
 - **Shipped locally:**
@@ -714,7 +714,7 @@
   - **ITMS-90683 (missing `NSLocationAlwaysAndWhenInUseUsageDescription`):** Added purpose string to `ios/App/App/Info.plist` alongside existing `NSLocationWhenInUseUsageDescription`. Required because `@capacitor/geolocation` references CoreLocation always-auth APIs in its iOS binary even though the app only requests when-in-use location.
 - **Next:** Commit + push to `master` → triggers TestFlight pipeline (Xcode 26 archive + fixed icons + build 2 + location purpose string) → confirm ASC processing passes with no ITMS-900xx errors.
 
-## Active work — Vendor & patron floor map exposure (local, not deployed)
+## Shipped this session (Vendor & patron floor map exposure, deployed 2026-06-29)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
 - **Shipped locally:**
@@ -727,7 +727,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: vendor with booth → `/vendor/events/{id}/map`; patron → `/events/{id}/map?booth=N` highlights vendor + route.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Market draft save on venue select (local, not deployed)
+## Shipped this session (Market draft save on venue select, deployed 2026-06-29)
 - **Goal:** Selecting any venue on create-market must save the draft; unrecognized venues queue for admin review without blocking save.
 - **Persona:** Coordinator · market setup wizard (Step 1 venue)
 - **Root cause:** Auth middleware redirected `POST /api/coordinator/events/draft` to HTML login/confirm pages; client parsed 200 HTML as empty JSON → generic "Could not save market draft".
@@ -738,14 +738,14 @@
 - **Verify:** Create market → pick any venue/park → draft saves (no toast error); session-expired case shows actionable message; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Mobile login chrome dedupe (local, not deployed)
+## Shipped this session (Mobile login chrome dedupe, deployed 2026-06-29)
 - **Goal:** Remove redundant GuestNav on mobile login — duplicates large form logo; profile/menu irrelevant before sign-in.
 - **Shipped locally:**
   - **`app/(auth)/login/page.tsx`:** `GuestNav` hidden below `md`; login content uses `safe-top` + mobile top padding.
 - **Verify:** `/login` on mobile — no sticky header; large logo + sign-in card only; desktop keeps GuestNav.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Outdoor markets (tent vendors + fixtures) (local, not deployed)
+## Shipped this session (Outdoor markets (tent vendors + fixtures), deployed 2026-06-29)
 - **Goal:** First-class outdoor market support in HubGrid — venue profile, 10×10 tent vendors, outdoor fixtures palette, legacy-bridge parity.
 - **Persona:** Coordinator · HubGrid canvas + Allocation Ledger
 - **Shipped locally:**
@@ -765,7 +765,7 @@
 - **Verify:** Blueprint tab — logo fits top of 48px rail; no overlap with Home/HubGrid icons at sm+ breakpoints.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — HubGrid canvas layout redesign (local, not deployed)
+## Shipped this session (HubGrid canvas layout redesign, deployed 2026-06-29)
 - **Goal:** Maximize blueprint canvas vertical space — slim nav rail, unified header, vertical tool rail, floating dock, contextual size popover.
 - **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)
 - **Shipped locally:**
@@ -777,7 +777,7 @@
 - **Verify:** Blueprint tab — slim left nav, single header row, vertical draw rail, bottom dock (zoom/undo/presenter), size popover when vendor/patron draw armed; Ledger tab restores AppNav; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Center/align toolbar placement (local, not deployed)
+## Shipped this session (Center/align toolbar placement, deployed 2026-06-29)
 - **Goal:** Move center/align controls beside (to the right of) patron and vendor table bars in HubGrid command center.
 - **Persona:** Coordinator · HubGrid canvas toolbar
 - **Shipped locally:**
@@ -789,7 +789,7 @@
 - **Verify:** Command center top toolbar — patron + vendor sections, then Alignment & Spacing (center/align), then Shapes; merged ribbon placement row shows align beside vendor.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Homepage pathway dedupe (local, not deployed)
+## Shipped this session (Homepage pathway dedupe, deployed 2026-06-29)
 - **Goal:** Remove duplicate patron/vendor/organizer pathway cards on the public homepage.
 - **Shipped locally:**
   - **`marketing-hero.tsx`:** Hero keeps eyebrow + headline + subhead only; removed dark-green pathway cards and footer line; tighter bottom padding.
@@ -798,7 +798,7 @@
 - **Verify:** Smoke `/` — one pathway section on cream background after green hero; patron discover, vendor hub, organizer links work.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Native mobile apps (local, not deployed)
+## Shipped this session (Native mobile apps, deployed 2026-06-29)
 - **Goal:** Finish Capacitor iOS/Android shells for internal testing now that Apple + Google developer accounts exist.
 - **Shipped locally:**
   - **Cap sync:** All 6 plugins registered (app, geolocation, haptics, push, splash, status bar).
@@ -836,7 +836,7 @@
 - **Verify:** `npx tsc --noEmit` PASS; `npm run test:unit` PASS; `npm run build` PASS.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
+## Shipped this session (Tipsy Fox Creations Inc. entity structure, deployed 2026-06-29)
 - **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
 - **Shipped locally:**
   - **`lib/legal/entity.ts`:** `LEGAL_ENTITY_NAME`, `PRODUCT_BRAND_NAME`, `COPYRIGHT_NOTICE`, `PLATFORM_OPERATOR_LINE`.
@@ -848,7 +848,7 @@
 - **Verify:** Smoke `/legal/terms` §1 operator line; footer shows corp name.
 - **Next:** Incorporate per checklist; commit + deploy when user asks.
 
-## Active work — IP protection (local, not deployed)
+## Shipped this session (IP protection, deployed 2026-06-29)
 - **Goal:** Establish and assert Popup Hub ownership — copyright, Terms IP clauses, trade secrets register, access audit, legal contact.
 - **Shipped locally:**
   - **`LICENSE`:** Proprietary all-rights-reserved notice; **`package.json`** `"license": "UNLICENSED"`.
@@ -860,7 +860,7 @@
 - **Verify:** Smoke `/legal/terms` → new sections render; footer copyright visible; `legal@popuphub.app` links present.
 - **Next:** Lawyer review of Terms IP sections; commit + deploy when user asks.
 
-## Active work — Vendor payment chase (local, not deployed)
+## Shipped this session (Vendor payment chase, deployed 2026-06-29)
 - **Goal:** Automated vendor payment chase with multi-channel outreach (in-app, email, SMS, push), escalating reminders, auto-release, and coordinator tools.
 - **Persona:** Vendor · applications/dashboard; Coordinator · event hub
 - **Shipped locally:**
@@ -873,7 +873,7 @@
 - **Verify:** Apply migrations **124–125**; `npx tsx lib/applications/payment-deadline.test.ts`; `npx tsx lib/applications/payment-reminder-schedule.test.ts`; `npm run test:unit`; `npx tsc --noEmit`
 - **Next:** Commit + deploy when user asks
 
-## Active work — Discover quarter auction visibility fix (local, not deployed)
+## Shipped this session (Discover quarter auction visibility fix, deployed 2026-06-29)
 - **Goal:** Patrons can find quarter auction events on Discover when toggling **Quarter auctions**.
 - **Persona:** Patron · `/discover`
 - **Root cause:** Discover always filtered `community_market` even with the quarter-auction toggle, then required legacy timer `auctions.status = active` — so `garage_yard_sale` events never appeared.
@@ -898,7 +898,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Apply migration **123**. Smoke: allow MLM → add multiple brands; set one booth fee → publish; admin badge counts; venue submit → admin email; quarter auction event page → auction banner + room link.
 - **Next:** Commit + deploy when user asks. GCP: confirm `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` has Maps JS + Places + Geocoding enabled for popuphub.ca.
 
-## Active work — Quarter auction paddle purchase & bid flow (local, not deployed)
+## Shipped this session (Quarter auction paddle purchase & bid flow, deployed 2026-06-29)
 - **Goal:** Patron-facing paddle chip purchase, multi-paddle bidding, room-wide winner reveal, and winner celebration per auction spec.
 - **Persona:** Patron · `/events/[id]/quarter-auction`
 - **Shipped locally:**
@@ -910,7 +910,7 @@
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: buy chips → taken for others; bid paddles → wallet deduct; close bidding → lock; draw → all see winner #; winner vibrates/confetti; next item clears overlays.
 - **Next:** Add `public/sounds/woo-hoo.mp3` for richer audio; commit + deploy when user asks.
 
-## Active work — Square Reader affiliate on Market Supplies (local, not deployed)
+## Shipped this session (Square Reader affiliate on Market Supplies, deployed 2026-06-29)
 - **Goal:** Add Square Reader Amazon brand-store link (with associate tag) as the first curated pick on `/supplies` and `/vendor/supplies`.
 - **Shipped locally:**
   - **`lib/affiliate/amazon.ts`:** `appendAmazonAssociateTag()` for direct product/store URLs.
@@ -928,14 +928,14 @@
 - **Verify:** Sign in as platform admin on desktop → click avatar in header → Admin console; or Profile → Open admin console.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Split-story banner placement (local, not deployed)
+## Shipped this session (Split-story banner placement, deployed 2026-06-29)
 - **Goal:** Center the dark green platform banner vertically between the two feature-card rows in the "Two brands, one origin" graphic.
 - **Shipped locally:**
   - **`marketing-split-story.tsx`:** Replaced bottom-absolute banner with flex column layout — top row (Discover/Passport/Layout), banner, bottom row (Applications/Check-in/Payouts); `gap-3`/`gap-4` spacing prevents overlap.
 - **Verify:** Smoke `/` split-story graphic — banner sits between card rows with clear spacing; text/colors unchanged.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Vendor & site UX polish batch (local, not deployed)
+## Shipped this session (Vendor & site UX polish batch, deployed 2026-06-29)
 - **Goal:** Eight-item UX polish — vouch gating, vendor application status alerts, field contrast, scroll-to-top, venue preset cleanup, nav menu, logo-aligned brand tokens.
 - **Shipped locally:**
   - **Vouch:** `VendorCoordinatorVouchButton` hidden unless `vendorCanVouchForCoordinator(passport).ok`; threaded from vendor event page → `ApplyButton`.
@@ -2740,8 +2740,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `a815dfb5` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.189.0 build 1** | commit `0a0bd46e` (handoff updated 2026-06-29 19:33)
+- Branch: `master` @ `20712b21` (v1.191.0 release)
+- Production: https://popuphub.ca - **v1.191.0 build 1** | commit `20712b21` (handoff updated 2026-06-30)
+- **iOS:** build **12** (`iosBuild` in build-number.json); native `MARKETING_VERSION` synced to 1.191.0
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
