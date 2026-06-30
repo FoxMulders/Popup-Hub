@@ -22,7 +22,7 @@ function AccountSecurityCardInner({ email }: AccountSecurityCardProps) {
   const supabase = createClient()
   const [open, setOpen] = useState(true)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
-  const [setPasswordDialogOpen, setSetPasswordDialogOpen] = useState(false)
+  const [addPasswordDialogOpen, setAddPasswordDialogOpen] = useState(false)
   const [emailDialogOpen, setEmailDialogOpen] = useState(false)
   const [hasEmailIdentity, setHasEmailIdentity] = useState<boolean | null>(null)
 
@@ -84,7 +84,7 @@ function AccountSecurityCardInner({ email }: AccountSecurityCardProps) {
                   type="button"
                   variant="outline"
                   className="gap-2 h-11 w-full sm:w-auto"
-                  onClick={() => setSetPasswordDialogOpen(true)}
+                  onClick={() => setAddPasswordDialogOpen(true)}
                 >
                   <KeyRound className="h-4 w-4" />
                   Set a password
@@ -122,8 +122,8 @@ function AccountSecurityCardInner({ email }: AccountSecurityCardProps) {
       />
       <SetPasswordDialog
         email={email}
-        open={setPasswordDialogOpen}
-        onOpenChange={setSetPasswordDialogOpen}
+        open={addPasswordDialogOpen}
+        onOpenChange={setAddPasswordDialogOpen}
       />
     </>
   )
