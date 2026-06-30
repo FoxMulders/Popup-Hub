@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS ITMS-90035 resubmit (shipped `eef7ef06`, TestFlight upload OK)
+- **Goal:** Fix App Store Connect **ITMS-90035** (invalid signature) after rejected build **10** / v1.120.0; upload new build **13** / v1.191.0.
+- **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
+- **Root cause (build 10):** Binary signed before manual App Store distribution signing was fully enforced; likely Development/Ad Hoc cert or profile drift.
+- **Shipped:**
+  - **`build-number.json`** — `iosBuild` 12 → **13**; `mobile:assets` syncs `MARKETING_VERSION=1.191.0`.
+  - **`.github/workflows/deploy.yml`** — ITMS-90035 guards: validate App Store profile type + cert/profile SHA-1 match; post-archive `codesign` audit (Apple Distribution on App + widget).
+  - **`scripts/mobile/audit-apple-signing-assets.sh`**, **`scripts/mobile/profile-cert-fingerprint.py`** — Mac/CI signing asset validation.
+  - **`PM/ios-testflight.md`** — ITMS-90035 troubleshooting + audit script in §8b.
+- **CI:** **Deploy to TestFlight** run https://github.com/FoxMulders/Popup-Hub/actions/runs/28477436513 @ `eef7ef06` — **SUCCESS** (validate signing → archive → audit signatures → export/upload).
+- **Verify:** App Store Connect → TestFlight → build **13** / v**1.191.0** processing (confirm no ITMS-90035 email). Answer Export Compliance when prompted.
+- **Next:** Device smoke tests (`PM/ios-testflight.md` §5). If ASC still emails ITMS-90035, run audit script on Mac and refresh signing secrets.
+
 ## Active work — Venue approval no longer gates market publish (shipped `a79f75e6`)
 - **Persona:** Coordinator · market setup wizard (`/coordinator/events/[id]/setup`).
 - **Goal:** Pending venue admin approval should not block coordinators from saving or publishing markets; approval only adds the venue to the shared dropdown.
