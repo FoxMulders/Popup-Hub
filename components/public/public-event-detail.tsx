@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { EventDetailClient } from '@/components/shopper/event-detail-client'
 import { getStrollerBadge } from '@/lib/shopper/layout'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
@@ -25,9 +26,10 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { data: event } = await supabase
-    .from('events')
-    .select(`
+  const { data: event } = await excludeTestMarkets(
+    supabase
+      .from('events')
+      .select(`
       *,
       coordinator:profiles!events_coordinator_id_fkey(
         id, full_name, avatar_url,
@@ -36,9 +38,9 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
       category_limits:event_category_limits(*, category:categories(name)),
       event_days(*)
     `)
-    .eq('id', eventId)
-    .in('status', ['published', 'active', 'completed'])
-    .single()
+      .eq('id', eventId)
+      .in('status', ['published', 'active', 'completed'])
+  ).single()
 
   if (!event) notFound()
 
