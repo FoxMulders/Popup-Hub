@@ -2,12 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — iOS archive fix: remove crashing AppIcon.icon (local, shipping)
+## Active work — iOS archive fix: remove crashing AppIcon.icon (shipped `a815dfb5`)
 - **Goal:** Stop TestFlight `CompileAssetCatalogVariant` / `actool` crash (`attempt to insert nil object` in Icon Composer path) on Xcode 26.6 CI.
 - **Root cause:** Hand-authored `ios/App/App/AppIcon.icon` (Liquid Glass Icon Composer doc from `writeIosGlassIcon`) was passed to `actool` alongside `Assets.xcassets`; Xcode 26.6 RC crashes parsing it. Classic `AppIcon.appiconset` is complete and valid.
-- **Fix:** Deleted `AppIcon.icon/`; removed all four `AppIcon.icon` refs from `project.pbxproj` (kept `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`); removed `writeIosGlassIcon` from `generate-ios-resources.mjs` and added defensive `rm` of stale `.icon` on `mobile:assets`.
-- **Verify:** `node --check scripts/mobile/generate-ios-resources.mjs` PASS; no `AppIcon.icon` / `iconcomposer` refs in pbxproj.
-- **Next:** Re-run **Deploy to TestFlight**; expect `actool` crash gone → `ARCHIVE SUCCEEDED`. Signing blockers (cert ↔ profile binding) may still apply at export/upload.
+- **Shipped:** Commit `a815dfb5` — deleted `AppIcon.icon/`; removed all four `AppIcon.icon` refs from `project.pbxproj` (kept `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`); removed `writeIosGlassIcon` from `generate-ios-resources.mjs` and added defensive `rm` of stale `.icon` on `mobile:assets`.
+- **CI:** **Deploy to TestFlight** run https://github.com/FoxMulders/Popup-Hub/actions/runs/28414224680 triggered on `master` @ `a815dfb5`.
+- **Next:** Monitor workflow → expect `actool` crash gone → `ARCHIVE SUCCEEDED`. Signing blockers (cert ↔ profile binding) may still apply at export/upload.
 
 ## Active work — Daily feedback triage Cursor Automation (2026-06-29)
 - **Goal:** Scheduled read-only triage of `/admin/feedback` queue; Slack DM when open `feature_requests` exist.
@@ -2707,9 +2707,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `1b9070c0` (pushed to `origin/master`)
-- Last deploy commit: `1b9070c0` - feat: ship 46 session updates (Public event TypeScript CI fix; Signup role selection + questionnaire; Market detail footer clearance; Center loader logo and animation; +42 more)
-- Production: https://popuphub.ca - **v1.187.0 build 1** | commit `df577fe5` (handoff updated 2026-06-29 18:07)
+- Branch: `master` @ `a815dfb5` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.189.0 build 1** | commit `0a0bd46e` (handoff updated 2026-06-29 19:33)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
