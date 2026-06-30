@@ -42,7 +42,8 @@ profile_fingerprint() {
   local cert_der
   cert_der=$(mktemp)
   security cms -D -i "$profile" > "$plist"
-  /usr/libexec/PlistBuddy -x -c 'Print DeveloperCertificates:0' "$plist" > "$cert_der"
+  /usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' "$plist" \
+    | grep -Eo '[0-9A-Fa-f]{2}' | tr -d '\n' | xxd -r -p > "$cert_der"
   openssl x509 -inform DER -in "$cert_der" -noout -fingerprint -sha1 \
     | sed 's/SHA1 Fingerprint=//;s/://g' | tr '[:lower:]' '[:upper:]'
   rm -f "$plist" "$cert_der"
