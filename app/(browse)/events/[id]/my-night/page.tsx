@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { MyNightAtAuction } from '@/components/market-night/my-night-at-auction'
 import { getMyNightSummary } from '@/lib/market-night/summary'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
@@ -11,12 +12,9 @@ interface Props {
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: event } = await supabase
-    .from('events')
-    .select('name')
-    .eq('id', id)
-    .eq('status', 'completed')
-    .maybeSingle()
+  const { data: event } = await excludeTestMarkets(
+    supabase.from('events').select('name').eq('id', id).eq('status', 'completed')
+  ).maybeSingle()
 
   return buildPublicMetadata({
     title: event

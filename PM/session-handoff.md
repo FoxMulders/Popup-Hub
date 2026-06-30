@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fixes (branch `cursor/critical-bug-investigation-bb54`, not merged)
+- **Trigger:** Post-push scan @ `16d9d153` (docs-only handoff); substantive bugs predated latest commit.
+- **Fixes:**
+  1. **Publish-assist approve/reject RLS no-op** — admin routes now use `createAdminClient()` (cookie-bound `createServiceClient()` ran UPDATE under admin JWT; migration `134` has no admin UPDATE policy).
+  2. **`is_test` catalog leak** — `excludeTestMarkets()` helper + filters on discover/vendor/widget/event detail/coordinator profiles; vendor apply API rejects test markets.
+  3. **Native OAuth session loss** — `CapacitorInit` OAuth deep link uses `window.location.replace` (matches signup page) so `/api/auth/callback` Set-Cookie persists.
+- **Test:** `npx tsx lib/queries/public-market-catalog.test.ts`
+- **Next:** Merge PR; deploy; smoke admin publish-assist approve, discover with seeded `is_test` market, iOS OAuth sign-in.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
