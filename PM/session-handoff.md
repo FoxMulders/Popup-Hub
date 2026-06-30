@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Organizer claim approval silently failing (shipped `e88bab69`)
+- **Persona:** Admin · HubGuard organizer claims queue (`/admin/organizer-claims`).
+- **Symptom:** Approved organizer claims kept showing in the pending queue; `organizers.claimed_by` never got set.
+- **Root cause:** `approveOrganizerClaimRequest`/`rejectOrganizerClaimRequest` wrote through `createServiceClient()`, which is the cookie-bound `@supabase/ssr` client. With an admin logged in, PostgREST uses the admin's user JWT, so the write runs **under RLS as that user**. `organizer_claim_requests` (migration `127`) has SELECT + INSERT policies but **no UPDATE policy**, so `status='approved'` matched zero rows and returned no error. The approve update error was also unchecked.
+- **Fix:** `lib/organizers/claim-organizer.ts` now uses `createAdminClient()` (true service-role, no cookies → bypasses RLS) for both approve and reject, and surfaces the approve update error.
+- **Data repair:** One stuck row (`Lauderdale Community League`, requester `jessiehilts@gmail.com`) approved directly via SQL — set `organizers.claimed_by`/`popup_hub_coordinator_id`/`claimed_at` and request `status='approved'`, `reviewed_by` = admin `bradmulders@gmail.com`. Pending queue now 0.
+- **Verify:** prod deploy `e88bab69`; pending_count = 0; organizer claimed_by set. Future approvals now persist.
+- **Next:** none — monitor next real claim approval clears the queue.
+
 ## Active work — iOS archive fix: remove crashing AppIcon.icon (shipped `a815dfb5`)
 - **Goal:** Stop TestFlight `CompileAssetCatalogVariant` / `actool` crash (`attempt to insert nil object` in Icon Composer path) on Xcode 26.6 CI.
 - **Root cause:** Hand-authored `ios/App/App/AppIcon.icon` (Liquid Glass Icon Composer doc from `writeIosGlassIcon`) was passed to `actool` alongside `Assets.xcassets`; Xcode 26.6 RC crashes parsing it. Classic `AppIcon.appiconset` is complete and valid.
@@ -77,8 +86,10 @@
 - **Fix:** Extended `scripts/process-logo.mjs` to emit transparent 16×16 + 32×32 PNG favicons and a proper multi-size PNG-in-ICO to **both** `public/favicon.ico` and `app/favicon.ico`. Ran `npm run assets:logo`.
 - **Assets:** `public/favicon-16x16.png`, `public/favicon-32x32.png`, `public/favicon.ico`, `app/favicon.ico` (3613 B ICO, 16+32 entries, transparent); PWA/`app/icon.png` unchanged (glass 512).
 - **Verify:** `npm run assets:logo` PASS; `npm run lint` PASS; Sharp check — favicon center transparent, ~315 green tent pixels in 32×32.
-- **Blockers:** None locally. Production needs commit + deploy; browsers may cache old favicon — hard-refresh or clear site data.
-- **Next:** Commit when user asks; smoke browser tab after deploy.
+- **Persisting-triangle root cause (2nd pass):** Files were correct (prod `/favicon.ico` is byte-identical to the tent ICO, MD5 match), but the PWA service worker `public/sw.js` precaches `/favicon.ico` and serves it **cache-first**; old caches are only purged when `CACHE_NAME` changes. The favicon swap never bumped it, so installed clients kept serving the cached triangle through hard refreshes.
+- **Fix (2nd pass):** Bumped `CACHE_NAME` `popup-hub-shell-v21` -> `v22` in `public/sw.js` so the `activate` handler deletes the stale cache and re-precaches the tent favicon on next load.
+- **Blockers:** None locally. Production needs commit + deploy; after deploy the SW updates on next visit (may need one reload/relaunch to swap the icon).
+- **Next:** Commit when user asks; smoke browser tab after deploy (relaunch the in-app browser / reload twice so the new SW activates).
 
 ## Active work — iOS 26 glass app icon + App Store icon validation fix (local, not committed)
 - **Goal:** Resolve TestFlight `exportArchive` icon validation failures while adding the requested iOS/iPad glass-style icon treatment.
