@@ -6,7 +6,7 @@
 - **Persona:** All users · auth callback (`/api/auth/callback`).
 - **Bug:** `?link=1` alone skipped duplicate-email guard — forged sign-up OAuth redirects could create duplicate profiles. Duplicate redirect also omitted `attachCookies` after `signOut`, leaving the new duplicate session active.
 - **Fix:** `isGenuineOAuthLinkFlow()` requires pre-exchange session + unchanged user id; duplicate path uses `attachCookies` after sign-out. Tests: `lib/auth/oauth-link-flow.test.ts`.
-- **Next:** Commit + PR from `cursor/critical-bug-investigation-a797`.
+- **Next:** PR #140 — merge and deploy.
 
 ## Active work — Unified auth accounts (OAuth + email) (shipped `04805099`)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
