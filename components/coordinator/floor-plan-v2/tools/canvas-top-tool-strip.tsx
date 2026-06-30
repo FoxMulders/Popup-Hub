@@ -1,27 +1,46 @@
 'use client'
 
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useCallback, useEffect, useState, type ComponentProps } from 'react'
+import { useCallback, useSyncExternalStore, type ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 import { CanvasCommandBar } from './canvas-command-bar'
 
 const STORAGE_KEY = 'popup-hub:hub-grid:canvas-toolbar-collapsed'
 
-function loadCollapsed(): boolean {
+const collapsedListeners = new Set<() => void>()
+
+function subscribeCollapsed(onStoreChange: () => void) {
+  collapsedListeners.add(onStoreChange)
+  if (typeof window !== 'undefined') {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) onStoreChange()
+    }
+    window.addEventListener('storage', onStorage)
+    return () => {
+      collapsedListeners.delete(onStoreChange)
+      window.removeEventListener('storage', onStorage)
+    }
+  }
+  return () => {
+    collapsedListeners.delete(onStoreChange)
+  }
+}
+
+function notifyCollapsedChange() {
+  collapsedListeners.forEach((listener) => listener())
+}
+
+function getCollapsedSnapshot(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
+    return window.localStorage.getItem(STORAGE_KEY) === '1'
   } catch {
     return false
   }
 }
 
-function saveCollapsed(collapsed: boolean) {
-  try {
-    localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0')
-  } catch {
-    // ignore quota / private mode
-  }
+function getCollapsedServerSnapshot(): boolean {
+  return false
 }
 
 type CanvasTopToolStripProps = Omit<
@@ -37,18 +56,20 @@ type CanvasTopToolStripProps = Omit<
 
 /** Horizontal layout tools strip — sits above the HubGrid canvas grid. */
 export function CanvasTopToolStrip({ className, ...props }: CanvasTopToolStripProps) {
-  const [collapsed, setCollapsed] = useState(false)
-
-  useEffect(() => {
-    setCollapsed(loadCollapsed())
-  }, [])
+  const collapsed = useSyncExternalStore(
+    subscribeCollapsed,
+    getCollapsedSnapshot,
+    getCollapsedServerSnapshot
+  )
 
   const toggle = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev
-      saveCollapsed(next)
-      return next
-    })
+    const next = !getCollapsedSnapshot()
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+    } catch {
+      // ignore quota / private mode
+    }
+    notifyCollapsedChange()
   }, [])
 
   return (

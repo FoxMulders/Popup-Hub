@@ -3280,6 +3280,7 @@ function FloorPlanV2Workspace({
                   />
                 </CanvasRootErrorBoundary>
                 </div>
+                </div>
                 {!dashboardPreview ? <CanvasLedger /> : null}
               </div>
               </div>
