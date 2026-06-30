@@ -180,7 +180,7 @@ export async function approveOrganizerClaimRequest(
 
   const now = new Date().toISOString()
 
-  const { error: orgError } = await admin
+  const { data: claimedOrganizer, error: orgError } = await admin
     .from('organizers')
     .update({
       claimed_by: request.requested_by,
@@ -189,12 +189,18 @@ export async function approveOrganizerClaimRequest(
       updated_at: now,
     })
     .eq('id', request.organizer_id)
+    .or(`claimed_by.is.null,claimed_by.eq.${request.requested_by}`)
+    .select('id')
+    .maybeSingle()
 
   if (orgError) {
     return { ok: false, status: 500, error: orgError.message }
   }
+  if (!claimedOrganizer) {
+    return { ok: false, status: 409, error: 'Organizer was claimed by someone else' }
+  }
 
-  const { error: approveError } = await admin
+  const { data: approvedRequest, error: approveError } = await admin
     .from('organizer_claim_requests')
     .update({
       status: 'approved',
@@ -203,9 +209,35 @@ export async function approveOrganizerClaimRequest(
       updated_at: now,
     })
     .eq('id', requestId)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle()
 
   if (approveError) {
+    await admin
+      .from('organizers')
+      .update({
+        claimed_by: null,
+        popup_hub_coordinator_id: null,
+        claimed_at: null,
+        updated_at: now,
+      })
+      .eq('id', request.organizer_id)
+      .eq('claimed_by', request.requested_by)
     return { ok: false, status: 500, error: approveError.message }
+  }
+  if (!approvedRequest) {
+    await admin
+      .from('organizers')
+      .update({
+        claimed_by: null,
+        popup_hub_coordinator_id: null,
+        claimed_at: null,
+        updated_at: now,
+      })
+      .eq('id', request.organizer_id)
+      .eq('claimed_by', request.requested_by)
+    return { ok: false, status: 409, error: 'Claim request is no longer pending' }
   }
 
   await admin
