@@ -143,7 +143,7 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
             />
           )}
         </div>
-        <BrandLogoLockup className="shrink-0" size="header" />
+        <BrandLogoLockup className="shrink-0" size="loader" />
       </div>
     </div>
   ) : null
