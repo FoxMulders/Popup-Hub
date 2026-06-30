@@ -9,7 +9,15 @@
   - `ios/App/App.xcodeproj/project.pbxproj` — removed the `Info.plist in Resources` `PBXBuildFile` (`W1DGE00C…`) and its entry in the widget `PBXResourcesBuildPhase` (`W1DGE0101…`). The file reference + group membership stay (still visible in the navigator); `INFOPLIST_FILE = ../PopupHubWidget/Info.plist` remains the sole source.
   - `scripts/mobile/patch-ios-widget.mjs` — same removal so regenerating the widget target no longer re-adds the duplicate (widget Resources phase emits empty `files = ()`).
 - **Verify:** No remaining `Info.plist in Resources` reference in either file; widget Resources phase is now empty. Confirm on Mac/CI with `xcodebuild archive` → expect the duplicate-output warning gone and `ARCHIVE SUCCEEDED`.
-- **Next:** Commit + push → re-run **Deploy to TestFlight**. Signing blockers below (cert/profile binding) are separate and still apply once the archive step is reached.
+
+### Follow-on archive failure: orphaned widget group → "Build input files cannot be found"
+- **Symptom (run `28410262281`, sha `d5b3212b`):** `** ARCHIVE FAILED **` with `SwiftDriver Compilation PopupHubWidgetExtension` failing. Pulled real error via `gh run view … --log-failed`: `error: Build input files cannot be found: '…/ios/App/PopupHubWidget.swift', '…/WidgetFeedClient.swift', '…/WidgetIntents.swift'`.
+- **Root cause:** In `project.pbxproj`, the `PopupHubWidget` group (`path = ../PopupHubWidget`) was **orphaned** — defined but not listed in the main project group, so its `../PopupHubWidget` prefix never applied and the widget Swift files resolved to `ios/App/<file>` (wrong). The `WidgetBridgePlugin.swift` ref was likewise detached from the `App` group (real file: `ios/App/App/WidgetBridge/WidgetBridgePlugin.swift`). A `cap sync`-driven pbxproj regeneration broke `patch-ios-widget.mjs`'s fragile two-line adjacency anchors, so the group/bridge re-attach `.replace()`s silently no-op'd while the build-phase entries were still added.
+- **Fix:**
+  - `ios/App/App.xcodeproj/project.pbxproj` — added `W1DGE0031… /* PopupHubWidget */` to the main group children, and `W1DGE0011… /* WidgetBridgePlugin.swift */` to the `App` group children. Paths now resolve to `ios/PopupHubWidget/*.swift` and `ios/App/App/WidgetBridge/WidgetBridgePlugin.swift`.
+  - `scripts/mobile/patch-ios-widget.mjs` — both attachments now use robust single-line anchors (App-group child / AppDelegate.swift child), are idempotent (skip if already attached), and `process.exit(1)` if the anchor is missing instead of silently leaving an orphan.
+- **Verify:** `node --check scripts/mobile/patch-ios-widget.mjs` PASS; widget group + bridge file now appear in their parent groups in the pbxproj.
+- **Next:** Commit + push → re-run **Deploy to TestFlight**. Signing blockers below (cert/profile binding, Attempt #62) are separate and still apply once archive/export is reached.
 
 ## Active work — iOS TestFlight completion (build 12, merged PR #122 + #123)
 - **Goal:** Land repo fixes for internal TestFlight upload via GitHub Actions manual signing.

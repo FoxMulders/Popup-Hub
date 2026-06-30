@@ -67,13 +67,21 @@ pbx = pbx.replace(
 /* End PBXFileReference section */`
 )
 
-pbx = pbx.replace(
-  `\t\t\t504EC3071FED79650016851F /* AppDelegate.swift */,
-\t\t\t504EC30B1FED79650016851F /* Main.storyboard */,`,
-  `\t\t\t504EC3071FED79650016851F /* AppDelegate.swift */,
-\t\t\t${ids.bridgeFile} /* WidgetBridgePlugin.swift */,
-\t\t\t504EC30B1FED79650016851F /* Main.storyboard */,`
-)
+// Attach WidgetBridgePlugin.swift to the App group. Anchor on the AppDelegate.swift
+// child reference (single line, ends with a comma) so this stays robust if cap sync
+// reorders surrounding entries — a fragile multi-line anchor previously orphaned the
+// file, making Xcode resolve it to the wrong path ("Build input files cannot be found").
+{
+  const bridgeChild = `\t\t\t${ids.bridgeFile} /* WidgetBridgePlugin.swift */,`
+  const appDelegateChild = `\t\t\t504EC3071FED79650016851F /* AppDelegate.swift */,`
+  if (!pbx.includes(bridgeChild)) {
+    if (!pbx.includes(appDelegateChild)) {
+      console.error('patch-ios-widget: could not find AppDelegate.swift group anchor')
+      process.exit(1)
+    }
+    pbx = pbx.replace(appDelegateChild, `${appDelegateChild}\n${bridgeChild}`)
+  }
+}
 
 pbx = pbx.replace(
   `\t\t\t504EC3041FED79650016851F /* App.app */,
@@ -83,13 +91,21 @@ pbx = pbx.replace(
 \t\t\t);`
 )
 
-pbx = pbx.replace(
-  `\t\t\t504EC3061FED79650016851F /* App */,
-\t\t\t504EC3051FED79650016851F /* Products */,`,
-  `\t\t\t504EC3061FED79650016851F /* App */,
-\t\t\t${ids.widgetGroup} /* PopupHubWidget */,
-\t\t\t504EC3051FED79650016851F /* Products */,`
-)
+// Attach the PopupHubWidget group to the main project group. Anchor on the App group's
+// child reference (single line, ends with a comma) so it survives cap sync reordering.
+// If this group is left orphaned, its `path = ../PopupHubWidget` never applies and the
+// widget's Swift files resolve to ios/App/<file> instead of ios/PopupHubWidget/<file>.
+{
+  const widgetGroupChild = `\t\t\t${ids.widgetGroup} /* PopupHubWidget */,`
+  const appGroupChild = `\t\t\t504EC3061FED79650016851F /* App */,`
+  if (!pbx.includes(widgetGroupChild)) {
+    if (!pbx.includes(appGroupChild)) {
+      console.error('patch-ios-widget: could not find App group anchor in main group')
+      process.exit(1)
+    }
+    pbx = pbx.replace(appGroupChild, `${appGroupChild}\n${widgetGroupChild}`)
+  }
+}
 
 pbx = pbx.replace(
   '/* End PBXGroup section */',
