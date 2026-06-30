@@ -118,6 +118,78 @@ async function writeIosAppIcon() {
   )
 
   console.log('Updated ios/App/App/Assets.xcassets AppIcon + Splash')
+  await ensureAppIconIconInPbxproj()
+}
+
+async function ensureAppIconIconInPbxproj() {
+  const pbxproj = path.join(root, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj')
+  if (!(await pathExists(pbxproj))) return
+
+  const fileRefId = 'E1C0A0001FED79650016851F'
+  const buildFileId = 'E1C0A0011FED79650016851F'
+  const fileRefLine = `\t\t${fileRefId} /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };`
+  const buildFileLine = `\t\t${buildFileId} /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = ${fileRefId} /* AppIcon.icon */; };`
+
+  let project = await readFile(pbxproj, 'utf8')
+  let changed = false
+
+  // Cap sync / XcodeGen sometimes explode .icon bundles into individual resource files.
+  const explodedPattern =
+    /\t\t[A-F0-9]+ \/\* (?:icon\.json|Background\.png|Logo\.png) in Resources \*\/ = \{isa = PBXBuildFile; fileRef = [A-F0-9]+ \/\* (?:icon\.json|Background\.png|Logo\.png) \*\/; \};\n/g
+  const withoutExploded = project.replace(explodedPattern, '')
+  if (withoutExploded !== project) {
+    project = withoutExploded
+    changed = true
+    console.log('Removed exploded AppIcon.icon child files from project.pbxproj')
+  }
+
+  if (!project.includes('folder.iconcomposer.icon')) {
+    if (!project.includes(`${fileRefId} /* AppIcon.icon */`)) {
+      project = project.replace(
+        '/* End PBXFileReference section */',
+        `${fileRefLine}\n/* End PBXFileReference section */`,
+      )
+    } else {
+      project = project.replace(
+        new RegExp(
+          `${fileRefId} /\\* AppIcon\\.icon \\*/ = \\{isa = PBXFileReference;[^}]+\\};`,
+        ),
+        fileRefLine.trim(),
+      )
+    }
+    changed = true
+  }
+
+  if (!project.includes('AppIcon.icon in Resources')) {
+    project = project.replace(
+      '/* End PBXBuildFile section */',
+      `${buildFileLine}\n/* End PBXBuildFile section */`,
+    )
+    changed = true
+  }
+
+  if (!project.includes(`${fileRefId} /* AppIcon.icon */,\n\t\t\t\t504EC30E1FED79650016851F /* Assets.xcassets */`)) {
+    if (project.includes('504EC30E1FED79650016851F /* Assets.xcassets */,')) {
+      project = project.replace(
+        '504EC30B1FED79650016851F /* Main.storyboard */,\n\t\t\t\t504EC30E1FED79650016851F /* Assets.xcassets */,',
+        `504EC30B1FED79650016851F /* Main.storyboard */,\n\t\t\t\t${fileRefId} /* AppIcon.icon */,\n\t\t\t\t504EC30E1FED79650016851F /* Assets.xcassets */,`,
+      )
+      changed = true
+    }
+  }
+
+  if (!project.includes(`${buildFileId} /* AppIcon.icon in Resources */`)) {
+    project = project.replace(
+      '504EC3021FED79650016851F /* Resources */ = {\n\t\t\tisa = PBXResourcesBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n',
+      `504EC3021FED79650016851F /* Resources */ = {\n\t\t\tisa = PBXResourcesBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n\t\t\t\t${buildFileId} /* AppIcon.icon in Resources */,\n`,
+    )
+    changed = true
+  }
+
+  if (changed) {
+    await writeFile(pbxproj, project)
+    console.log('Ensured ios/App/App/AppIcon.icon bundle reference in project.pbxproj')
+  }
 }
 
 async function writeIosGlassIcon(glassIconDir, assetsDir) {
