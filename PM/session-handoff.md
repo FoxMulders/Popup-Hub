@@ -2,16 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Venue approval no longer gates market publish (local, not committed)
+## Active work — Venue approval no longer gates market publish (shipped `a79f75e6`)
 - **Persona:** Coordinator · market setup wizard (`/coordinator/events/[id]/setup`).
 - **Goal:** Pending venue admin approval should not block coordinators from saving or publishing markets; approval only adds the venue to the shared dropdown.
-- **Shipped locally:**
+- **Shipped:**
   - Removed publish gate in `market-setup-wizard.tsx` that blocked deploy when `platform_venue_submissions.status === 'pending'`.
   - Updated capacity-step banner copy — informational only, no publish block language.
   - `listApprovedPlatformVenues` + "Approved venues" optgroup in `edmonton-venue-template-bar.tsx` (admin-approved rows appear in venue template dropdown).
   - Admin venues panel copy clarifies approval purpose.
-- **Verify:** Create market with a new custom venue → save/deploy succeeds while venue is pending; after admin approves, venue appears in "Approved venues" dropdown for other coordinators.
-- **Next:** Commit + deploy when user asks.
+- **Merge:** PR #147 → `master` @ `a79f75e6`.
+- **TestFlight:** **Deploy to TestFlight** run https://github.com/FoxMulders/Popup-Hub/actions/runs/28467286409 — `EXPORT SUCCEEDED`, upload succeeded (build 12).
+- **Web prod:** Pending manual `vercel deploy --prod` (git deploy disabled on `master` in `vercel.json`; cloud agent has no Vercel credentials). Prod still on `20712b2` until deploy.
+- **Verify:** Create market with new custom venue → save/deploy succeeds while pending; after admin approves, venue in "Approved venues" dropdown.
+- **Next:** Run `PM\Deploy-popuphub.bat` or `npx vercel deploy --prod --yes` from authenticated machine to ship web.
 
 ## Active work — Unified auth accounts (OAuth + email) (local, not committed)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
