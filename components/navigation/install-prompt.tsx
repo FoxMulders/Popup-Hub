@@ -1,7 +1,7 @@
 'use client'
 
 import { Share, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { PopupHubLogo } from '@/components/brand/popup-hub-logo'
 import { useInstallPrompt } from '@/hooks/use-install-prompt'

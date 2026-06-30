@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ShieldCheck, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   REQUIRED_COORDINATOR_VOUCHES,
   REQUIRED_VENDOR_VOUCHES,

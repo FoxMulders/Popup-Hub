@@ -16,7 +16,7 @@ import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-cli
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { RequestPublishAssistButton } from '@/components/coordinator/request-publish-assist-button'
 import { usePublishAssistPending } from '@/hooks/use-publish-assist-pending'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { ChevronDown, Eye, Globe, Zap, CheckCircle, XCircle } from 'lucide-react'
 import type { Event, EventStatus } from '@/types/database'
 

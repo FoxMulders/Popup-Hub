@@ -61,7 +61,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { FacebookIcon } from '@/components/icons/facebook-icon'
 import { TikTokIcon } from '@/components/icons/tiktok-icon'
 

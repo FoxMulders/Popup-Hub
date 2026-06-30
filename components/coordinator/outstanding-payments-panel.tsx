@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { AlertCircle, Clock, CreditCard, Loader2, Timer } from 'lucide-react'
 import { formatCents } from '@/lib/square/client'
 import {

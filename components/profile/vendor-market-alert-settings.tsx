@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { HomeAddressPicker } from '@/components/location/home-address-picker'
 import { MapPin, Loader2, Navigation } from 'lucide-react'
 

@@ -259,7 +259,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { QuadrantBounds } from '@/lib/booth-planner/quadrant-grid'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { notifyVendorBoothAssigned } from '@/lib/applications/notify-vendor-booth-assigned'
 import {
   ArrowDown,

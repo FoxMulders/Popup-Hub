@@ -16,7 +16,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2, CheckCircle, Send, Clock, AlertTriangle } from 'lucide-react'
 import { PayBoothModal } from '@/components/events/pay-booth-modal'
 import { PassportApplyPreview } from '@/components/events/passport-apply-preview'

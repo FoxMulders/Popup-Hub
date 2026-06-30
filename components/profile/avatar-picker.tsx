@@ -8,7 +8,7 @@ import { cropImageToSquare } from '@/lib/profile/crop-image'
 import { fitImageInSquare } from '@/lib/profile/fit-image-square'
 import { dispatchAvatarChanged } from '@/lib/profile/avatar-sync'
 import type { Profile } from '@/types/database'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2, Trash2, Upload } from 'lucide-react'
 
 interface AvatarPickerProps {

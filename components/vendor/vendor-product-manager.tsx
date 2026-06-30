@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import type { VendorProduct } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import {

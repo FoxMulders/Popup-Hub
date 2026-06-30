@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2, MessageSquarePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

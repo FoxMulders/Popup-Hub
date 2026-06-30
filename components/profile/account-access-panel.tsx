@@ -17,7 +17,7 @@ import {
 import { getPortalHome, PORTAL_LABELS } from '@/lib/portals/active-portal'
 import type { Role } from '@/types/database'
 import { CheckCircle2, Circle, Loader2, ShieldAlert } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useAdminPendingCounts } from '@/hooks/use-admin-pending-counts'
 
 interface AccountAccessPanelProps {

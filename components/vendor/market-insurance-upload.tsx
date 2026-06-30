@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
 import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { FileText, Loader2 } from 'lucide-react'
 
 interface MarketInsuranceUploadProps {

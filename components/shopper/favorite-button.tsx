@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 interface FavoriteButtonProps {
   eventId: string

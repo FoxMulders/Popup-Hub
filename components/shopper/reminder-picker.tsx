@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { REMINDER_OPTIONS, computeRemindAt } from '@/lib/shopper/reminders'
 import type { ReminderOffset } from '@/types/database'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2 } from 'lucide-react'
 
 interface ReminderPickerProps {

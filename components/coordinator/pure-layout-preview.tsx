@@ -11,7 +11,7 @@ import {
   svgToDataUrl,
 } from '@/lib/booth-planner/pure-layout-export'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 const PREVIEW_CELL_PX = 4
 

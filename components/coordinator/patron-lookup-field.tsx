@@ -9,7 +9,7 @@ import type { PatronLookupResult } from '@/lib/coordinator/patron-lookup'
 import { formatCredits } from '@/lib/quarter-auction/credits'
 import { formatPaddleIdDisplay } from '@/lib/wallet/paddle-id'
 import { formatCents } from '@/lib/square/client'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 interface PatronLookupFieldProps {
   eventId?: string

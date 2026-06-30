@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { createClient } from '@/lib/supabase/client'
 import { DemoMarketGuideBanner } from '@/components/coordinator/demo-market-guide-banner'

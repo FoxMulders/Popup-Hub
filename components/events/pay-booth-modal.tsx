@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2 } from 'lucide-react'
 import { formatCents } from '@/lib/square/client'
 import type { PlatformFeeMode } from '@/types/database'

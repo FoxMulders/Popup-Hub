@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2, Trash2 } from 'lucide-react'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'

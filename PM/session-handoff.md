@@ -2,9 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Unified auth accounts (OAuth + email) (local, not committed)
+## Active work — Persistent error toasts on mobile (shipped `91e23066`, PR #138)
+- **Goal:** Error toasts should stay visible until the user dismisses them — especially on mobile where auto-dismiss was too fast to read.
+- **Persona:** All surfaces · global Sonner toaster.
+- **Shipped:** `lib/toast.ts` wraps `toast.error` with `duration: Infinity`; all app imports route through it. `AppToaster` centers toasts on viewports ≤640px and shows a close button. Flyer parse error custom toast also persistent.
+- **Verify:** Trigger any `toast.error` on a phone — message stays until ✕ or swipe dismiss; success toasts still auto-dismiss.
+- **Next:** Merge PR #138 + deploy when ready.
+
+## Active work — Unified auth accounts (OAuth + email) (shipped `04805099`, PR #135)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
-- **Shipped locally:**
+- **Shipped:**
   - **`supabase/config.toml`** — `enable_manual_linking = true` (production: also enable Manual linking in Supabase Dashboard → Authentication → Settings).
   - **`lib/auth/connected-identities.ts`**, **`lib/auth/link-oauth.ts`**, **`lib/auth/duplicate-account.ts`**, **`lib/auth/auth-error-messages.ts`**
   - **Profile UI** — `ConnectedSignInMethods`, `SetPasswordDialog`; extended `AccountSecurityCard` (link/unlink OAuth, set password for OAuth-only users).
@@ -14,7 +21,7 @@
   - **`scripts/resolve-duplicate-email-accounts.ts`** — dry-run/apply ops script for empty duplicate profiles by email.
   - **Login/signup copy** — existing-account OAuth error messages + helper text.
 - **Verify:** Sign into email admin account → Profile → Connect Apple; run `npx tsx scripts/resolve-duplicate-email-accounts.ts --email bradmulders@gmail.com` (dry run) then `--apply` if safe.
-- **Next:** Enable Manual linking in Supabase Dashboard; commit + deploy; run ops script on prod for Brad duplicate; user links Apple from kept admin account.
+- **Next:** Enable Manual linking in Supabase Dashboard; deploy; run ops script on prod for Brad duplicate; user links Apple from kept admin account.
 
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.

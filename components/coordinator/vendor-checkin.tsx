@@ -15,7 +15,7 @@ import { CheckinQR } from '@/components/vendor/checkin-qr'
 import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { CoordinatorOpsSnapshotSeed } from '@/components/coordinator/coordinator-ops-snapshot-seed'
 import { commitCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { CheckCircle2, Undo2, QrCode } from 'lucide-react'
 
 interface CheckinApplication {

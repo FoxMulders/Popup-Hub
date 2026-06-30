@@ -5,7 +5,7 @@ import { MapPin, Loader2, CheckCircle2, LogIn } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { requestUserLocation } from '@/lib/markets/user-location'
 import { AUCTION_PRESENCE_RADIUS_METERS } from '@/lib/quarter-auction/participation'
 

@@ -15,7 +15,7 @@ import type { Category } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import { selectValueOrNull } from '@/lib/wizard/wizard-autosave'
 import { WIZARD_BTN_PRIMARY } from '@/lib/wizard/wizard-panel-styles'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   applyMlmLimitRules,
   clampMlmMaxSlots,

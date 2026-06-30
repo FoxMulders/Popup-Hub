@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { showFlyerParseErrorToast } from '@/components/coordinator/flyer-parse-error-toast'
 import { applyParsedFlyer } from '@/lib/flyer/apply-parsed-flyer'
 import { compressImageForUpload } from '@/lib/media/compress-image-for-upload'

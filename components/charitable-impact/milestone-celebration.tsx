@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { ConfettiBurst } from '@/components/charitable-impact/confetti-burst'
 import { formatImpactDollars, type CharityMilestone } from '@/lib/charitable-impact/milestones'
 import { Button } from '@/components/ui/button'
