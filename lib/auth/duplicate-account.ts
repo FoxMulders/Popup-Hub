@@ -100,3 +100,30 @@ export async function findDuplicateDeletionBlockers(
 
   return blockers
 }
+
+export function shouldRollbackFreshOAuthDuplicate(
+  blockers: DuplicateDeletionBlocker[]
+): boolean {
+  return blockers.length === 0
+}
+
+/** Remove a just-created OAuth user when an older profile already owns the email. */
+export async function deleteFreshDuplicateOAuthUser(
+  admin: SupabaseClient,
+  newUserId: string
+): Promise<{ deleted: boolean; error?: string }> {
+  const blockers = await findDuplicateDeletionBlockers(admin, newUserId)
+  if (!shouldRollbackFreshOAuthDuplicate(blockers)) {
+    return {
+      deleted: false,
+      error: blockers.map((blocker) => blocker.message).join(' '),
+    }
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(newUserId)
+  if (error) {
+    return { deleted: false, error: error.message }
+  }
+
+  return { deleted: true }
+}

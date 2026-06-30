@@ -2,7 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Unified auth accounts (OAuth + email) (local, not committed)
+## Active work — Critical bug investigation: OAuth orphan user (shipped `a28cd7e2` on branch)
+- **Goal:** Deep review of recent commits for critical correctness bugs.
+- **Finding:** OAuth duplicate-email guard (#135) signed out and redirected to `/account-link` but left a fresh `auth.users` row with the OAuth identity linked — blocking later Profile → Connect for the kept account.
+- **Fix:** `deleteFreshDuplicateOAuthUser()` in `lib/auth/duplicate-account.ts`; callback rolls back safe fresh duplicates before sign-out. Tests in `lib/auth/duplicate-account.test.ts`.
+- **Trigger commit `b0cc09b` (loader wordmark 2.5×):** cosmetic only — no critical issues.
+- **PR:** #145
+- **Next:** Merge + deploy; smoke OAuth duplicate path (email account → Google login → account-link → sign in original → Connect Google succeeds).
+
+## Active work — Unified auth accounts (OAuth + email) (shipped `0480509` / #135)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
 - **Shipped locally:**
   - **`supabase/config.toml`** — `enable_manual_linking = true` (production: also enable Manual linking in Supabase Dashboard → Authentication → Settings).

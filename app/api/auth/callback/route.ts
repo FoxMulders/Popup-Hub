@@ -3,7 +3,10 @@ import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
-import { findDuplicateProfilesByEmail } from '@/lib/auth/duplicate-account'
+import {
+  deleteFreshDuplicateOAuthUser,
+  findDuplicateProfilesByEmail,
+} from '@/lib/auth/duplicate-account'
 import { createAdminClient } from '@/lib/supabase/server'
 
 function safeRedirectPath(value: string | null, fallback = '/discover'): string {
@@ -119,6 +122,14 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient()
     const duplicates = await findDuplicateProfilesByEmail(admin, user.email, user.id)
     if (duplicates.length > 0) {
+      const rollback = await deleteFreshDuplicateOAuthUser(admin, user.id)
+      if (!rollback.deleted) {
+        console.warn(
+          '[auth/callback] could not remove fresh OAuth duplicate user:',
+          rollback.error ?? 'unknown error'
+        )
+      }
+
       await supabase.auth.signOut()
 
       const accountLinkUrl = new URL('/account-link', origin)
