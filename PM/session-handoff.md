@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Unified auth accounts (OAuth + email) (local, not committed)
+## Active work — Unified auth accounts (OAuth + email) (shipped master `04805099`)
 - **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
 - **Shipped locally:**
   - **`supabase/config.toml`** — `enable_manual_linking = true` (production: also enable Manual linking in Supabase Dashboard → Authentication → Settings).
@@ -14,7 +14,16 @@
   - **`scripts/resolve-duplicate-email-accounts.ts`** — dry-run/apply ops script for empty duplicate profiles by email.
   - **Login/signup copy** — existing-account OAuth error messages + helper text.
 - **Verify:** Sign into email admin account → Profile → Connect Apple; run `npx tsx scripts/resolve-duplicate-email-accounts.ts --email bradmulders@gmail.com` (dry run) then `--apply` if safe.
-- **Next:** Enable Manual linking in Supabase Dashboard; commit + deploy; run ops script on prod for Brad duplicate; user links Apple from kept admin account.
+- **Next:** Enable Manual linking in Supabase Dashboard; run ops script on prod for Brad duplicate; user links Apple from kept admin account.
+
+## Active work — Platform admin re-grant bradmulders@gmail.com (shipped branch `cursor/bradmulders-admin-grant-5161`)
+- **Goal:** Ensure `bradmulders@gmail.com` is the sole platform admin (`profiles.is_admin`).
+- **Persona:** Platform operator · admin console (`/admin/*`), middleware `hasAdminAccess`.
+- **Shipped:** Migration `136_platform_operator_regrant_bradmulders.sql` (clears other admins, sets operator admin + auth metadata + `platform_settings.platform_operator_id`); npm script `grant:platform-operator` wraps existing `scripts/grant-platform-operator.ts`.
+- **Apply:** `npm run db:push` (or run migration `136` on remote) **or** `npm run grant:platform-operator` with `.env.local` service role.
+- **Verify:** Sign in as `bradmulders@gmail.com` → Admin console link in nav → `/admin/feedback` loads; `SELECT email, is_admin FROM profiles WHERE is_admin` returns only bradmulders.
+- **Blocker:** Cloud agent has no Supabase/Vercel credentials — migration must be applied on remote by deploy or manual `db:push`.
+- **Next:** Apply migration to production; confirm admin access after next sign-in.
 
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
@@ -2740,8 +2749,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `a815dfb5` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.189.0 build 1** | commit `0a0bd46e` (handoff updated 2026-06-29 19:33)
+- Branch: `cursor/bradmulders-admin-grant-5161` (merged `master` @ `04805099`)
+- Production: https://popuphub.ca — pending migration `136` apply for admin re-grant
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
