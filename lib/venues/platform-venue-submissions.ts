@@ -3,6 +3,15 @@ import { matchEdmontonVenuePreset } from '@/lib/booth-planner/edmonton-venue-reg
 
 export type VenueSubmissionStatus = 'pending' | 'approved' | 'rejected'
 
+export interface ApprovedPlatformVenue {
+  id: string
+  location_name: string
+  address: string
+  latitude: number
+  longitude: number
+  market_city: string | null
+}
+
 export interface VenueSubmissionInput {
   locationName: string
   address: string
@@ -35,6 +44,20 @@ export async function findVenueSubmissionByAddress(
     .maybeSingle()
 
   return data ? { status: data.status as VenueSubmissionStatus } : null
+}
+
+/** Approved venues appear in the shared coordinator venue dropdown. */
+export async function listApprovedPlatformVenues(
+  supabase: SupabaseClient
+): Promise<{ venues: ApprovedPlatformVenue[]; error: Error | null }> {
+  const { data, error } = await supabase
+    .from('platform_venue_submissions')
+    .select('id, location_name, address, latitude, longitude, market_city')
+    .eq('status', 'approved')
+    .order('location_name', { ascending: true })
+
+  if (error) return { venues: [], error: new Error(error.message) }
+  return { venues: (data ?? []) as ApprovedPlatformVenue[], error: null }
 }
 
 export async function submitPlatformVenue(

@@ -68,7 +68,8 @@ export function AdminVenueSubmissionsPanel() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        {pending.length} pending · {rows.length} total submissions
+        {pending.length} pending · {rows.length} total submissions. Approving adds a venue to the
+        shared coordinator dropdown — it does not gate market creation.
       </p>
       <ul className="space-y-3">
         {rows.map((row) => (
