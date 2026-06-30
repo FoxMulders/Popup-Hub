@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug scan @ `45dad9f8` (PR pending)
+- **Trigger:** Push `45dad9f8` (re-enable Vercel git deploy on `master` after mobile header merge).
+- **Recent commits reviewed:** `45dad9f8` (vercel.json deploy flag + docs), `248f5249` (mobile header safe area — no critical issues), `a79f75e6` (venue approval publish gate — intentional).
+- **Critical bugs found (still on `master`, fix on `cursor/critical-bug-investigation-9621` @ `5459e5d8`):**
+  1. **Publish-assist RLS no-op** — approve/reject routes used `createServiceClient()` (cookie-bound admin JWT). RLS has no admin UPDATE on `event_publish_assist_requests` and admin read-only on `events`, so approve/reject could return `{ ok: true }` without publishing or updating queue status.
+  2. **`is_test` catalog leak** — QA scenario markets visible on `/discover`, vendor directory, widget feed, public event pages. Added `excludeTestMarkets()` + vendor apply API guard.
+  3. **Native OAuth callback** — `CapacitorInit` used `router.push('/api/auth/callback')` (RSC fetch; Set-Cookie not persisted). Switched to `window.location.replace` (matches login/signup).
+- **Validation:** `npx tsx lib/queries/public-market-catalog.test.ts` passed.
+- **Next:** Merge PR; deploy; smoke admin publish-assist approve + native Google OAuth on device.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (merged `c7141c61`, deploying via git push)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.

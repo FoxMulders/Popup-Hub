@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { VendorEventApplySection } from '@/components/vendor/vendor-event-apply-section'
@@ -50,12 +51,9 @@ export default async function VendorEventDetailPage({ params }: Props) {
     { data: wallet },
     { data: passport },
   ] = await Promise.all([
-    supabase
-      .from('events')
-      .select(VENDOR_EVENT_SELECT)
-      .eq('id', id)
-      .in('status', VENDOR_MARKET_STATUSES)
-      .maybeSingle(),
+    excludeTestMarkets(
+      supabase.from('events').select(VENDOR_EVENT_SELECT).eq('id', id).in('status', VENDOR_MARKET_STATUSES)
+    ).maybeSingle(),
     supabase
       .from('booth_applications')
       .select(
