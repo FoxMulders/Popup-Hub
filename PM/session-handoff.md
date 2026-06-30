@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Persistent error toasts on mobile (shipped `91e23066`, PR #138)
+- **Goal:** Error toasts should stay visible until the user dismisses them — especially on mobile where auto-dismiss was too fast to read.
+- **Persona:** All surfaces · global Sonner toaster.
+- **Shipped:** `lib/toast.ts` wraps `toast.error` with `duration: Infinity`; all app imports route through it. `AppToaster` centers toasts on viewports ≤640px and shows a close button. Flyer parse error custom toast also persistent.
+- **Verify:** Trigger any `toast.error` on a phone — message stays until ✕ or swipe dismiss; success toasts still auto-dismiss.
+- **Next:** Merge PR #138 + deploy when ready.
+
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
