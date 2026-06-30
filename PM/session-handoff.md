@@ -2,7 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Admin feedback triage (read-only, 2026-06-29)
+## Active work — Critical bug scan: is_test catalog leak (2026-06-30)
+- **Goal:** Post-ship-46 scan for critical correctness bugs on master (`0efd152d`).
+- **Finding:** QA scenario markets (`events.is_test = true`) still leaked to public discover, vendor directory, new `/api/discover/vendors`, widget feed, public event pages, coordinator profiles, favorites recs. Sitemap already excluded them.
+- **Fix (branch `cursor/critical-bug-investigation-8ace`):** `excludeTestMarkets()` helper + `.eq('is_test', false)` on cached catalog queries; applied across public pages; vendor apply API blocks test markets.
+- **Verify:** `npx tsx lib/queries/public-market-catalog.test.ts` PASS.
+- **Next:** Merge PR; revalidate `markets` cache tag on deploy.
+
 - **Goal:** Read-only triage of `/admin/feedback` incoming queue via Supabase MCP; no code or DB writes.
 - **Result:** `feature_requests` open queue empty (`pending` / `under_review` / `planned` = 0). Historical: 19 completed (2 critical, 2 workflow_blocked, 15 nice_to_have).
 - **Next:** Re-run triage when new submissions arrive; user approves fixes per item before implementation.
