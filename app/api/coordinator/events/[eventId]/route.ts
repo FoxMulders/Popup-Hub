@@ -94,18 +94,7 @@ export async function PATCH(
     .eq('id', event.coordinator_id)
     .single()
 
-  const { data: squareEvent } = await supabase
-    .from('events')
-    .select('id')
-    .eq('coordinator_id', event.coordinator_id)
-    .not('square_merchant_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
-
-  const publishBlock = coordinatorPublishBlockReason({
-    ...ownerProfile,
-    has_square_event: !!squareEvent,
-  })
+  const publishBlock = coordinatorPublishBlockReason(ownerProfile)
   if (publishBlock) {
     return NextResponse.json({ error: publishBlock }, { status: 403 })
   }

@@ -10,6 +10,7 @@ import {
   coordinatorHasPaymentTrustPath,
   coordinatorPaymentCollectionBlockReason,
   coordinatorPublishBlockReason,
+  isSquareConnectedCoordinator,
 } from '@/lib/coordinator/verification'
 import { MarketDashboardClient } from '@/components/coordinator/dashboard/market-dashboard-client'
 import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
@@ -233,21 +234,9 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
   const totalRevenueCents =
     revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
 
-  const { data: squareEvent } = await supabase
-    .from('events')
-    .select('id')
-    .eq('coordinator_id', user.id)
-    .not('square_merchant_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
+  const fraudGate = profile
 
-  const fraudGate = {
-    ...profile,
-    has_square_event: !!squareEvent,
-  }
-
-  const squareConnected =
-    profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
+  const squareConnected = isSquareConnectedCoordinator(profile)
   const stripeConnected =
     !!profile?.stripe_connected_id && profile?.stripe_onboarding_complete === true
   const paymentTrustComplete = coordinatorHasPaymentTrustPath(fraudGate)

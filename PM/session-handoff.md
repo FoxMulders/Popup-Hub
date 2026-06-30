@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Square setup persists per coordinator, not per market (local, not committed)
+- **Goal:** Square OAuth connection is a coordinator account setting — once connected, all markets inherit it without per-event `square_merchant_id` backfill.
+- **Persona:** Coordinator · Payment methods (`/coordinator/payment-methods`), publish gates, vendor checkout.
+- **Shipped locally:**
+  - **`lib/coordinator/verification.ts`** — `isSquareConnectedCoordinator` reads profile only (`square_access_token` + `payout_onboarding_status` / `payout_account_id`); removed `has_square_event` event lookup.
+  - **OAuth + sandbox connect** — stop writing `events.square_merchant_id` on connect (`square/oauth/callback`, `connect-coordinator-sandbox-token`).
+  - **API routes + pages** — publish/payment gates, payment-config, booth-payment, vendor apply, coordinator home/studio/markets/event hub use profile Square status.
+  - **`event-readiness-checklist.tsx`** — Square step uses coordinator `hasSquare` prop only.
+- **Verify:** `npx tsx scripts/verify-coordinator-verification.ts` PASS; `npx tsc --noEmit` PASS. Smoke: connect Square once → new draft market shows Square ready without reconnecting.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).

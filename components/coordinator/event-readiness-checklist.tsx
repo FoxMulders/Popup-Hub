@@ -61,7 +61,7 @@ export function EventReadinessChecklist({
     {
       key: 'square',
       label: requiresSquare ? 'Square connected (paid booths)' : 'Square connected (optional)',
-      done: !requiresSquare || event.square_merchant_id != null || hasSquare,
+      done: !requiresSquare || hasSquare,
       skippable: !requiresSquare,
     },
     ...(event.skip_venue_layout

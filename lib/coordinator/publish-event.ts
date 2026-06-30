@@ -43,18 +43,7 @@ export async function publishCoordinatorEvent(
     return { ok: false, error: 'Organizer profile not found.', status: 404 }
   }
 
-  const { data: squareEvent } = await supabase
-    .from('events')
-    .select('id')
-    .eq('coordinator_id', event.coordinator_id)
-    .not('square_merchant_id', 'is', null)
-    .limit(1)
-    .maybeSingle()
-
-  const publishBlock = coordinatorPublishBlockReason({
-    ...ownerProfile,
-    has_square_event: !!squareEvent,
-  })
+  const publishBlock = coordinatorPublishBlockReason(ownerProfile)
   if (publishBlock) {
     return { ok: false, error: publishBlock, status: 403 }
   }

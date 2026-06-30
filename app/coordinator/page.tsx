@@ -47,7 +47,7 @@ export default async function CoordinatorHomePage() {
 
   const scope = await getCoordinatorScope(supabase, user.id)
 
-  const [{ data: profile }, eventsQuery, claimSuggestions, { data: coordProfile }, { data: squareEvent }, { data: recentEvents }] =
+  const [{ data: profile }, eventsQuery, claimSuggestions, { data: coordProfile }, { data: recentEvents }] =
     await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
     scope.isAdmin
@@ -61,13 +61,6 @@ export default async function CoordinatorHomePage() {
       .from('profiles')
       .select(COORDINATOR_FRAUD_PROFILE_SELECT)
       .eq('id', user.id)
-      .maybeSingle(),
-    supabase
-      .from('events')
-      .select('id')
-      .eq('coordinator_id', user.id)
-      .not('square_merchant_id', 'is', null)
-      .limit(1)
       .maybeSingle(),
     scope.isAdmin
       ? supabase
@@ -86,10 +79,7 @@ export default async function CoordinatorHomePage() {
   ])
 
   const marketCount = eventsQuery.count ?? 0
-  const paymentGate = {
-    ...coordProfile,
-    has_square_event: Boolean(squareEvent),
-  }
+  const paymentGate = coordProfile
   const showPaymentReadiness =
     coordinatorPublishBlockReason(paymentGate)?.includes('Connect Stripe or Square') === true &&
     !coordinatorHasPaymentTrustPath(paymentGate)

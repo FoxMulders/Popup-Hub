@@ -117,10 +117,7 @@ export async function POST(request: Request) {
     ? eventRow.coordinator[0]
     : eventRow.coordinator
 
-  const paymentBlock = coordinatorPaymentCollectionBlockReason({
-    ...coordinator,
-    has_square_event: false,
-  })
+  const paymentBlock = coordinatorPaymentCollectionBlockReason(coordinator)
   if (paymentBlock) {
     return NextResponse.json({ error: paymentBlock }, { status: 403 })
   }

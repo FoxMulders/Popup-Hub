@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { partitionEventsByPhase, sortEventsByStartAsc, sortEventsByStartDesc } from '@/lib/queries/events'
+import { isSquareConnectedCoordinator } from '@/lib/coordinator/verification'
 import {
   CoordinatorMarketsList,
   type CoordinatorMarketSummary,
@@ -65,7 +66,7 @@ export default async function CoordinatorMarketsPage() {
     supabase
       .from('profiles')
       .select(
-        'payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete'
+        'payout_onboarding_status, payout_account_id, square_access_token, stripe_connected_id, stripe_onboarding_complete'
       )
       .eq('id', user.id)
       .maybeSingle(),
@@ -98,8 +99,7 @@ export default async function CoordinatorMarketsPage() {
   const totalRevenueCents =
     revenueResult.data?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
 
-  const squareConnected =
-    profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
+  const squareConnected = isSquareConnectedCoordinator(profile)
   const stripeConnected =
     !!profile?.stripe_connected_id && profile?.stripe_onboarding_complete === true
 

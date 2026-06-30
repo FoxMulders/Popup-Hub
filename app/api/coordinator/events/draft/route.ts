@@ -75,18 +75,7 @@ export async function POST(request: Request) {
   const publishing = body.draft?.status === 'published'
 
   if (publishing) {
-    const { data: squareEvent } = await authSupabase
-      .from('events')
-      .select('id')
-      .eq('coordinator_id', user.id)
-      .not('square_merchant_id', 'is', null)
-      .limit(1)
-      .maybeSingle()
-
-    const publishBlock = coordinatorPublishBlockReason({
-      ...profile,
-      has_square_event: !!squareEvent,
-    })
+    const publishBlock = coordinatorPublishBlockReason(profile)
     if (publishBlock) {
       return NextResponse.json({ error: publishBlock }, { status: 403 })
     }

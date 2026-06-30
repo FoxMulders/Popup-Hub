@@ -27,7 +27,6 @@ export async function GET(
     .select(`
       id,
       coordinator_id,
-      square_merchant_id,
       status,
       accepts_credit_card,
       accepts_etransfer,
@@ -61,8 +60,7 @@ export async function GET(
   }
 
   const credentials = await getCoordinatorAccessToken(serviceSupabase, event.coordinator_id)
-  const squareConnected =
-    !!event.square_merchant_id || !!credentials?.accessToken
+  const squareConnected = !!credentials?.accessToken
 
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const stripeConnected =

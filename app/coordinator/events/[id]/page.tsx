@@ -86,14 +86,12 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   const categoryNameById = buildCategoryNameMap(allCategories ?? [])
 
-  const [{ data: layoutRow }, { data: squareLinked }, { data: scheduleItems }, { data: revenueRows }, { count: catalogItemCount }, { count: qaVendorApprovalCount }] = await Promise.all([
+  const [{ data: layoutRow }, { data: coordinatorProfile }, { data: scheduleItems }, { data: revenueRows }, { count: catalogItemCount }, { count: qaVendorApprovalCount }] = await Promise.all([
     supabase.from('booth_layouts').select('id').eq('event_id', id).maybeSingle(),
     supabase
-      .from('events')
-      .select('id')
-      .eq('coordinator_id', event.coordinator_id)
-      .not('square_merchant_id', 'is', null)
-      .limit(1)
+      .from('profiles')
+      .select('payout_onboarding_status, payout_account_id, square_access_token')
+      .eq('id', event.coordinator_id)
       .maybeSingle(),
     supabase
       .from('event_schedule_items')
@@ -115,7 +113,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
       .eq('event_id', id),
   ])
 
-  const hasSquare = !!event.square_merchant_id || !!squareLinked
+  const hasSquare =
+    coordinatorProfile?.payout_onboarding_status === 'complete' &&
+    (!!coordinatorProfile.payout_account_id || !!coordinatorProfile.square_access_token)
 
   const pendingCount =
     applications?.filter((a) => a.status === 'pending' || a.status === 'pending_insurance')
