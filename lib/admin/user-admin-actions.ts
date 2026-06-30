@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { PLATFORM_OPERATOR_EMAIL, PLATFORM_SQUARE_OPERATOR_EMAIL } from '@/lib/platform/operator'
+import { canSafelyDeleteDuplicateAccount } from '@/lib/admin/user-detail'
 import type { Role } from '@/types/database'
 
 export type AdminUserAction =
@@ -10,6 +11,7 @@ export type AdminUserAction =
   | { action: 'send_password_reset' }
   | { action: 'ban_auth' }
   | { action: 'unban_auth' }
+  | { action: 'resolve_duplicate'; keepUserId: string }
 
 export type AdminUserActionResult =
   | { ok: true; message?: string }
@@ -48,6 +50,8 @@ export async function applyAdminUserAction(
       return banAuthUser(db, targetUserId, targetProfile.is_admin === true)
     case 'unban_auth':
       return unbanAuthUser(db, targetUserId)
+    case 'resolve_duplicate':
+      return resolveDuplicateAccount(db, targetUserId, payload.keepUserId)
     default:
       return { ok: false, error: 'Invalid action', status: 400 }
   }
@@ -269,6 +273,28 @@ async function unbanAuthUser(
   return { ok: true, message: 'Auth account unbanned' }
 }
 
+async function resolveDuplicateAccount(
+  db: SupabaseClient,
+  duplicateUserId: string,
+  keepUserId: string
+): Promise<AdminUserActionResult> {
+  const safety = await canSafelyDeleteDuplicateAccount(db, duplicateUserId, keepUserId)
+  if (!safety.ok) {
+    return { ok: false, error: safety.error, status: 409 }
+  }
+
+  const { error } = await db.auth.admin.deleteUser(duplicateUserId)
+  if (error) {
+    return { ok: false, error: error.message, status: 500 }
+  }
+
+  return {
+    ok: true,
+    message:
+      'Duplicate account deleted. Ask the user to sign into the kept account and connect OAuth from Profile → Account Security.',
+  }
+}
+
 export function parseAdminUserAction(body: unknown): AdminUserAction | null {
   if (!body || typeof body !== 'object') return null
 
@@ -295,6 +321,9 @@ export function parseAdminUserAction(body: unknown): AdminUserAction | null {
   }
   if (action === 'unban_auth') {
     return { action: 'unban_auth' }
+  }
+  if (action === 'resolve_duplicate' && typeof record.keepUserId === 'string') {
+    return { action: 'resolve_duplicate', keepUserId: record.keepUserId }
   }
 
   return null

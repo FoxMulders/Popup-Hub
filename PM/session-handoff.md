@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Square setup persists per coordinator, not per market (local, not committed)
+## Active work — Square setup persists per coordinator, not per market (PR #137)
 - **Goal:** Square OAuth connection is a coordinator account setting — once connected, all markets inherit it without per-event `square_merchant_id` backfill.
 - **Persona:** Coordinator · Payment methods (`/coordinator/payment-methods`), publish gates, vendor checkout.
 - **Shipped locally:**
@@ -11,7 +11,21 @@
   - **API routes + pages** — publish/payment gates, payment-config, booth-payment, vendor apply, coordinator home/studio/markets/event hub use profile Square status.
   - **`event-readiness-checklist.tsx`** — Square step uses coordinator `hasSquare` prop only.
 - **Verify:** `npx tsx scripts/verify-coordinator-verification.ts` PASS; `npx tsc --noEmit` PASS. Smoke: connect Square once → new draft market shows Square ready without reconnecting.
-- **Next:** Commit + deploy when user asks.
+- **Next:** Merge PR #137 + deploy.
+
+## Active work — Unified auth accounts (OAuth + email) (shipped `04805099` / PR #135)
+- **Goal:** Link Google/Apple/Facebook/Microsoft sign-in to the same Popup Hub account as email/password; fix duplicate profiles (e.g. Brad Mulders admin vs Apple shopper).
+- **Shipped locally:**
+  - **`supabase/config.toml`** — `enable_manual_linking = true` (production: also enable Manual linking in Supabase Dashboard → Authentication → Settings).
+  - **`lib/auth/connected-identities.ts`**, **`lib/auth/link-oauth.ts`**, **`lib/auth/duplicate-account.ts`**, **`lib/auth/auth-error-messages.ts`**
+  - **Profile UI** — `ConnectedSignInMethods`, `SetPasswordDialog`; extended `AccountSecurityCard` (link/unlink OAuth, set password for OAuth-only users).
+  - **`app/api/auth/callback/route.ts`** — duplicate-email guard redirects to `/account-link`; `?link=1` returns to profile after manual linking.
+  - **`app/(auth)/account-link/page.tsx`** — recovery instructions (incl. Apple Hide My Email).
+  - **Admin** — linked providers + duplicate email warnings in user detail; `resolve_duplicate` action.
+  - **`scripts/resolve-duplicate-email-accounts.ts`** — dry-run/apply ops script for empty duplicate profiles by email.
+  - **Login/signup copy** — existing-account OAuth error messages + helper text.
+- **Verify:** Sign into email admin account → Profile → Connect Apple; run `npx tsx scripts/resolve-duplicate-email-accounts.ts --email bradmulders@gmail.com` (dry run) then `--apply` if safe.
+- **Next:** Enable Manual linking in Supabase Dashboard; run ops script on prod for Brad duplicate; user links Apple from kept admin account.
 
 ## Active work — Loader wordmark below animation (local, not committed)
 - **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
