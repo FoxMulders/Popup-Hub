@@ -390,8 +390,10 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
               onSignIn={(provider) => void handleOAuthSignIn(provider)}
             />
             <p className="text-center text-xs text-muted-foreground leading-relaxed">
-              Use the same email as your existing account, or sign in with email first and connect
-              social providers from Profile settings.
+              If you signed up with email, open the confirmation link in your inbox before using
+              social login — otherwise the same address may create a separate account. Use the same
+              email as your existing account, or sign in here first and connect providers from
+              Profile → Account Security.
             </p>
 
             <div className="relative flex items-center">

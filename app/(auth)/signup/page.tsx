@@ -288,8 +288,8 @@ function SignupForm() {
             <LoginForm embedded />
             <p className="mt-4 text-center text-xs text-muted-foreground leading-relaxed">
               New here? Create an account first — we email a confirmation <strong>link</strong> (not
-              a code). If sign-in fails, check your inbox for that link or use Resend after signing
-              up.
+              a code). Confirm that link before using Google, Apple, or other sign-in with the same
+              email. If sign-in fails, check your inbox or use Resend after signing up.
             </p>
           </>
         ) : (
@@ -349,8 +349,10 @@ function SignupForm() {
               onSignIn={(provider) => void handleOAuthSignUp(provider)}
             />
             <p className="text-center text-xs text-muted-foreground leading-relaxed">
-              Already have an account? Sign in first, then connect Google, Apple, or other providers
-              from Profile → Account Security.
+              Signed up with email? Open the confirmation link in your inbox before using Google,
+              Apple, or other providers — the same address can otherwise create a second account.
+              Already have an account? Sign in first, then connect providers from Profile → Account
+              Security.
             </p>
             <div className="sticky bottom-0 bg-white pt-2 space-y-2">
               <Button type="submit" className="w-full min-h-11 touch-manipulation" disabled={!canSubmit}>
