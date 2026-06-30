@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Publish-assist approve/reject silently failing (PR pending)
+- **Persona:** Admin · publish-assist queue (`/admin/publish-assist`).
+- **Symptom:** Admin approve/reject returned `{ ok: true }` but requests stayed pending and draft markets were not published.
+- **Root cause:** Same class as organizer claims (`e88bab69`). Approve/reject routes passed `createServiceClient()` (cookie-bound SSR → writes under admin JWT + RLS). `event_publish_assist_requests` (migration `134`) has no admin UPDATE policy; migration `132` grants admins SELECT-only on `events`, so `publishCoordinatorEvent` could also no-op without error.
+- **Fix:** `app/api/admin/publish-assist/[id]/approve|reject/route.ts` now use `createAdminClient()`. `publishCoordinatorEvent` requires a returned row from the status update so blocked writes cannot report success.
+- **Verify:** Typecheck/lint on changed files; manual — approve a pending publish-assist request and confirm event status + request row update.
+- **Next:** Merge PR; monitor first real publish-assist approval in prod.
+
 ## Active work — Organizer claim approval silently failing (shipped `e88bab69`)
 - **Persona:** Admin · HubGuard organizer claims queue (`/admin/organizer-claims`).
 - **Symptom:** Approved organizer claims kept showing in the pending queue; `organizers.claimed_by` never got set.
