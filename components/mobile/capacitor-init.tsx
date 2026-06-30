@@ -63,7 +63,10 @@ export function CapacitorInit() {
               const query = params.toString()
               markNativeOAuthDeepLinkReturn()
               void closeNativeOAuthBrowser()
-              router.push(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
+              // Full navigation so Set-Cookie from /api/auth/callback persists (router.push does not).
+              window.location.replace(
+                query ? `/api/auth/callback?${query}` : '/api/auth/callback'
+              )
               return
             }
             const path = `${url.pathname}${url.search}${url.hash}`
