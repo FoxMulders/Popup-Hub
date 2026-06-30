@@ -2,6 +2,61 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Admin feedback triage (read-only, 2026-06-29)
+- **Goal:** Read-only triage of `/admin/feedback` incoming queue via Supabase MCP; no code or DB writes.
+- **Result:** `feature_requests` open queue empty (`pending` / `under_review` / `planned` = 0). Historical: 19 completed (2 critical, 2 workflow_blocked, 15 nice_to_have).
+- **Next:** Re-run triage when new submissions arrive; user approves fixes per item before implementation.
+
+## Active work — Optional primary social handle on vendor passport (local, not committed)
+- **Goal:** Unblock all vendors without social media — primary social handle no longer mandatory for passport save or market apply.
+- **Persona:** Vendor · `/vendor/passport` (Passport Wizard).
+- **Shipped locally:**
+  - **`lib/vendor/verification.ts`** — empty handle is valid (`normalized: null`); risk bump uses `!handle.normalized`; removed hard apply gate in `vendorApplyBlockReason`; exported `socialHandleFromInstagram`.
+  - **`components/passport/passport-wizard.tsx`** — label optional, helper text, Instagram URL auto-fills handle when empty.
+  - **`lib/vendor/verification.test.ts`** — empty handle, normalization, apply gate, risk score.
+- **Verify:** `npx tsc --noEmit` PASS; `npx tsx lib/vendor/verification.test.ts` PASS. Smoke: save passport without handle, apply to open market — no social-handle block.
+- **Next:** Commit + deploy when user asks; vendors can leave handle blank and apply (risk +25, under 75 threshold).
+
+## Active work — Mobile swipe-back + sticky Back bar (local, not committed)
+- **Goal:** Patron PWA users can swipe from the left edge to go back (standalone mode has no browser gesture) and keep the Back bar visible while scrolled.
+- **Persona:** Patron (primary), vendor/multi-portal mobile shells.
+- **Shipped locally:**
+  - **`hooks/use-page-back.ts`** — shared `goBack` / `canGoBack` (history + fallback).
+  - **`lib/navigation/swipe-back-gesture.ts`** — edge zone, threshold, cancel guards.
+  - **`hooks/use-swipe-back.ts`**, **`components/navigation/swipe-back-handler.tsx`** — mobile touch listener; mounted in `shopper-shell-client` + `site-app-shell`.
+  - **`page-back-bar.tsx`** — sticky on mobile below header; stacked-nav offset in `globals.css`.
+  - **Map opt-out:** `data-swipe-back="off"` on `public-floorplan`, `event-map`, `card-location-map`.
+  - **Tests:** `lib/navigation/swipe-back-gesture.test.ts`, `lib/navigation/page-back.test.ts`; e2e extended in `patron-mobile-chrome.spec.ts`.
+- **Verify:** `npx tsx lib/navigation/swipe-back-gesture.test.ts` PASS; `npx tsx lib/navigation/page-back.test.ts` PASS. Playwright e2e needs running dev server.
+- **Next:** Commit + deploy when user asks; manual PWA smoke — edge swipe on event detail, sticky Back while scrolled, no back on `/discover`.
+
+## Active work — Vendor passport wizard save bar hidden by bottom nav (local, not committed)
+- **Goal:** Fix mobile `/vendor/passport` wizard so the fixed **Save Passport** action bar is fully visible above the vendor bottom nav.
+- **Persona:** Vendor · Passport wizard (`/vendor/passport`).
+- **Root cause:** `PassportWizard` fixed action bar and `VendorBottomNav` both used `fixed bottom-0 z-50`; nav covered the save bar on mobile.
+- **Fix:**
+  - **`components/passport/passport-wizard.tsx`** — added `passport-wizard-action-bar` class on the fixed bar.
+  - **`app/globals.css`** — mobile rule lifts bar above nav when `body[data-mobile-bottom-nav]` is set (`bottom: calc(3.25rem + safe-area)`).
+  - **`components/passport/passport-page-view.tsx`** — increased wizard-branch mobile padding `pb-24` → `pb-44` so stories scroll clear of both bars.
+- **Verify:** On mobile width at `/vendor/passport`, Back/Next/Save Passport bar sits above bottom nav; desktop unchanged (`md:hidden` nav).
+- **Next:** Commit + deploy when user asks; smoke scroll to stories section on phone.
+
+## Active work — Patron vendor search on Discover (local, not committed)
+- **Goal:** Cross-market vendor search on `/discover` — find a vendor by name or filter markets by category for the selected date/area.
+- **Persona:** Patron · Discover (`/discover?view=vendors`).
+- **Shipped locally:**
+  - **`lib/shopper/discover-vendor-search.ts`** — public booth_application query, text/category filters, vendor grouping, category chips.
+  - **`lib/shopper/discover-scope.ts`** — shared date/listing filter for discover + API.
+  - **`lib/shopper/vendors.ts`** — extracted `vendorTextMatchesSearch` shared with per-event lineup.
+  - **`app/api/discover/vendors/route.ts`** — public GET with `q`, `category`, when/date, lat/lng/radius, `chipsOnly`.
+  - **`discover-screen.tsx`** — List | Map | **Vendors** tab; URL `?view=vendors&q=&category=`.
+  - **`discover-vendor-search.tsx`**, **`discover-vendor-result-card.tsx`**, **`discover-vendor-empty-state.tsx`** — search UI, results, follow CTA.
+  - **`discover-event-cards.tsx`** — matching vendor preview for category-filtered markets.
+  - **`discover/page.tsx`** — passes `followVendorIds` for follow button state.
+  - **Tests:** `lib/shopper/discover-vendor-search.test.ts`; `scripts/verify-discover-vendor-search.ts`.
+- **Verify:** `npx tsx lib/shopper/discover-vendor-search.test.ts` PASS; `npx tsc --noEmit` PASS. Smoke script skips without Supabase env locally.
+- **Next:** Commit + deploy when user asks; smoke `/discover?view=vendors&when=weekend` — search vendor name, tap category chip, follow vendor when signed in.
+
 ## Active work — browser tab favicon tent logo (local, not committed)
 - **Goal:** Replace the default Next.js black-triangle tab icon with the Popup Hub tent (stall+pin) mark.
 - **Persona:** All personas · browser tab / Cursor in-app browser.
@@ -279,11 +334,12 @@
 - **Next:** User commit + deploy when ready.
 
 ## Active work — Capacity step skip-layout copy (local, not deployed)
-- **Goal:** Clarify Step 2 info box when coordinators skip venue space planning — avoid "CAD layout" confusion next to CAD currency fields.
+- **Goal:** Clarify Step 2 when coordinators skip venue space planning — avoid "CAD layout" confusion next to CAD currency fields and "Physical" title when no floor plan is used.
 - **Personas:** Coordinator · event setup wizard Step 2 (`/coordinator/events/[id]/setup?step=2`).
 - **Shipped locally:**
   - **`components/coordinator/wizard/wizard-step-capacity.tsx`** — replaced "No CAD layout for this market…" with "No need to upload a floor plan, this section will help you set limits on vendor types and help ensure variety." when `skipVenueLayout` is true.
-- **Verify:** Enable "No venue space planning required" on Step 1 → Step 2 shows new grey info box under Physical & pricing setup; normal markets still show floor dimension stats (no info box).
+  - **`wizard-step-capacity.tsx`** — first `WizardZone` title/subtitle now conditional: skip-layout shows **Capacity & pricing** + vendor-limit subtitle; floor-plan markets keep **Physical & pricing setup** + floor-dimension subtitle.
+- **Verify:** Enable "No venue space planning required" on Step 1 → Step 2 zone title is **Capacity & pricing** (not Physical), grey info box unchanged; normal markets still show floor dimension stats and Physical & pricing setup zone.
 - **Next:** User commit + deploy when ready.
 
 ## Active work — Vendor teardown copy clarity (local, not deployed)

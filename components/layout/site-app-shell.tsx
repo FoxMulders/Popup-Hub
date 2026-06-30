@@ -5,6 +5,7 @@ import { AppNav } from '@/components/nav/app-nav'
 import { FeatureRequestProvider } from '@/components/feedback/feature-request-context'
 import { VendorBottomNav } from '@/components/vendor/vendor-bottom-nav'
 import { PageBackBar } from '@/components/navigation/page-back-bar'
+import { SwipeBackHandler } from '@/components/navigation/swipe-back-handler'
 import { cn } from '@/lib/utils'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
@@ -41,6 +42,7 @@ export function SiteAppShell({
           viewportFill ? 'h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden' : 'min-h-0 flex-1'
         )}
       >
+        <SwipeBackHandler />
         <AppNav
           profile={profile}
           availablePortals={availablePortals}

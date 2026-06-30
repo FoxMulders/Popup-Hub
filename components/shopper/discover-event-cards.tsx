@@ -13,6 +13,7 @@ interface DiscoverEventCardsProps {
   selectedDate: Date
   favoriteIds: string[]
   activeAuctionByEventId?: Record<string, string>
+  matchingVendorPreview?: Record<string, string[]>
 }
 
 export function DiscoverEventCards({
@@ -20,10 +21,13 @@ export function DiscoverEventCards({
   selectedDate,
   favoriteIds,
   activeAuctionByEventId = {},
+  matchingVendorPreview = {},
 }: DiscoverEventCardsProps) {
   return (
     <div className="mt-4 grid max-w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {events.map((event) => (
+      {events.map((event) => {
+        const vendorPreview = matchingVendorPreview[event.id]
+        return (
         <div key={event.id} className="relative max-w-full">
           <div className="absolute right-3 top-3 z-10">
             <FavoriteButton
@@ -68,8 +72,15 @@ export function DiscoverEventCards({
               </div>
             }
           />
+          {vendorPreview && vendorPreview.length > 0 ? (
+            <p className="mt-2 px-1 text-xs text-muted-foreground">
+              Includes {event.vendor_count ?? vendorPreview.length} matching vendor
+              {(event.vendor_count ?? vendorPreview.length) === 1 ? '' : 's'}
+              {vendorPreview.length > 0 ? `: ${vendorPreview.join(', ')}` : ''}
+            </p>
+          ) : null}
         </div>
-      ))}
+      )})}
     </div>
   )
 }

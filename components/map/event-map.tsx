@@ -278,7 +278,10 @@ export function EventMap({ events, center: centerProp, radiusKm, showUserOriginP
       : DEFAULT_REGION)
 
   return (
-    <div className="relative isolate z-0 h-full w-full overflow-hidden [touch-action:auto]">
+    <div
+      data-swipe-back="off"
+      className="relative isolate z-0 h-full w-full overflow-hidden [touch-action:auto]"
+    >
       {!apiKey ? (
         <EventMapFallback events={events} />
       ) : (

@@ -23,7 +23,7 @@ import {
   toggleCategoryId,
 } from '@/lib/vendor/passport-categories'
 import { buildPassportSavePayload, formatSupabaseError } from '@/lib/vendor/passport-payload'
-import { evaluateAndScoreVendorPassport } from '@/lib/vendor/verification'
+import { evaluateAndScoreVendorPassport, socialHandleFromInstagram } from '@/lib/vendor/verification'
 import { uploadVendorAsset } from '@/lib/vendor/upload-vendor-asset'
 import { dispatchAvatarChanged } from '@/lib/profile/avatar-sync'
 import { cn } from '@/lib/utils'
@@ -273,14 +273,17 @@ export function PassportWizard({
                   Identity verification
                 </p>
                 <div className="space-y-1">
-                  <Label htmlFor="social-handle">Primary social handle *</Label>
+                  <Label htmlFor="social-handle">Primary social handle (optional)</Label>
                   <Input
                     id="social-handle"
                     placeholder="@yourbrand"
                     value={socialHandle}
                     onChange={(e) => setSocialHandle(e.target.value)}
-                    required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Your @username on Instagram, TikTok, or similar — not your login email. Leave blank if
+                    you don&apos;t use social media.
+                  </p>
                 </div>
               </div>
               <div className="space-y-3 border-t pt-4">
@@ -311,7 +314,16 @@ export function PassportWizard({
                     id="instagram"
                     placeholder="https://instagram.com/yourbrand"
                     value={instagramUrl}
-                    onChange={(e) => setInstagramUrl(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setInstagramUrl(value)
+                      setSocialHandle((current) => {
+                        if (current.trim()) return current
+                        const derived = socialHandleFromInstagram(value)
+                        if (!derived) return current
+                        return derived.startsWith('@') ? derived : `@${derived}`
+                      })
+                    }}
                   />
                 </div>
                 <div className="space-y-1">
@@ -535,7 +547,7 @@ export function PassportWizard({
 
       {/* Fixed nav — stays visible while scrolling featured products / stories below */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className="passport-wizard-action-bar fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         aria-label="Passport wizard navigation"
       >
         <div className="mx-auto flex max-w-xl justify-between gap-3">

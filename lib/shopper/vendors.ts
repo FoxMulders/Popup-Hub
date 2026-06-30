@@ -20,18 +20,37 @@ export function filterVendorsByCategory(
   return vendors.filter((v) => v.category_id === categoryId)
 }
 
+export function normalizeVendorSearchQuery(query: string): string {
+  return query.trim().toLowerCase()
+}
+
+export function vendorTextMatchesSearch(
+  fields: { businessName: string; categoryName?: string | null; bio?: string | null },
+  query: string
+): boolean {
+  const q = normalizeVendorSearchQuery(query)
+  if (!q) return true
+  const name = fields.businessName.toLowerCase()
+  const cat = fields.categoryName?.toLowerCase() ?? ''
+  const bio = fields.bio?.toLowerCase() ?? ''
+  return name.includes(q) || cat.includes(q) || bio.includes(q)
+}
+
 export function filterVendorsBySearch(
   vendors: VendorLineupEntry[],
   query: string
 ): VendorLineupEntry[] {
-  const q = query.trim().toLowerCase()
-  if (!q) return vendors
-  return vendors.filter((v) => {
-    const name = v.displayName.toLowerCase()
-    const cat = v.category?.name?.toLowerCase() ?? ''
-    const bio = v.passport?.bio?.toLowerCase() ?? ''
-    return name.includes(q) || cat.includes(q) || bio.includes(q)
-  })
+  if (!normalizeVendorSearchQuery(query)) return vendors
+  return vendors.filter((v) =>
+    vendorTextMatchesSearch(
+      {
+        businessName: v.displayName,
+        categoryName: v.category?.name,
+        bio: v.passport?.bio,
+      },
+      query
+    )
+  )
 }
 
 export function getCategoryChips(

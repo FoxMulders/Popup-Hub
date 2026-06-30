@@ -249,8 +249,12 @@ export function WizardStepCapacity({
       <div className="flex w-full flex-col items-center gap-4">
         <WizardZone
           id="wizard-zone-capacity-floor"
-          title="Physical &amp; pricing setup"
-          subtitle="Floor dimensions, booth capacity, and market-wide table pricing."
+          title={skipVenueLayout ? 'Capacity &amp; pricing' : 'Physical &amp; pricing setup'}
+          subtitle={
+            skipVenueLayout
+              ? 'Set limits on vendor types and market-wide table pricing.'
+              : 'Floor dimensions, booth capacity, and market-wide table pricing.'
+          }
           className="mx-auto w-full max-w-4xl"
         >
           {!skipVenueLayout ? (

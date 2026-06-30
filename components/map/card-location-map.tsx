@@ -118,7 +118,7 @@ export function CardLocationMap({
   }
 
   return (
-    <div ref={containerRef} className={cn('h-24 w-full', className)}>
+    <div ref={containerRef} data-swipe-back="off" className={cn('h-24 w-full', className)}>
       {!visible ? (
         <CardLocationMapPlaceholder label={label} />
       ) : (

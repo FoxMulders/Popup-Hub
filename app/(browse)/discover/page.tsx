@@ -30,12 +30,17 @@ async function DiscoverContent() {
   ])
 
   let favoriteIds: string[] = []
+  let followVendorIds: string[] = []
   if (user) {
-    const { data: favs } = await supabase
-      .from('shopper_favorites')
-      .select('event_id')
-      .eq('user_id', user.id)
+    const [{ data: favs }, { data: follows }] = await Promise.all([
+      supabase
+        .from('shopper_favorites')
+        .select('event_id')
+        .eq('user_id', user.id),
+      supabase.from('vendor_follows').select('vendor_id').eq('user_id', user.id),
+    ])
     favoriteIds = (favs ?? []).map((f) => f.event_id)
+    followVendorIds = (follows ?? []).map((f) => f.vendor_id)
   }
 
   return (
@@ -43,6 +48,7 @@ async function DiscoverContent() {
       events={events}
       vendorCounts={vendorCounts}
       favoriteIds={favoriteIds}
+      followVendorIds={followVendorIds}
       activeAuctionByEventId={activeAuctionByEventId}
       marketAlertsHref={
         user ? '/profile' : '/signup?role=vendor&next=%2Fprofile'

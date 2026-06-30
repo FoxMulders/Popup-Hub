@@ -261,6 +261,10 @@
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
   }
 
+  .app-nav--stacked ~ .page-back-bar {
+    top: var(--app-nav-height-stacked, 5.5rem);
+  }
+
   /*
    * Sticky site footer — page shells must grow within the band above
    * BuildVersionFooter, not declare a full raw viewport height.
@@ -1273,6 +1277,11 @@
 
     body[data-mobile-bottom-nav='shopper'] .site-app-shell #site-main {
       padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    body[data-mobile-bottom-nav] .passport-wizard-action-bar {
+      bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: 0.75rem;
     }
   }
 

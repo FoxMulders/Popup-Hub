@@ -406,6 +406,7 @@ export function PublicFloorplan({
 
       <div
         ref={canvasRef}
+        data-swipe-back="off"
         className="overflow-auto rounded-xl border bg-canvas p-2 touch-pan-x touch-pan-y max-h-[min(70vh,520px)]"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >

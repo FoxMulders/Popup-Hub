@@ -29,14 +29,24 @@ import {
 import type { Event } from '@/types/database'
 import { DiscoverEmptyState } from '@/components/shopper/discover-empty-state'
 import { DiscoverWhenFilter } from '@/components/shopper/discover-when-filter'
+import { DiscoverVendorSearch } from '@/components/shopper/discover-vendor-search'
 import { SitePageBand } from '@/components/layout/site-page-band'
 import { clampSliderRadiusKm } from '@/lib/markets/distance-radius'
 import { cn } from '@/lib/utils'
+
+type DiscoverView = 'list' | 'map' | 'vendors'
+
+function resolveDiscoverView(value: string | null): DiscoverView {
+  if (value === 'map') return 'map'
+  if (value === 'vendors') return 'vendors'
+  return 'list'
+}
 
 interface DiscoverScreenProps {
   events: Event[]
   vendorCounts: Record<string, number>
   favoriteIds: string[]
+  followVendorIds?: string[]
   activeAuctionByEventId?: Record<string, string>
   marketAlertsHref?: string
 }
@@ -45,14 +55,13 @@ export function DiscoverScreen({
   events,
   vendorCounts,
   favoriteIds,
+  followVendorIds = [],
   activeAuctionByEventId = {},
   marketAlertsHref,
 }: DiscoverScreenProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [view, setView] = useState<'list' | 'map'>(() =>
-    searchParams.get('view') === 'map' ? 'map' : 'list'
-  )
+  const [view, setView] = useState<DiscoverView>(() => resolveDiscoverView(searchParams.get('view')))
   const {
     origin,
     radiusKm,
@@ -92,9 +101,9 @@ export function DiscoverScreen({
   )
 
   const setViewMode = useCallback(
-    (next: 'list' | 'map') => {
+    (next: DiscoverView) => {
       setView(next)
-      replaceParams({ view: next })
+      replaceParams({ view: next === 'list' ? null : next })
     },
     [replaceParams]
   )
@@ -207,7 +216,7 @@ export function DiscoverScreen({
       </div>
 
       <div
-        className="mt-6 inline-flex w-full max-w-xs rounded-full border border-stone-200/70 bg-muted/60 p-1"
+        className="mt-6 inline-flex w-full max-w-md rounded-full border border-stone-200/70 bg-muted/60 p-1"
         role="tablist"
         aria-label="Discover view"
       >
@@ -237,9 +246,37 @@ export function DiscoverScreen({
         >
           Map
         </Button>
+        <Button
+          type="button"
+          role="tab"
+          aria-selected={view === 'vendors'}
+          variant={view === 'vendors' ? 'default' : 'ghost'}
+          className={cn(
+            'min-h-10 flex-1 touch-manipulation rounded-full shadow-none',
+            view === 'vendors' && 'shadow-sm'
+          )}
+          onClick={() => setViewMode('vendors')}
+        >
+          Vendors
+        </Button>
       </div>
 
-      {view === 'map' ? (
+      {view === 'vendors' ? (
+        <DiscoverVendorSearch
+          datePreset={datePreset}
+          filterDate={filterDate}
+          origin={origin}
+          radiusKm={radiusKm}
+          liveAuctionsOnly={liveAuctionsOnly}
+          favoriteIds={favoriteIds}
+          followVendorIds={followVendorIds}
+          activeAuctionByEventId={activeAuctionByEventId}
+          onReplaceParams={replaceParams}
+          onWidenRadius={widenRadius}
+          onShowEverywhere={() => setRadiusKm(null)}
+          onTryPreset={setDatePreset}
+        />
+      ) : view === 'map' ? (
         // The map stays mounted even when zero markets match the current
         // filters so the user keeps spatial context (their pinned origin,
         // surrounding geography) while they widen the radius or change

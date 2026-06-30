@@ -52,7 +52,7 @@ export function validateBusinessNumber(raw: string | null | undefined): Business
 export function validateSocialHandle(raw: string | null | undefined): SocialHandleValidation {
   const trimmed = raw?.trim() ?? ''
   if (!trimmed) {
-    return { ok: false, normalized: null, error: 'Social handle is required for verification.' }
+    return { ok: true, normalized: null }
   }
 
   const fromUrl = trimmed.match(/(?:instagram\.com|tiktok\.com)\/(@?[\w.]+)/i)?.[1]
@@ -107,7 +107,7 @@ export function computeRiskScore(input: VendorVerificationInput): number {
   const handle = validateSocialHandle(input.social_handle ?? socialHandleFromInstagram(input.instagram_url))
 
   if (bnProvided && !bn.ok) score += 35
-  if (!handle.ok) score += 25
+  if (!handle.normalized) score += 25
 
   if (input.verification_status === 'rejected') score += 50
   if (input.verification_status === 'verified' || input.is_verified) score = Math.max(0, score - 30)
@@ -115,7 +115,7 @@ export function computeRiskScore(input: VendorVerificationInput): number {
   return Math.min(100, Math.max(0, score))
 }
 
-function socialHandleFromInstagram(instagramUrl: string | null | undefined): string | null {
+export function socialHandleFromInstagram(instagramUrl: string | null | undefined): string | null {
   if (!instagramUrl?.trim()) return null
   const match = instagramUrl.match(/instagram\.com\/(@?[\w.]+)/i)
   return match?.[1] ?? null
@@ -147,11 +147,6 @@ export function vendorApplyBlockReason(passport: VendorFraudGate | null | undefi
   }
   if (isHighRiskVendor(passport)) {
     return 'Your account requires additional verification before applying to markets.'
-  }
-
-  const handle = validateSocialHandle(passport.social_handle)
-  if (!handle.ok) {
-    return 'Add a valid social handle to your Vendor Passport before applying.'
   }
 
   return null
