@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS archive fix: remove crashing AppIcon.icon (local, shipping)
+- **Goal:** Stop TestFlight `CompileAssetCatalogVariant` / `actool` crash (`attempt to insert nil object` in Icon Composer path) on Xcode 26.6 CI.
+- **Root cause:** Hand-authored `ios/App/App/AppIcon.icon` (Liquid Glass Icon Composer doc from `writeIosGlassIcon`) was passed to `actool` alongside `Assets.xcassets`; Xcode 26.6 RC crashes parsing it. Classic `AppIcon.appiconset` is complete and valid.
+- **Fix:** Deleted `AppIcon.icon/`; removed all four `AppIcon.icon` refs from `project.pbxproj` (kept `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`); removed `writeIosGlassIcon` from `generate-ios-resources.mjs` and added defensive `rm` of stale `.icon` on `mobile:assets`.
+- **Verify:** `node --check scripts/mobile/generate-ios-resources.mjs` PASS; no `AppIcon.icon` / `iconcomposer` refs in pbxproj.
+- **Next:** Re-run **Deploy to TestFlight**; expect `actool` crash gone → `ARCHIVE SUCCEEDED`. Signing blockers (cert ↔ profile binding) may still apply at export/upload.
+
+## Active work — Daily feedback triage Cursor Automation (2026-06-29)
+- **Goal:** Scheduled read-only triage of `/admin/feedback` queue; Slack DM when open `feature_requests` exist.
+- **Shipped:** Automations editor opened with prefilled draft **Daily feedback triage** — cron `0 9 * * *`, Supabase MCP + Slack, repo `FoxMulders/Popup-Hub` @ `master`.
+- **User must finish in editor:** Select Slack DM destination; confirm Supabase MCP connected; verify 9:00 AM timezone (UTC-6 → may need `0 15 * * *`); save + enable.
+- **Behavior:** Empty queue → silent (no Slack). Open items → triage report in run + compact Slack DM with counts and https://popuphub.ca/admin/feedback link.
+
 ## Active work — Admin feedback triage (read-only, 2026-06-29)
 - **Goal:** Read-only triage of `/admin/feedback` incoming queue via Supabase MCP; no code or DB writes.
 - **Result:** `feature_requests` open queue empty (`pending` / `under_review` / `planned` = 0). Historical: 19 completed (2 critical, 2 workflow_blocked, 15 nice_to_have).
