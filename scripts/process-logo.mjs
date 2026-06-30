@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import { access, mkdir, rename, unlink } from 'node:fs/promises'
+import { access, mkdir, rename, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { trimToLogoArtwork } from './logo-artwork-trim.mjs'
@@ -15,6 +15,49 @@ async function writePngAtomically(targetPath, buffer) {
     }
   }
   await rename(tempPath, targetPath)
+}
+
+async function writeBufferAtomically(targetPath, buffer) {
+  const tempPath = `${targetPath}.tmp`
+  await writeFile(tempPath, buffer)
+  try {
+    await unlink(targetPath)
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+      throw error
+    }
+  }
+  await rename(tempPath, targetPath)
+}
+
+/** Pack PNG image buffers into a single .ico (PNG-compressed entries, Vista+). */
+function pngBuffersToIco(entries) {
+  const count = entries.length
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0)
+  header.writeUInt16LE(1, 2)
+  header.writeUInt16LE(count, 4)
+
+  let offset = 6 + count * 16
+  const parts = [header]
+
+  for (const { png, width, height } of entries) {
+    const entry = Buffer.alloc(16)
+    entry[0] = width >= 256 ? 0 : width
+    entry[1] = height >= 256 ? 0 : height
+    entry[4] = 1
+    entry[6] = 32
+    entry.writeUInt32LE(png.length, 8)
+    entry.writeUInt32LE(offset, 12)
+    parts.push(entry)
+    offset += png.length
+  }
+
+  for (const { png } of entries) {
+    parts.push(png)
+  }
+
+  return Buffer.concat(parts)
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -434,19 +477,28 @@ async function writeIcons(iconMark) {
   console.log('Wrote apple-touch-icon:', path.join(iconsDir, 'apple-touch-icon.png'))
 
   // Browser tab favicons: icon mark (stall+pin), not full lockup — wordmark is illegible at 16–32px.
-  // Minimal padding (~3%) maximizes mark size while leaving anti-alias breathing room.
+  // Transparent background; minimal padding (~3%) maximizes mark size at 16–32px.
   const FAVICON_PADDING = 0.03
   const faviconSource = iconMark
+  const faviconIcoEntries = []
 
   for (const size of [16, 32]) {
-    const favicon = await iconOnBackground(faviconSource, size, CREAM, FAVICON_PADDING)
-    await sharp(favicon).toFile(path.join(root, 'public', `favicon-${size}x${size}.png`))
-    console.log('Wrote favicon:', path.join(root, 'public', `favicon-${size}x${size}.png`))
+    const favicon = await transparentIcon(faviconSource, size, FAVICON_PADDING)
+    const out = path.join(root, 'public', `favicon-${size}x${size}.png`)
+    await sharp(favicon).toFile(out)
+    console.log('Wrote favicon:', out)
+    const meta = await sharp(favicon).metadata()
+    faviconIcoEntries.push({ png: favicon, width: meta.width, height: meta.height })
   }
 
-  const favicon32 = await iconOnBackground(faviconSource, 32, CREAM, FAVICON_PADDING)
-  await sharp(favicon32).toFile(path.join(root, 'public', 'favicon.ico'))
-  console.log('Wrote favicon.ico')
+  const faviconIco = pngBuffersToIco(faviconIcoEntries)
+  for (const faviconPath of [
+    path.join(root, 'public', 'favicon.ico'),
+    path.join(appDir, 'favicon.ico'),
+  ]) {
+    await writeBufferAtomically(faviconPath, faviconIco)
+    console.log('Wrote favicon.ico:', faviconPath)
+  }
 
   const nextIcon = await glassIcon(iconMark, 512, 0.1)
   await sharp(nextIcon).toFile(path.join(appDir, 'icon.png'))

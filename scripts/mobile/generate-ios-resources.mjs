@@ -1,6 +1,6 @@
 import sharp from 'sharp'
 import { readFileSync } from 'node:fs'
-import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -13,6 +13,7 @@ const androidResDir = path.join(root, 'android', 'app', 'src', 'main', 'res')
 const iconSource = path.join(root, 'public', 'icons', 'icon-512x512.png')
 const brandSource = path.join(root, 'public', 'popup-hub-brand.png')
 const cream = { r: 250, g: 248, b: 245, alpha: 1 }
+const brandGreen = { r: 108, g: 226, b: 79, alpha: 1 }
 
 const ANDROID_LAUNCHER_SIZES = {
   'mipmap-mdpi': 48,
@@ -53,8 +54,11 @@ async function writeIosAppIcon() {
   }
 
   const appIconDir = path.join(iosAppDir, 'Assets.xcassets', 'AppIcon.appiconset')
+  const glassIconDir = path.join(iosAppDir, 'AppIcon.icon')
+  const glassIconAssetsDir = path.join(glassIconDir, 'Assets')
   const splashDir = path.join(iosAppDir, 'Assets.xcassets', 'Splash.imageset')
   await mkdir(appIconDir, { recursive: true })
+  await mkdir(glassIconAssetsDir, { recursive: true })
   await mkdir(splashDir, { recursive: true })
 
   const iconSizes = [20, 29, 40, 58, 60, 76, 80, 87, 120, 152, 167, 180, 1024]
@@ -67,42 +71,37 @@ async function writeIosAppIcon() {
         fit: 'contain',
         background: cream,
       })
+      .flatten({ background: cream })
       .png()
       .toFile(out)
   }
 
   const contents = {
-    images: iconSizes.map((size) => {
-      const filename = `AppIcon-${size}.png`
-      if (size === 1024) {
-        return {
-          filename,
-          idiom: 'ios-marketing',
-          scale: '1x',
-          size: '1024x1024',
-        }
-      }
-      if (size === 76 || size === 152) {
-        return {
-          filename,
-          idiom: 'ipad',
-          scale: size === 76 ? '1x' : '2x',
-          size: size === 76 ? '76x76' : '76x76',
-        }
-      }
-      const scale = [20, 29, 40, 58, 60, 80, 87, 120, 167, 180].includes(size) ? '2x' : '3x'
-      const base = size === 58 ? 29 : size === 87 ? 29 : size === 120 ? 60 : size === 167 ? 83.5 : size === 180 ? 60 : size
-      return {
-        filename,
-        idiom: 'iphone',
-        scale,
-        size: `${Math.round(base)}x${Math.round(base)}`,
-      }
-    }),
+    images: [
+      { filename: 'AppIcon-40.png', idiom: 'iphone', scale: '2x', size: '20x20' },
+      { filename: 'AppIcon-60.png', idiom: 'iphone', scale: '3x', size: '20x20' },
+      { filename: 'AppIcon-58.png', idiom: 'iphone', scale: '2x', size: '29x29' },
+      { filename: 'AppIcon-87.png', idiom: 'iphone', scale: '3x', size: '29x29' },
+      { filename: 'AppIcon-80.png', idiom: 'iphone', scale: '2x', size: '40x40' },
+      { filename: 'AppIcon-120.png', idiom: 'iphone', scale: '3x', size: '40x40' },
+      { filename: 'AppIcon-120.png', idiom: 'iphone', scale: '2x', size: '60x60' },
+      { filename: 'AppIcon-180.png', idiom: 'iphone', scale: '3x', size: '60x60' },
+      { filename: 'AppIcon-20.png', idiom: 'ipad', scale: '1x', size: '20x20' },
+      { filename: 'AppIcon-40.png', idiom: 'ipad', scale: '2x', size: '20x20' },
+      { filename: 'AppIcon-29.png', idiom: 'ipad', scale: '1x', size: '29x29' },
+      { filename: 'AppIcon-58.png', idiom: 'ipad', scale: '2x', size: '29x29' },
+      { filename: 'AppIcon-40.png', idiom: 'ipad', scale: '1x', size: '40x40' },
+      { filename: 'AppIcon-80.png', idiom: 'ipad', scale: '2x', size: '40x40' },
+      { filename: 'AppIcon-76.png', idiom: 'ipad', scale: '1x', size: '76x76' },
+      { filename: 'AppIcon-152.png', idiom: 'ipad', scale: '2x', size: '76x76' },
+      { filename: 'AppIcon-167.png', idiom: 'ipad', scale: '2x', size: '83.5x83.5' },
+      { filename: 'AppIcon-1024.png', idiom: 'ios-marketing', scale: '1x', size: '1024x1024' },
+    ],
     info: { author: 'xcode', version: 1 },
   }
 
   await writeFile(path.join(appIconDir, 'Contents.json'), `${JSON.stringify(contents, null, 2)}\n`)
+  await writeIosGlassIcon(glassIconDir, glassIconAssetsDir)
 
   const splashOut = path.join(splashDir, 'splash.png')
   await copyFile(path.join(resourcesDir, 'splash.png'), splashOut)
@@ -121,6 +120,117 @@ async function writeIosAppIcon() {
   console.log('Updated ios/App/App/Assets.xcassets AppIcon + Splash')
 }
 
+async function writeIosGlassIcon(glassIconDir, assetsDir) {
+  await rm(glassIconDir, { recursive: true, force: true })
+  await mkdir(assetsDir, { recursive: true })
+
+  const baseBuffer = await sharp({
+    create: {
+      width: 1024,
+      height: 1024,
+      channels: 4,
+      background: brandGreen,
+    },
+  })
+    .composite([
+      {
+        input: await sharp({
+          create: {
+            width: 1024,
+            height: 1024,
+            channels: 4,
+            background: cream,
+          },
+        })
+          .png()
+          .toBuffer(),
+        gravity: 'southeast',
+        blend: 'soft-light',
+      },
+    ])
+    .blur(24)
+    .png()
+    .toBuffer()
+
+  await sharp(baseBuffer)
+    .composite([
+      {
+        input: Buffer.from(
+          `<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="glow" cx="50%" cy="38%" r="70%">
+                <stop offset="0%" stop-color="#FAF8F5" stop-opacity="0.68"/>
+                <stop offset="46%" stop-color="#6CE24F" stop-opacity="0.32"/>
+                <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.18"/>
+              </radialGradient>
+            </defs>
+            <rect width="1024" height="1024" fill="url(#glow)"/>
+          </svg>`,
+        ),
+        blend: 'overlay',
+      },
+    ])
+    .flatten({ background: cream })
+    .removeAlpha()
+    .png()
+    .toFile(path.join(assetsDir, 'Background.png'))
+
+  await sharp(iconSource)
+    .resize(820, 820, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .extend({
+      top: 102,
+      bottom: 102,
+      left: 102,
+      right: 102,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toFile(path.join(assetsDir, 'Logo.png'))
+
+  const iconDocument = {
+    'color-space-for-untagged-svg-colors': 'display-p3',
+    fill: 'automatic',
+    groups: [
+      {
+        id: 'background',
+        name: 'Brand Glass Background',
+        layers: [{ id: 'background-layer', name: 'Background', 'image-name': 'Background.png' }],
+        lighting: 'combined',
+        specular: true,
+      },
+      {
+        id: 'logo',
+        name: 'Transparent Logo',
+        layers: [
+          {
+            id: 'logo-layer',
+            name: 'Popup Hub',
+            'image-name': 'Logo.png',
+            opacity: 1,
+            glass: true,
+            position: { scale: 1, 'translation-in-points': [0, 0] },
+          },
+        ],
+        shadow: { kind: 'neutral', opacity: 0.55 },
+        translucency: { enabled: true, value: 0.18 },
+        'blur-material': 0.24,
+        lighting: 'individual',
+        specular: true,
+      },
+    ],
+    'supported-platforms': {
+      circles: true,
+      squares: 'shared',
+    },
+  }
+
+  await writeFile(path.join(glassIconDir, 'icon.json'), `${JSON.stringify(iconDocument, null, 2)}\n`)
+  console.log('Updated ios/App/App/AppIcon.icon glass app icon')
+}
+
 async function writeAndroidAssets() {
   if (!(await pathExists(androidResDir))) {
     console.log('Skip Android assets — android/ not generated yet (run: npx cap add android)')
@@ -132,6 +242,7 @@ async function writeAndroidAssets() {
     await mkdir(dir, { recursive: true })
     const iconBuffer = await sharp(iconSource)
       .resize(size, size, { fit: 'contain', background: cream })
+      .flatten({ background: cream })
       .png()
       .toBuffer()
     await sharp(iconBuffer).toFile(path.join(dir, 'ic_launcher.png'))

@@ -2,6 +2,30 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — browser tab favicon tent logo (local, not committed)
+- **Goal:** Replace the default Next.js black-triangle tab icon with the Popup Hub tent (stall+pin) mark.
+- **Persona:** All personas · browser tab / Cursor in-app browser.
+- **Root cause:** `app/favicon.ico` was still the stock create-next-app ICO (~25 KB, 16/32/48/256). `scripts/process-logo.mjs` only regenerated `public/favicon.ico` (misnamed PNG), while Next.js App Router serves `/favicon.ico` from `app/favicon.ico` via file-based metadata — so metadata links in `app/layout.tsx` never overrode the triangle.
+- **Fix:** Extended `scripts/process-logo.mjs` to emit transparent 16×16 + 32×32 PNG favicons and a proper multi-size PNG-in-ICO to **both** `public/favicon.ico` and `app/favicon.ico`. Ran `npm run assets:logo`.
+- **Assets:** `public/favicon-16x16.png`, `public/favicon-32x32.png`, `public/favicon.ico`, `app/favicon.ico` (3613 B ICO, 16+32 entries, transparent); PWA/`app/icon.png` unchanged (glass 512).
+- **Verify:** `npm run assets:logo` PASS; `npm run lint` PASS; Sharp check — favicon center transparent, ~315 green tent pixels in 32×32.
+- **Blockers:** None locally. Production needs commit + deploy; browsers may cache old favicon — hard-refresh or clear site data.
+- **Next:** Commit when user asks; smoke browser tab after deploy.
+
+## Active work — iOS 26 glass app icon + App Store icon validation fix (local, not committed)
+- **Goal:** Resolve TestFlight `exportArchive` icon validation failures while adding the requested iOS/iPad glass-style icon treatment.
+- **Persona:** All users · native iOS/iPadOS app icon · TestFlight/App Store.
+- **Baseline:** `master` at `bb22eaab`; no deploy run in this task.
+- **Fix:**
+  - `scripts/mobile/generate-ios-resources.mjs` now composites legacy `AppIcon.appiconset` PNGs onto an opaque cream background so the App Store marketing icon has no alpha channel.
+  - The generated `Contents.json` now uses an explicit iPhone/iPad image list, including the required iPad Pro `AppIcon-167.png` entry (`83.5x83.5`, `2x`).
+  - Added generated `ios/App/App/AppIcon.icon` with an opaque brand-glass background layer and transparent logo foreground layer for Xcode 26 Icon Composer / Liquid Glass rendering.
+  - `ios/App/App.xcodeproj/project.pbxproj` now references `AppIcon.icon` as `folder.iconcomposer.icon` and includes it in the App target resources, while retaining the legacy `AppIcon.appiconset` fallback.
+  - Running `npm run mobile:assets` also synced native versions to package `1.187.0` and refreshed generated Android/mobile resource files.
+- **Verify:** Plan implemented and re-verified this session: `npm run assets:logo` + `npm run mobile:assets` PASS; Sharp metadata — `AppIcon-1024.png` 1024×1024 RGB/no alpha, `AppIcon-167.png` 167×167 RGB/no alpha; `Contents.json` includes iPad `83.5x83.5` → `AppIcon-167.png`; `AppIcon.icon/Assets/Logo.png` transparent for glass, `Background.png` RGB/no alpha.
+- **Blockers:** Cannot run `xcodebuild archive`/`exportArchive` on this Windows host; next verification is CI/TestFlight on macOS/Xcode 26.
+- **Next:** Commit + push when ready, then re-run Deploy to TestFlight and confirm export validation clears.
+
 ## Active work — iOS archive fix: duplicate widget Info.plist (local, not committed)
 - **Goal:** Stop the TestFlight `archive` failure (`CreateBuildDirectory … (1 failure)`, exit code 65) caused by the `duplicate output file … PopupHubWidgetExtension.appex/Info.plist` warning.
 - **Root cause:** The widget's `Info.plist` was listed in the **PopupHubWidgetExtension Copy Bundle Resources** phase **and** processed as the target's `INFOPLIST_FILE`, so `Info.plist` was emitted to the `.appex` twice. The new build system promotes that duplicate to a hard error during `archive` (it is only a warning in plain `build`). This invalidates the earlier handoff note (Attempt #61) that called the duplicate "a warning, not the failure."
