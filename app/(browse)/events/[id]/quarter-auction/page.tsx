@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { Button } from '@/components/ui/button'
 import { PatronQuarterAuctionLive } from '@/components/quarter-auction/patron-live-view'
 import { getOrCreateSettings } from '@/lib/quarter-auction/catalog'
@@ -24,12 +25,13 @@ export default async function PatronQuarterAuctionPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect(`/login?redirectTo=${encodeURIComponent(`/events/${eventId}/quarter-auction`)}`)
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, name, status, start_at')
-    .eq('id', eventId)
-    .in('status', ['published', 'active', 'completed'])
-    .single()
+  const { data: event } = await excludeTestMarkets(
+    supabase
+      .from('events')
+      .select('id, name, status, start_at')
+      .eq('id', eventId)
+      .in('status', ['published', 'active', 'completed'])
+  ).single()
 
   if (!event) notFound()
 
