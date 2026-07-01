@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hasAdminAccess } from '@/lib/auth/require-admin'
 import { approvePublishAssistRequest } from '@/lib/coordinator/publish-assist'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -20,7 +20,7 @@ export async function POST(_request: Request, { params }: Params) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const admin = await createServiceClient()
+  const admin = createAdminClient()
   const result = await approvePublishAssistRequest(admin, id, user.id)
 
   if (!result.ok) {

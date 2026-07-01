@@ -91,23 +91,14 @@ async function main() {
       throw new Error(`Could not query events: ${namedError.message}`)
     }
 
-    const picked =
-      named ??
-      (
-        await supabase
-          .from('events')
-          .select('id, name, coordinator_id, is_external_listing')
-          .order('start_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      ).data
-
-    if (!picked) {
-      throw new Error('No events found. Create a coordinator market first.')
+    if (!named) {
+      throw new Error(
+        `No event matching name "${DEFAULT_EVENT_NAME}" found. Pass --event-id or create the test market first.`
+      )
     }
 
-    eventId = picked.id
-    eventName = picked.name
+    eventId = named.id
+    eventName = named.name
   } else {
     const { data: event, error } = await supabase
       .from('events')

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hasAdminAccess } from '@/lib/auth/require-admin'
 import { rejectPublishAssistRequest } from '@/lib/coordinator/publish-assist'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: Params) {
     body = {}
   }
 
-  const admin = await createServiceClient()
+  const admin = createAdminClient()
   const result = await rejectPublishAssistRequest(admin, id, user.id, body.reviewNote)
 
   if (!result.ok) {
