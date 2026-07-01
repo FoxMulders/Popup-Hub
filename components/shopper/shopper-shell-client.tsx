@@ -37,7 +37,7 @@ function ShopperShellInner({
       <PageBackBar />
       <main
         id="site-main"
-        className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+        className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(var(--shopper-bottom-chrome-height)+env(safe-area-inset-bottom,0px))] md:pb-0"
       >
         {children}
       </main>
@@ -65,7 +65,7 @@ export function ShopperShellClient({
         <PageBackBar />
         <main
           id="site-main"
-          className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+          className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(var(--shopper-bottom-chrome-height)+env(safe-area-inset-bottom,0px))] md:pb-0"
         >
           {children}
         </main>

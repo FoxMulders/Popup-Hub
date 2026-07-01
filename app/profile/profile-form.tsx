@@ -191,7 +191,7 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
         </div>
       ) : null}
 
-      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-10 -mx-4 flex items-center gap-4 border-t border-stone-200/80 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pt-2 md:bottom-auto">
+      <div className="sticky bottom-[calc(var(--shopper-bottom-chrome-height)+env(safe-area-inset-bottom,0px))] z-10 -mx-4 flex items-center gap-4 border-t border-stone-200/80 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pt-2 md:bottom-auto">
         <Button type="submit" disabled={loading} className="h-11 w-full px-8 sm:w-auto">
           {loading ? (
             <>
