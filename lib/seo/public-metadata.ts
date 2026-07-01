@@ -7,10 +7,28 @@ import {
   DEFAULT_SITE_DESCRIPTION,
   DEFAULT_SITE_TITLE,
   SITE_NAME,
+  TWITTER_CREATOR,
+  TWITTER_SITE,
   defaultOpenGraphImages,
   siteMetadataBase,
 } from '@/lib/seo/site-config'
 import { publicAppUrl } from '@/lib/url/public-app-url'
+
+/** Brand-free page title for use with root layout `%s | Popup Hub` template. */
+export function pageTitle(shortTitle: string): string {
+  return shortTitle.trim()
+}
+
+function buildTwitterMetadata(title: string, description: string, image: string): Metadata['twitter'] {
+  return {
+    card: 'summary_large_image',
+    title,
+    description,
+    images: [image],
+    ...(TWITTER_SITE ? { site: TWITTER_SITE } : {}),
+    ...(TWITTER_CREATOR ? { creator: TWITTER_CREATOR } : {}),
+  }
+}
 
 export function buildPublicMetadata({
   title,
@@ -20,6 +38,7 @@ export function buildPublicMetadata({
   type = 'website',
   noIndex = false,
   keywords,
+  authors,
 }: {
   title: string
   description: string
@@ -28,6 +47,7 @@ export function buildPublicMetadata({
   type?: 'website' | 'article'
   noIndex?: boolean
   keywords?: string[]
+  authors?: string[]
 }): Metadata {
   const url = publicAppUrl(path)
   const imagePath = imageUrl?.trim() || DEFAULT_OG_IMAGE_PATH
@@ -48,6 +68,7 @@ export function buildPublicMetadata({
     ...(googleVerification
       ? { verification: { google: googleVerification } }
       : {}),
+    ...(authors && authors.length > 0 ? { authors: authors.map((name) => ({ name })) } : {}),
     openGraph: {
       title,
       description,
@@ -64,13 +85,9 @@ export function buildPublicMetadata({
             : {}),
         },
       ],
+      ...(authors && authors.length > 0 ? { authors } : {}),
     },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [image],
-    },
+    twitter: buildTwitterMetadata(title, description, image),
   }
 }
 
@@ -79,6 +96,8 @@ export const rootLayoutMetadata: Omit<Metadata, 'title'> = {
   metadataBase: siteMetadataBase(),
   description: DEFAULT_SITE_DESCRIPTION,
   keywords: DEFAULT_KEYWORDS,
+  alternates: { canonical: publicAppUrl('/') },
+  category: 'technology',
   openGraph: {
     siteName: SITE_NAME,
     type: 'website',
@@ -91,6 +110,8 @@ export const rootLayoutMetadata: Omit<Metadata, 'title'> = {
     card: 'summary_large_image',
     title: DEFAULT_SITE_TITLE,
     description: DEFAULT_SITE_DESCRIPTION,
+    ...(TWITTER_SITE ? { site: TWITTER_SITE } : {}),
+    ...(TWITTER_CREATOR ? { creator: TWITTER_CREATOR } : {}),
   },
 }
 

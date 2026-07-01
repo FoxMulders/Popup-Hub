@@ -27,18 +27,19 @@ export async function generateMetadata({ params }: Props) {
 
   if (!city) {
     return buildPublicMetadata({
-      title: 'Markets — Popup Hub',
-      description: 'Discover makers markets near you on Popup Hub.',
+      title: 'Markets',
+      description: 'Discover markets published on Popup Hub near you.',
       path: `/markets/${citySlug}`,
       noIndex: true,
     })
   }
 
   return buildPublicMetadata({
-    title: `${city.headline} — Popup Hub`,
+    title: city.headline,
     description: city.description,
     path: `/markets/${city.slug}`,
     keywords: city.keywords,
+    imageUrl: `/markets/${city.slug}/opengraph-image`,
   })
 }
 

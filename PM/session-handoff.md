@@ -2,6 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+<<<<<<< HEAD
 ## Active work — Discover view toggles preserve scroll (local)
 - **Persona:** Patron · Discover (`/discover`) · List / Map / Vendors segmented control.
 - **Goal:** Switching discover view tabs must not jump the page back to the top.
@@ -10,6 +11,34 @@
   - **`route-scroll-to-top.tsx`** — scroll reset only on pathname changes, not query-only updates.
   - **`check-search-form.tsx`** — explicit `resetScrollToTop()` on submit so HubGuard search still lands at top.
 - **Verify:** Scroll down on `/discover`, toggle List ↔ Map ↔ Vendors — scroll position stays put.
+=======
+## Active work — Popup Hub-only market copy (shipped locally)
+- **Persona:** Patron · marketing homepage · city SEO landing pages (`/markets/[city]`).
+- **Goal:** Reword city cards and guides so copy reflects Popup Hub–published markets only, not general area listings.
+- **Shipped:**
+  - `lib/seo/market-city-pages.ts` — headlines, meta descriptions, and intros emphasize organizers publishing on Popup Hub.
+  - `lib/seo/market-city-intents.ts` — vendor/weekend/artisan intent pages aligned to platform-only listings.
+  - `marketing-local-markets.tsx` — section headline/subtitle and “Also on Popup Hub in …” footer line.
+  - `market-city-landing.tsx` — listing section headers and sibling “All Popup Hub markets” link.
+  - Fallback metadata on `/markets/[city]` routes updated.
+- **Verify:** Homepage local-markets section and `/markets/edmonton` hero + cards read as Popup Hub–hosted markets only.
+- **Next:** Merge PR and deploy.
+
+## Active work — Advanced SEO optimization (shipping)
+- **Persona:** Public marketing + discover surfaces (patrons, vendors, organizers landing).
+- **Goal:** Comprehensive SEO — metadata, OG/Twitter, JSON-LD, sitemap/robots, semantic HTML, dynamic OG images.
+- **Shipped:**
+  - **Global metadata** — `lib/seo/site-config.ts`, `lib/seo/public-metadata.ts` (Twitter site/creator env, `pageTitle` helper, canonical on root); `app/layout.tsx` title template order.
+  - **Title template fix** — short page titles across ~25 public routes (no duplicate `| Popup Hub`).
+  - **Static routes** — `/contact` page + ContactPage JSON-LD; `/about` → `/legal/about` redirect in `next.config.ts`.
+  - **Dynamic metadata** — richer event keywords/OG fallback, vendor bio/logo, organizer province, `my-night` noindex.
+  - **OG images** — shared `lib/seo/og-image-template.tsx`; per-event and per-city `opengraph-image.tsx` routes.
+  - **JSON-LD** — Organization `contactPoint`; WebSite `BrowseAction`; event organizer slug URL; province from market context.
+  - **Semantic/CWV** — `PassportPublicCard` `headingLevel` h1 on public profiles; LCP `priority` on event cover images.
+  - **Crawl** — sitemap includes `/contact`, completed events, coordinator profiles; robots blocks `/signup`, `/suggestions`.
+- **Verify:** View source on `/`, `/contact`, `/events/{id}` — canonical, `og:locale=en_CA`, single title suffix; Rich Results Test on event page.
+- **Next:** Set `NEXT_PUBLIC_TWITTER_SITE` in Vercel if brand handle available.
+>>>>>>> origin/master
 
 ## Active work — Remove Edmonton/Calgary area buttons and city links (shipped locally)
 - **Persona:** Patron · Discover map (`/discover`) · Vendor market browse · site footer · SEO guides.

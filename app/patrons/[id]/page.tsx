@@ -25,14 +25,14 @@ export async function generateMetadata({ params }: Props) {
 
   if (!profile) {
     return buildPublicMetadata({
-      title: 'Patron not found — Popup Hub',
+      title: 'Patron not found',
       description: 'This patron profile is unavailable.',
       path: `/patrons/${id}`,
     })
   }
 
   return buildPublicMetadata({
-    title: `${profile.full_name} — Popup Hub Patron`,
+    title: profile.full_name ?? 'Patron profile',
     description: `Browse ${profile.full_name}'s market passport and story highlights on Popup Hub.`,
     path: `/patrons/${id}`,
     imageUrl: profile.avatar_url,
@@ -79,6 +79,7 @@ export default async function PatronPublicProfilePage({ params }: Props) {
         avatarUrl={displayAvatarUrl}
         passport={publicPassport}
         subtitle={`Market Patron · Member since ${format(new Date(profile.created_at), 'MMMM yyyy')}`}
+        headingLevel="h1"
       >
         <PassportStoriesPublicStrip
           ownerId={profile.id}

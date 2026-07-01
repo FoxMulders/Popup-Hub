@@ -8,7 +8,7 @@ import { HubGuardLogo } from '@/components/brand/hubguard-logo'
 import type { Profile } from '@/types/database'
 
 export const metadata = buildPublicMetadata({
-  title: 'Review an organizer — Popup Hub',
+  title: 'Review an organizer',
   description:
     'Share your experience vending at a market. Help other vendors through HubGuard before paying booth fees.',
   path: '/check/review',

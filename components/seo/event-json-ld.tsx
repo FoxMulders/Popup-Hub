@@ -11,6 +11,7 @@ type EventJsonLdProps = {
     location_name?: string | null
     address?: string | null
     city?: string | null
+    market_city?: string | null
     latitude?: number | null
     longitude?: number | null
     cover_image_url?: string | null
@@ -20,6 +21,13 @@ type EventJsonLdProps = {
   vendorCount?: number
   vendorNames?: string[]
   organizerId?: string | null
+  organizerSlug?: string | null
+}
+
+function resolveEventProvince(marketCity?: string | null): string {
+  // Indexed SEO markets are Alberta today; default for Canadian pop-up listings.
+  void marketCity
+  return 'AB'
 }
 
 export function EventJsonLd({
@@ -27,6 +35,7 @@ export function EventJsonLd({
   vendorCount,
   vendorNames,
   organizerId,
+  organizerSlug,
 }: EventJsonLdProps) {
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
 
@@ -39,7 +48,7 @@ export function EventJsonLd({
     locationName: event.location_name,
     address: event.address,
     city: event.city,
-    province: 'AB',
+    province: resolveEventProvince(event.market_city),
     latitude: event.latitude,
     longitude: event.longitude,
     coverImageUrl: event.cover_image_url,
@@ -47,6 +56,7 @@ export function EventJsonLd({
     status: event.status,
     organizerName: coordinator?.full_name,
     organizerId: organizerId ?? coordinator?.id ?? null,
+    organizerSlug,
     vendorNames,
   })
 

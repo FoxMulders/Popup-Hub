@@ -13,11 +13,11 @@ export function MarketingLocalMarkets() {
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Makers markets across Alberta
+            Popup Hub markets across Alberta
           </h2>
           <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-            Browse city guides with confirmed vendor counts, weekend listings, and vendor application
-            pages — no account required.
+            Explore markets published on Popup Hub — with confirmed vendor counts, weekend dates, and
+            vendor application pages. No account required to browse.
           </p>
         </div>
 
@@ -39,7 +39,7 @@ export function MarketingLocalMarkets() {
 
         {INDEXABLE_MARKET_CITY_SLUGS.length > FEATURED_CITY_SLUGS.length ? (
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Also covering{' '}
+            Also on Popup Hub in{' '}
             {INDEXABLE_MARKET_CITY_SLUGS.filter(
               (slug) => !FEATURED_CITY_SLUGS.includes(slug as (typeof FEATURED_CITY_SLUGS)[number]),
             )

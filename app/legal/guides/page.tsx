@@ -5,7 +5,7 @@ import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { SEO_GUIDES } from '@/lib/seo/guides/guide-registry'
 
 export const metadata = buildPublicMetadata({
-  title: 'Market Guides — Popup Hub',
+  title: 'Market Guides',
   description:
     'Practical guides for vendors, organizers, and patrons — vendor applications, booth fees, HubGuard trust, and running profitable pop-up markets in Canada.',
   path: '/legal/guides',

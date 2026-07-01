@@ -35,18 +35,19 @@ export async function generateMetadata({ params }: Props) {
 
   if (!city || !intent) {
     return buildPublicMetadata({
-      title: 'Markets — Popup Hub',
-      description: 'Discover makers markets near you on Popup Hub.',
+      title: 'Markets',
+      description: 'Discover markets published on Popup Hub near you.',
       path: `/markets/${citySlug}/${intentSlug}`,
       noIndex: true,
     })
   }
 
   return buildPublicMetadata({
-    title: `${intent.headline} — Popup Hub`,
+    title: intent.headline,
     description: intent.description,
     path: `/markets/${city.slug}/${intent.slug}`,
     keywords: intent.keywords,
+    imageUrl: `/markets/${city.slug}/opengraph-image`,
   })
 }
 

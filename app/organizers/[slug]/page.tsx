@@ -37,14 +37,14 @@ export async function generateMetadata({ params }: Props) {
   const org = await getPublishedOrganizerBySlug(slug)
   if (!org) {
     return buildPublicMetadata({
-      title: 'Organizer not found — Popup Hub',
+      title: 'Organizer not found',
       description: 'This organizer profile is not available.',
       path: `/organizers/${slug}`,
     })
   }
   return buildPublicMetadata({
     title: `${org.display_name} — Organizer Trust Report`,
-    description: `Check ${org.display_name} in ${org.city}, AB before paying booth fees.`,
+    description: `Check ${org.display_name} in ${org.city}, ${org.province} before paying booth fees.`,
     path: `/organizers/${org.slug}`,
   })
 }

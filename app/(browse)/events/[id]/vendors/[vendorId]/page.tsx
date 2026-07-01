@@ -24,21 +24,41 @@ export async function generateMetadata({ params }: Props) {
   const supabase = await createClient()
   const { data: app } = await supabase
     .from('booth_applications')
-    .select('passport:vendor_passports(business_name)')
+    .select(`
+      passport:vendor_passports(business_name, bio, logo_url),
+      category:categories(name),
+      event:events(name)
+    `)
     .eq('event_id', id)
     .eq('vendor_id', vendorId)
     .eq('status', 'approved')
     .maybeSingle()
 
   const passport = Array.isArray(app?.passport) ? app.passport[0] : app?.passport
-  const name =
-    (passport as { business_name?: string } | null | undefined)?.business_name?.trim() ??
-    'Vendor'
+  const event = Array.isArray(app?.event) ? app.event[0] : app?.event
+  const category = Array.isArray(app?.category) ? app.category[0] : app?.category
+  const passportData = passport as {
+    business_name?: string | null
+    bio?: string | null
+    logo_url?: string | null
+  } | null | undefined
+  const eventName = (event as { name?: string } | null | undefined)?.name?.trim()
+  const categoryName = (category as { name?: string } | null | undefined)?.name?.trim()
+  const name = passportData?.business_name?.trim() ?? 'Vendor'
+  const bio = passportData?.bio?.trim()
+  const description =
+    bio?.slice(0, 160) ||
+    (eventName && categoryName
+      ? `Visit ${name} at ${eventName} — ${categoryName}.`
+      : eventName
+        ? `Visit ${name} at ${eventName} on Popup Hub.`
+        : `Visit ${name} at this market on Popup Hub.`)
 
   return buildPublicMetadata({
-    title: `${name} — Popup Hub`,
-    description: `Visit ${name} at this market on Popup Hub.`,
+    title: name,
+    description,
     path: buildVendorProfileHref(id, vendorId),
+    imageUrl: passportData?.logo_url,
   })
 }
 

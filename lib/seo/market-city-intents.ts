@@ -20,8 +20,8 @@ function intentPagesForCity(city: MarketCitySeoPage): MarketCityIntentPage[] {
     {
       slug: 'vendor-applications',
       headline: `Vendor applications in ${name}`,
-      description: `Find open and juried artisan market vendor applications in ${name}, Alberta — apply with one passport on Popup Hub and verify organizers with HubGuard.`,
-      intro: `Skip the Instagram DMs and duplicate PDFs. Browse published markets accepting vendor applications near ${name}, check organizer trust reports, and apply with your Popup Hub vendor passport.`,
+      description: `Find open and juried vendor applications for markets published on Popup Hub in ${name}, Alberta — apply with one passport and verify organizers with HubGuard.`,
+      intro: `Skip the Instagram DMs and duplicate PDFs. Browse Popup Hub markets accepting vendor applications near ${name}, check organizer trust reports, and apply with your vendor passport.`,
       keywords: [
         `${name} vendor application`,
         `apply craft fair ${name}`,
@@ -34,8 +34,8 @@ function intentPagesForCity(city: MarketCitySeoPage): MarketCityIntentPage[] {
     {
       slug: 'this-weekend',
       headline: `Markets this weekend in ${name}`,
-      description: `See pop-up and makers markets happening this weekend in ${name}, Alberta — confirmed vendor counts and booth maps on Popup Hub.`,
-      intro: `Plan your Saturday or Sunday around published markets near ${name}. See who is vending, browse the lineup, and open the patron map before you leave home.`,
+      description: `See pop-up and makers markets published on Popup Hub happening this weekend in ${name}, Alberta — confirmed vendor counts and booth maps before you visit.`,
+      intro: `Plan your Saturday or Sunday around Popup Hub markets near ${name}. See who is vending, browse the lineup, and open the patron map before you leave home.`,
       keywords: [
         `markets this weekend ${name}`,
         `weekend craft fair ${name}`,
@@ -47,8 +47,8 @@ function intentPagesForCity(city: MarketCitySeoPage): MarketCityIntentPage[] {
     {
       slug: 'artisan-markets',
       headline: `Artisan markets in ${name}`,
-      description: `Discover handmade and artisan markets in ${name}, Alberta — meet local makers, browse vendor lineups, and plan your market day on Popup Hub.`,
-      intro: `From juried craft fairs to recurring community pop-ups, Popup Hub surfaces artisan markets across the ${name} area with maker profiles and confirmed vendor counts.`,
+      description: `Discover handmade and artisan markets published on Popup Hub in ${name}, Alberta — meet local makers, browse vendor lineups, and plan your market day.`,
+      intro: `From juried craft fairs to recurring community pop-ups, browse artisan markets hosted on Popup Hub across the ${name} area — with maker profiles and confirmed vendor counts.`,
       keywords: [
         `artisan market ${name}`,
         `handmade market ${name}`,
