@@ -104,13 +104,13 @@
 - **Verify:** Sign into email admin account → Profile → Connect Apple; run `npx tsx scripts/resolve-duplicate-email-accounts.ts --email bradmulders@gmail.com` (dry run) then `--apply` if safe.
 - **Next:** Enable Manual linking in Supabase Dashboard; commit + deploy; run ops script on prod for Brad duplicate; user links Apple from kept admin account.
 
-## Active work — Loader wordmark below animation (local, not committed)
-- **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
+## Active work — Loader wordmark above animation (local, not committed)
+- **Goal:** Center the enlarged "Popup Hub" wordmark above the loader animation; remove the storefront tent icon from the loader lockup.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
 - **Shipped locally:**
-  - Reordered flex column in `components/brand/popup-loader-provider.tsx` — animation (`loader-screen__lottie`) first, `BrandLogoLockup` second.
-  - **Wordmark 2.5×** — new `loader` size on `BrandLogoLockup` (`h-[5.625rem]` / `sm:h-[6.25rem]`, 2.5× header `h-9` / `sm:h-10`); provider uses `size="loader"`.
-- **Verify:** Hard refresh (or clear `popup-hub-initial-loader-shown` session key) — booth-deal / walk-to-market animation appears above a larger storefront + wordmark lockup.
+  - **`components/brand/popup-loader-provider.tsx`** — `BrandLogoLockup` first, animation (`loader-screen__lottie`) second; `wordmarkOnly` prop.
+  - **`components/brand/popup-hub-logo.tsx`** — `wordmarkOnly` on `BrandLogoLockup` skips the tent icon and centers the wordmark (`object-center`, `justify-center`).
+- **Verify:** Hard refresh (or clear `popup-hub-initial-loader-shown` session key) — centered wordmark above booth-deal / walk-to-market animation, no tent beside the wordmark.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — Organizer claim approval silently failing (shipped `e88bab69`)
