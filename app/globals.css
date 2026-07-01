@@ -1291,6 +1291,10 @@
       bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
       padding-bottom: 0.75rem;
     }
+
+    body[data-mobile-bottom-nav] .scroll-to-top-button-host {
+      bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   #floor-plan-workspace .floor-plan-canvas-host {

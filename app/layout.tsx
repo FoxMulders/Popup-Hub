@@ -5,6 +5,7 @@ import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
 import { RouteScrollToTop } from '@/components/navigation/route-scroll-to-top'
+import { ScrollToTopButton } from '@/components/navigation/scroll-to-top-button'
 import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
 import { PopupLoaderProvider } from '@/components/brand/popup-loader-provider'
 import { BuildVersionFooter } from '@/components/brand/build-version-footer'
@@ -116,6 +117,7 @@ export default async function RootLayout({
             </div>
           </div>
           <InstallPrompt />
+          <ScrollToTopButton />
           <Toaster richColors position="top-right" />
           <Analytics />
         </PopupLoaderProvider>
