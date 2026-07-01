@@ -248,22 +248,19 @@ export function AppNav({
           <>
             <div className="relative flex w-full min-w-0 items-center justify-center">
               {brandLogo}
-              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-2 overflow-x-hidden">
-                {rightActions}
-              </div>
+              {!mobile ? (
+                <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-2 overflow-x-hidden">
+                  {rightActions}
+                </div>
+              ) : null}
             </div>
-            <div
-              className={cn(
-                'flex w-full min-w-0 items-center gap-2 overflow-x-hidden',
-                mobile ? 'justify-center' : 'justify-start'
-              )}
-            >
+            <div className="flex w-full min-w-0 items-center gap-2 overflow-x-hidden">
               {!mobile ? <NavBackButton /> : null}
               <div
                 className={cn(
                   'min-w-0',
                   mobile
-                    ? 'flex justify-center'
+                    ? 'flex min-w-0 flex-1 justify-center'
                     : 'flex-1 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]'
                 )}
               >
@@ -271,10 +268,16 @@ export function AppNav({
                   availablePortals={availablePortals}
                   activePortal={activePortal}
                   compact
-                  className={mobile ? 'mx-auto max-w-full' : undefined}
+                  className={mobile ? 'max-w-full' : undefined}
                 />
               </div>
-              <DesktopNavLinks links={links} pathname={pathname} />
+              {mobile ? (
+                <div className="flex shrink-0 items-center gap-2 overflow-x-hidden">
+                  {rightActions}
+                </div>
+              ) : (
+                <DesktopNavLinks links={links} pathname={pathname} />
+              )}
             </div>
           </>
         ) : (
