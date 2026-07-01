@@ -2,20 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Advanced SEO optimization (shipping)
-- **Persona:** Public marketing + discover surfaces (patrons, vendors, organizers landing).
-- **Goal:** Comprehensive SEO — metadata, OG/Twitter, JSON-LD, sitemap/robots, semantic HTML, dynamic OG images.
-- **Shipped:**
-  - **Global metadata** — `lib/seo/site-config.ts`, `lib/seo/public-metadata.ts` (Twitter site/creator env, `pageTitle` helper, canonical on root); `app/layout.tsx` title template order.
-  - **Title template fix** — short page titles across ~25 public routes (no duplicate `| Popup Hub`).
-  - **Static routes** — `/contact` page + ContactPage JSON-LD; `/about` → `/legal/about` redirect in `next.config.ts`.
-  - **Dynamic metadata** — richer event keywords/OG fallback, vendor bio/logo, organizer province, `my-night` noindex.
-  - **OG images** — shared `lib/seo/og-image-template.tsx`; per-event and per-city `opengraph-image.tsx` routes.
-  - **JSON-LD** — Organization `contactPoint`; WebSite `BrowseAction`; event organizer slug URL; province from market context.
-  - **Semantic/CWV** — `PassportPublicCard` `headingLevel` h1 on public profiles; LCP `priority` on event cover images.
-  - **Crawl** — sitemap includes `/contact`, completed events, coordinator profiles; robots blocks `/signup`, `/suggestions`.
-- **Verify:** View source on `/`, `/contact`, `/events/{id}` — canonical, `og:locale=en_CA`, single title suffix; Rich Results Test on event page.
-- **Next:** Set `NEXT_PUBLIC_TWITTER_SITE` in Vercel if brand handle available.
+## Active work — Critical bug investigation (post SEO merge `8e2ea50`)
+- **Trigger:** Push to `master` — advanced SEO optimization merge.
+- **Findings (fixed on `cursor/critical-bug-investigation-5a7c`):**
+  1. **Publish-assist RLS no-op** — admin approve/reject used `createServiceClient()` (cookie-bound JWT); migration 134 has no admin UPDATE policy → status never persisted. Fixed: `createAdminClient()`.
+  2. **`is_test` catalog leak** — QA scenario markets visible on discover/vendor/widget/event surfaces. Fixed: `excludeTestMarkets()` helper + filters across catalog queries; vendor apply API rejects `is_test`.
+  3. **Native OAuth callback** — `CapacitorInit` used `router.push` for `/api/auth/callback`; Set-Cookie dropped. Fixed: `window.location.replace`.
+  4. **SEO title template regression** — SEO merge reordered `app/layout.tsx` spreads so `buildPublicMetadata` overwrote `title.template`. Fixed: template spread after public metadata.
+- **Tests:** `npx tsx lib/queries/public-market-catalog.test.ts` passes.
+- **Next:** Merge PR; smoke admin publish-assist approve/reject; native OAuth sign-in on TestFlight.
+
+## Active work — Advanced SEO optimization (shipped `8e2ea50`)
 
 ## Active work — Remove Edmonton/Calgary area buttons and city links (shipped locally)
 - **Persona:** Patron · Discover map (`/discover`) · Vendor market browse · site footer · SEO guides.
