@@ -68,15 +68,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     ...baseMetadata,
-    title: {
-      default: DEFAULT_SITE_TITLE,
-      template: '%s | Popup Hub',
-    },
     ...buildPublicMetadata({
       title: DEFAULT_SITE_TITLE,
       description: DEFAULT_SITE_DESCRIPTION,
       path: '/',
     }),
+    title: {
+      default: DEFAULT_SITE_TITLE,
+      template: '%s | Popup Hub',
+    },
   }
 }
 

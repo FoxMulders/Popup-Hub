@@ -239,6 +239,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
 
+  if (event.is_test) {
+    return NextResponse.json({ error: 'This market is not open for applications' }, { status: 400 })
+  }
+
   if (!OPEN_EVENT_STATUSES.includes(event.status as (typeof OPEN_EVENT_STATUSES)[number])) {
     return NextResponse.json({ error: 'This market is not open for applications' }, { status: 400 })
   }
