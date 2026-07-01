@@ -20,6 +20,24 @@ test.describe('Discover UX @prod-smoke', () => {
     await expect(page).toHaveURL(/view=map/)
   })
 
+  test('view toggle preserves scroll position', async ({ page }) => {
+    await page.goto('/discover')
+    await expect(page.getByRole('heading', { name: 'Community markets near you' })).toBeVisible({
+      timeout: 15_000,
+    })
+    await page.evaluate(() => window.scrollTo(0, 600))
+    const scrollBefore = await page.evaluate(() => window.scrollY)
+    expect(scrollBefore).toBeGreaterThan(100)
+    await page.getByRole('tab', { name: 'Map' }).click()
+    await expect(page).toHaveURL(/view=map/)
+    const scrollAfter = await page.evaluate(() => window.scrollY)
+    expect(scrollAfter).toBeGreaterThan(100)
+    await page.getByRole('tab', { name: 'Vendors' }).click()
+    await expect(page).toHaveURL(/view=vendors/)
+    const scrollAfterVendors = await page.evaluate(() => window.scrollY)
+    expect(scrollAfterVendors).toBeGreaterThan(100)
+  })
+
   test('footer exposes build metadata', async ({ page }) => {
     await page.goto('/discover')
     const buildMeta = page.getByTestId('build-version-footer')

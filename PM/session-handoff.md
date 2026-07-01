@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+<<<<<<< HEAD
+## Active work — Discover view toggles preserve scroll (local)
+- **Persona:** Patron · Discover (`/discover`) · List / Map / Vendors segmented control.
+- **Goal:** Switching discover view tabs must not jump the page back to the top.
+- **Root cause:** `RouteScrollToTop` reset scroll on every search-param change, overriding `router.replace(..., { scroll: false })` in `discover-screen.tsx`.
+- **Shipped locally:**
+  - **`route-scroll-to-top.tsx`** — scroll reset only on pathname changes, not query-only updates.
+  - **`check-search-form.tsx`** — explicit `resetScrollToTop()` on submit so HubGuard search still lands at top.
+- **Verify:** Scroll down on `/discover`, toggle List ↔ Map ↔ Vendors — scroll position stays put.
+=======
 ## Active work — Popup Hub-only market copy (shipped locally)
 - **Persona:** Patron · marketing homepage · city SEO landing pages (`/markets/[city]`).
 - **Goal:** Reword city cards and guides so copy reflects Popup Hub–published markets only, not general area listings.
@@ -28,6 +38,7 @@
   - **Crawl** — sitemap includes `/contact`, completed events, coordinator profiles; robots blocks `/signup`, `/suggestions`.
 - **Verify:** View source on `/`, `/contact`, `/events/{id}` — canonical, `og:locale=en_CA`, single title suffix; Rich Results Test on event page.
 - **Next:** Set `NEXT_PUBLIC_TWITTER_SITE` in Vercel if brand handle available.
+>>>>>>> origin/master
 
 ## Active work — Remove Edmonton/Calgary area buttons and city links (shipped locally)
 - **Persona:** Patron · Discover map (`/discover`) · Vendor market browse · site footer · SEO guides.
