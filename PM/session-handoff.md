@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (Jul 1 2026)
+- **Trigger:** Push `96abc7a7` (CI auto-run Conversion Engine Ops on master).
+- **Findings:** Conversion engine `track-click`/`upgrade-to-native` used cookie-bound `createServiceClient` for RLS-blocked writes; seed script could flag a production market when QA event name missing; `is_test` QA markets leaked to discover; iOS OAuth callback used `router.push`.
+- **Shipped (PR — `cursor/critical-bug-investigation-ad7e`):**
+  - `createAdminClient()` on track-click, upgrade-to-native, publish-assist approve/reject
+  - `excludeTestMarkets()` across discover/vendor/widget/public event surfaces
+  - Seed script fails fast when named QA event not found (no fallback to latest event)
+  - `CapacitorInit` OAuth — `window.location.replace` for session cookie persistence
+  - Root layout `title.template` spread-order fix
+- **Next:** Merge PR; run Conversion Engine Ops workflow after deploy.
+
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
 - **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.
