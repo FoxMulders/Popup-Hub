@@ -2,17 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Popup Hub-only market copy (shipped locally)
+## Active work — Popup Hub-only market copy (merged `6675bd95`, prod deploy pending)
 - **Persona:** Patron · marketing homepage · city SEO landing pages (`/markets/[city]`).
 - **Goal:** Reword city cards and guides so copy reflects Popup Hub–published markets only, not general area listings.
-- **Shipped:**
+- **Shipped (merged PR #166 @ `6675bd95`):**
   - `lib/seo/market-city-pages.ts` — headlines, meta descriptions, and intros emphasize organizers publishing on Popup Hub.
   - `lib/seo/market-city-intents.ts` — vendor/weekend/artisan intent pages aligned to platform-only listings.
   - `marketing-local-markets.tsx` — section headline/subtitle and “Also on Popup Hub in …” footer line.
   - `market-city-landing.tsx` — listing section headers and sibling “All Popup Hub markets” link.
   - Fallback metadata on `/markets/[city]` routes updated.
 - **Verify:** Homepage local-markets section and `/markets/edmonton` hero + cards read as Popup Hub–hosted markets only.
-- **Next:** Merge PR and deploy.
+- **Prod deploy:** Pending — run `PM\Deploy-popuphub.bat` or `npx vercel deploy --prod --yes` from authenticated machine (`vercel.json` disables git deploy on `master`).
 
 ## Active work — Advanced SEO optimization (shipping)
 - **Persona:** Public marketing + discover surfaces (patrons, vendors, organizers landing).
