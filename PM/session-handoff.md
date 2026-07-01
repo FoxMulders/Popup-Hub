@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (push `4433e13f`, PR #171 open)
+- **Trigger:** Docs-only handoff after TestFlight build 26 — no bugs in that diff.
+- **Found on `master`:** Four critical issues from prior investigations still unmerged (publish-assist RLS no-op, `is_test` catalog leak, native OAuth session drop, SEO title template regression).
+- **Shipped on branch `cursor/critical-bug-investigation-299d` @ `4bbb9e10`:** Re-applied proven fix from `b460b96d` — PR #171.
+- **Verify:** `npx tsx lib/queries/public-market-catalog.test.ts`; merge + `npx vercel deploy --prod --yes`; native OAuth smoke on TestFlight build 26+.
+- **Next:** Merge PR #171; prod deploy from authenticated machine.
+
 ## Active work — iOS ITMS-90189 redundant build (build 26 / v1.191.0) — TestFlight uploaded
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
 - **Goal:** Fix App Store Connect **ITMS-90189** — build **24** already uploaded for v**1.191.0**; increment `CFBundleVersion` before re-upload.
