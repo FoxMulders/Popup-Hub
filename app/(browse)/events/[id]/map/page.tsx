@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { PublicFloorplan } from '@/components/shopper/public-floorplan'
 import { ArrowLeft } from 'lucide-react'
 import type { BoothLayout } from '@/types/database'
@@ -15,12 +16,9 @@ export default async function EventMapPage({ params, searchParams }: Props) {
   const { booth } = await searchParams
   const supabase = await createClient()
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, name')
-    .eq('id', id)
-    .in('status', ['published', 'active', 'completed'])
-    .single()
+  const { data: event } = await excludeTestMarkets(
+    supabase.from('events').select('id, name').eq('id', id).in('status', ['published', 'active', 'completed'])
+  ).single()
 
   if (!event) notFound()
 

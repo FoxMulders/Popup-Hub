@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { resolveProfileAvatarForServer } from '@/lib/profile/server-avatar'
 import { loadPublicPassportIndex } from '@/lib/passport/public-passport-index'
 import { PassportPublicCard } from '@/components/passport/passport-public-card'
@@ -108,11 +109,13 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
 
   const displayName = publicPassport?.businessName?.trim() || profile.full_name
 
-  const { data: events } = await supabase
-    .from('events')
-    .select('id, name, location_name, start_at, status')
-    .eq('coordinator_id', id)
-    .in('status', ['published', 'active', 'completed'])
+  const { data: events } = await excludeTestMarkets(
+    supabase
+      .from('events')
+      .select('id, name, location_name, start_at, status')
+      .eq('coordinator_id', id)
+      .in('status', ['published', 'active', 'completed'])
+  )
     .order('start_at', { ascending: false })
     .limit(12)
 
