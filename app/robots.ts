@@ -23,6 +23,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           '/coordinators/',
           '/patrons/',
           '/legal/',
+          '/contact',
         ],
         disallow: [
           '/api/',
@@ -36,6 +37,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           '/shared/',
           '/admin/',
           '/login',
+          '/signup',
+          '/suggestions',
         ],
       },
     ],

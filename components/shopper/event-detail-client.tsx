@@ -124,6 +124,9 @@ export function EventDetailClient({
               src={event.cover_image_url}
               alt={event.name}
               className="h-56 w-full object-cover bg-canvas sm:h-72"
+              priority
+              width={1200}
+              height={630}
             />
           ) : (
             <div className="flex h-44 items-center justify-center bg-gradient-to-br from-sage-100 via-canvas to-harvest-50 sm:h-56">

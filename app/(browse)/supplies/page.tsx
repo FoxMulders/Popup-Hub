@@ -3,7 +3,7 @@ import { SitePageBand } from '@/components/layout/site-page-band'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
-  title: 'Market Supplies — Popup Hub',
+  title: 'Market Supplies',
   description:
     'Curated Amazon.ca affiliate picks for market booth gear, displays, tents, and packaging — search supplies for your next pop-up market.',
   path: '/supplies',

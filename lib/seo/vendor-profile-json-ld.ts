@@ -22,7 +22,7 @@ export function buildVendorProfileJsonLd(input: VendorProfileJsonLdInput) {
   return {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
-    name: `${input.businessName} — Popup Hub`,
+    name: input.businessName,
     url: profileUrl,
     mainEntity: {
       '@type': 'Organization',

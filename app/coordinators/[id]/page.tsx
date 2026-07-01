@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props) {
 
   if (!profile) {
     return buildPublicMetadata({
-      title: 'Organizer not found — Popup Hub',
+      title: 'Organizer not found',
       description: 'This market organizer profile is unavailable.',
       path: `/coordinators/${id}`,
     })
@@ -128,6 +128,7 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
         avatarUrl={displayAvatarUrl}
         passport={publicPassport}
         subtitle={`Market Organizer · Member since ${format(new Date(profile.created_at), 'MMMM yyyy')}`}
+        headingLevel="h1"
       >
         <PassportStoriesPublicStrip
           ownerId={profile.id}

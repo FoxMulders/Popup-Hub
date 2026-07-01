@@ -2,6 +2,21 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Advanced SEO optimization (local, not deployed)
+- **Persona:** Public marketing + discover surfaces (patrons, vendors, organizers landing).
+- **Goal:** Comprehensive SEO — metadata, OG/Twitter, JSON-LD, sitemap/robots, semantic HTML, dynamic OG images.
+- **Shipped locally:**
+  - **Global metadata** — `lib/seo/site-config.ts`, `lib/seo/public-metadata.ts` (Twitter site/creator env, `pageTitle` helper, canonical on root); `app/layout.tsx` title template order.
+  - **Title template fix** — short page titles across ~25 public routes (no duplicate `| Popup Hub`).
+  - **Static routes** — `/contact` page + ContactPage JSON-LD; `/about` → `/legal/about` redirect in `next.config.ts`.
+  - **Dynamic metadata** — richer event keywords/OG fallback, vendor bio/logo, organizer province, `my-night` noindex.
+  - **OG images** — shared `lib/seo/og-image-template.tsx`; per-event and per-city `opengraph-image.tsx` routes.
+  - **JSON-LD** — Organization `contactPoint`; WebSite `BrowseAction`; event organizer slug URL; province from market context.
+  - **Semantic/CWV** — `PassportPublicCard` `headingLevel` h1 on public profiles; LCP `priority` on event cover images.
+  - **Crawl** — sitemap includes `/contact`, completed events, coordinator profiles; robots blocks `/signup`, `/suggestions`.
+- **Verify:** View source on `/`, `/contact`, `/events/{id}` — canonical, `og:locale=en_CA`, single title suffix; Rich Results Test on event page.
+- **Next:** Commit + deploy; set `NEXT_PUBLIC_TWITTER_SITE` in Vercel if brand handle available.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.

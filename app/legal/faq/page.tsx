@@ -5,7 +5,7 @@ import { buildFaqPageJsonLd } from '@/lib/seo/faq-json-ld'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
-  title: 'FAQ — Popup Hub',
+  title: 'FAQ',
   description:
     'Frequently asked questions about discovering markets, vending, and hosting events on Popup Hub.',
   path: '/legal/faq',

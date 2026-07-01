@@ -88,6 +88,15 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/about',
+        destination: '/legal/about',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

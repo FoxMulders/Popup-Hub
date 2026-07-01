@@ -10,6 +10,7 @@ interface PassportPublicCardProps {
   subtitle?: string
   className?: string
   children?: React.ReactNode
+  headingLevel?: 'h1' | 'h2'
 }
 
 export function PassportPublicCard({
@@ -20,6 +21,7 @@ export function PassportPublicCard({
   subtitle,
   className,
   children,
+  headingLevel = 'h2',
 }: PassportPublicCardProps) {
   const links = getPassportSocialLinks(
     passport
@@ -39,6 +41,7 @@ export function PassportPublicCard({
       .join('')
       .toUpperCase()
       .slice(0, 2)
+  const HeadingTag = headingLevel
 
   return (
     <div className={cn('rounded-2xl border bg-white p-6 shadow-sm space-y-4', className)}>
@@ -47,7 +50,7 @@ export function PassportPublicCard({
       <div className="flex items-start gap-4">
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border bg-canvas">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-harvest-100 text-lg font-bold text-harvest-700">
               {initials}
@@ -56,7 +59,7 @@ export function PassportPublicCard({
         </div>
         <div className="min-w-0 flex-1 space-y-2">
           <div>
-            <h2 className="text-2xl font-bold text-foreground truncate">{displayName}</h2>
+            <HeadingTag className="text-2xl font-bold text-foreground truncate">{displayName}</HeadingTag>
             {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
           </div>
           {passport?.bio ? (

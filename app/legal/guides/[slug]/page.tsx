@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props) {
   const guide = getSeoGuide(slug)
   if (!guide) {
     return buildPublicMetadata({
-      title: 'Guide not found — Popup Hub',
+      title: 'Guide not found',
       description: 'This guide is unavailable.',
       path: `/legal/guides/${slug}`,
       noIndex: true,
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props) {
   }
 
   return buildPublicMetadata({
-    title: `${guide.title} — Popup Hub`,
+    title: guide.title,
     description: guide.description,
     path: `/legal/guides/${guide.slug}`,
     keywords: guide.keywords,

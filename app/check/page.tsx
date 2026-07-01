@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 export const metadata = buildPublicMetadata({
-  title: 'HubGuard — Popup Hub security & fraud prevention',
+  title: 'HubGuard — security & fraud prevention',
   description:
     'Search Edmonton-area market organizers. See official links, vendor discussions, and scam alerts before you send booth fees.',
   path: '/check',

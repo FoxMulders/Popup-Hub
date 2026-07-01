@@ -17,6 +17,7 @@ type EventJsonLdInput = {
   status?: string | null
   organizerName?: string | null
   organizerId?: string | null
+  organizerSlug?: string | null
   vendorNames?: string[]
 }
 
@@ -88,12 +89,16 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
   }
 
   if (event.organizerName?.trim()) {
+    const organizerUrl = event.organizerSlug?.trim()
+      ? publicAppUrl(`/organizers/${event.organizerSlug.trim()}`)
+      : event.organizerId
+        ? publicAppUrl(`/coordinators/${event.organizerId}`)
+        : undefined
+
     jsonLd.organizer = {
       '@type': 'Organization',
       name: event.organizerName.trim(),
-      ...(event.organizerId
-        ? { url: publicAppUrl(`/coordinators/${event.organizerId}`) }
-        : {}),
+      ...(organizerUrl ? { url: organizerUrl } : {}),
     }
   }
 

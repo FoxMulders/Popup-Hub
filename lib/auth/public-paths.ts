@@ -43,6 +43,7 @@ export function isPublicPath(pathname: string): boolean {
     pathname === '/api/build-info' ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/legal/') ||
+    pathname === '/contact' ||
     pathname.startsWith('/wallet/door')
   )
 }
