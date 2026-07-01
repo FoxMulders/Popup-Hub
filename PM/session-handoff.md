@@ -5,7 +5,7 @@
 ## Active work — Blueprint Studio small-screen matrix guard (PR automation)
 - **Persona:** Coordinator · HubGrid / Blueprint Studio dual-screen Booth Matrix (`/coordinator/studio/ledger`).
 - **Goal:** QA scan layout/dashboard Blueprint Studio views and ensure small screens either use the shared desktop-required guard or render the floor-plan matrix regression warning.
-- **Baseline:** branch `cursor/blueprint-layout-responsiveness-cc5b` @ `430097cf`; base task triggered from PR #172 context (`cursor/conversion-engine-mvp-d6a9` @ `a7f5e171`). No production deploy from this QA branch.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-cc5b` @ latest pushed `HEAD` (implementation through `c7dbd93c`, handoff included); base task triggered from PR #172 context (`cursor/conversion-engine-mvp-d6a9` @ `a7f5e171`). No production deploy from this QA branch.
 - **Shipped:**
   - `components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx` — reusable client guard with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`, 1024px × 550px breaker, alert UI, and `data-testid="floor-plan-matrix-small-screen-warning"`.
   - `components/coordinator/dashboard/dashboard-ledger-window-client.tsx` — wraps presenter/wall-cast matrix UI in the guard so BroadcastChannel subscriptions and table rows mount only after a desktop-sized viewport is confirmed.
