@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fixes (PR pending @ `b460b96d`)
+- **Trigger:** Post-merge investigation after PR #166 handoff (`bdf59266`).
+- **Found 4 critical bugs still on master** (prior fix `a9ebc720` never merged):
+  1. **Publish-assist RLS no-op** — admin approve/reject used `createServiceClient()` (cookie-bound JWT); migration 134 has no admin UPDATE policy → status never updates.
+  2. **`is_test` catalog leak** — discover/vendor/widget/event surfaces listed QA scenario markets publicly.
+  3. **Native OAuth session loss** — `CapacitorInit` used `router.push` for `/api/auth/callback`; Set-Cookie dropped on RSC fetch.
+  4. **SEO title template regression** — `buildPublicMetadata()` spread overwrote `title.template` in root layout.
+- **Fix branch:** `cursor/critical-bug-investigation-dcf9` @ `b460b96d` (cherry-pick of `a9ebc720` + tests).
+- **Validation:** `npx tsx lib/queries/public-market-catalog.test.ts` passed.
+- **Next:** Merge PR, deploy prod, smoke-test native OAuth + admin publish-assist queue.
+
 ## Active work — Popup Hub-only market copy (merged `6675bd95`, prod deploy pending)
 - **Persona:** Patron · marketing homepage · city SEO landing pages (`/markets/[city]`).
 - **Goal:** Reword city cards and guides so copy reflects Popup Hub–published markets only, not general area listings.
