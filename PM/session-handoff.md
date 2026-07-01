@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Mobile shopper footer below bottom nav (local)
+- **Persona:** Patron · Discover / Favorites / Profile · mobile shell.
+- **Goal:** Remove the separate footer bar above the bottom nav; show About Us + copyright below Discover/Favorites/Profile tabs.
+- **Shipped (branch `cursor/mobile-footer-below-nav-2287`):**
+  - **`shopper-bottom-nav.tsx`** — legal strip (About Us link, Popup Hub + copyright, build metadata) below tab row.
+  - **`globals.css`** — hide `.popup-hub-chrome-footer` when `data-mobile-bottom-nav=shopper`; `--shopper-bottom-chrome-height` for main padding.
+  - **`shopper-shell-client.tsx`**, **`profile-form.tsx`** — padding/sticky offsets use new chrome height.
+- **Verify:** Mobile `/discover` — no footer bar above tabs; About Us + copyright visible below nav; desktop footer unchanged.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
