@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Mobile hamburger inline with portal role tabs (local `ccff43f1`, PR pending)
+- **Persona:** Patron · main page (`/`) and browse shell · mobile multi-portal users.
+- **Goal:** Move the hamburger menu onto the same row as Patron/Vendor/Coordinator portal tabs (not floating on the logo row).
+- **Shipped (branch `cursor/hamburger-inline-role-buttons-850d` @ `ccff43f1`):**
+  - **`shopper-top-bar.tsx`** — stacked mobile header: logo row is logo-only; portal tabs + hamburger share the second row (`flex` with tabs centered, menu flush right).
+  - **`app-nav.tsx`** — same mobile stacked pattern; desktop stacked layout unchanged (avatar/actions stay on logo row).
+- **Verify:** Signed-in user with 2+ portals on iPhone — `/` and `/discover` show hamburger vertically aligned with role tabs, not beside the logo.
+- **Next:** Merge PR; deploy web when credentials available.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
