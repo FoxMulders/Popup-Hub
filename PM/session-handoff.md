@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (Conversion Engine RLS + CI seed)
+- **Persona:** Coordinator · Conversion Engine · CI ops.
+- **Goal:** Fix high-severity bugs in conversion engine MVP and ops pipeline on `master` @ `4a245eb2`.
+- **Shipped (branch `cursor/critical-bug-investigation-e16b`, PR pending):**
+  - **track-click / upgrade-to-native** — `createAdminClient()` bypasses `ad_clicks_log` INSERT RLS (`WITH CHECK (false)`) and ensures native migration writes succeed under cookie-bound SSR.
+  - **seed-external-listing-market.ts** — removed fallback to most recent event when QA name not found (prevents CI from flagging a live production market as external listing).
+  - **Test** — `lib/markets/ad-click-tracking.test.ts` locks RLS error propagation + duplicate dedupe.
+- **Smoke-test:** `npx tsx lib/markets/ad-click-tracking.test.ts`; `npx tsx scripts/verify-conversion-engine.ts`.
+- **Next:** Merge PR; re-run Conversion Engine Ops workflow after secrets configured.
+
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
 - **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.
