@@ -2,6 +2,11 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (automation, `abca5b26`)
+- **Scope:** Push to `master` @ `abca5b264a515fd1f1f8876ac49ddda3a897c1cc` (PR #162 — Edmonton/Calgary filter/link removal) plus adjacent commits (`248f5249` mobile header, `a79f75e6` venue publish gate).
+- **Result:** No critical bugs found. Changes are intentional UI/nav removals; no data-loss, auth bypass, crash, or write-race paths identified.
+- **Note (non-critical):** Mobile multi-portal `AppNav` hides `NavBackButton` on stacked header while `SiteAppShell` omits `PageBackBar` when `availablePortals.length > 1` — swipe-back still available via `SwipeBackHandler`.
+
 ## Active work — Remove Edmonton/Calgary area buttons and city links (shipped locally)
 - **Persona:** Patron · Discover map (`/discover`) · Vendor market browse · site footer · SEO guides.
 - **Goal:** Remove Edmonton/Calgary area quick-picks and city-specific market/vendor-application navigation links.
