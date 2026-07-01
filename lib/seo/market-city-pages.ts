@@ -22,12 +22,12 @@ function buildCitySeo(
 ): Omit<MarketCitySeoPage, keyof MarketCity | 'slug'> {
   const city = getMarketCityById(slug)
   const name = cityName(city.label)
-  const marketNoun = variants.marketNoun ?? 'makers markets'
-  const headline = `${marketNoun.charAt(0).toUpperCase() + marketNoun.slice(1)} in ${name}`
-  const description = `Find upcoming pop-up and ${marketNoun} in ${name}, Alberta — see confirmed vendors, dates, and locations on Popup Hub.`
+  const marketNoun = variants.marketNoun ?? 'Popup Hub markets'
+  const headline = `${marketNoun} in ${name}`
+  const description = `Find upcoming pop-up and makers markets published on Popup Hub in ${name}, Alberta — see confirmed vendors, dates, and locations before you visit.`
   const intro =
     variants.intro ??
-    `Plan your weekend around ${name}-area artisan markets, craft fairs, and community pop-ups. Popup Hub lists published markets with confirmed vendor counts so you know who is vending before you go.`
+    `Browse artisan markets, craft fairs, and community pop-ups hosted on Popup Hub in the ${name} area. Every listing is created by organizers on the platform, with confirmed vendor counts so you know who is vending before you go.`
 
   const keywords = [
     `${name} makers market`,
@@ -54,7 +54,7 @@ const CITY_SEO: Record<string, Omit<MarketCitySeoPage, keyof MarketCity | 'slug'
   'grande-prairie': buildCitySeo('grande-prairie'),
   'sherwood-park': buildCitySeo('sherwood-park', {
     intro:
-      'Sherwood Park and Strathcona County hosts artisan fairs and community pop-ups throughout the year. Browse published markets with confirmed vendor lineups on Popup Hub.',
+      'Browse artisan fairs and community pop-ups published on Popup Hub in Sherwood Park and Strathcona County — every listing is created by organizers on the platform, with confirmed vendor lineups.',
   }),
   'st-albert': buildCitySeo('st-albert'),
   airdrie: buildCitySeo('airdrie'),

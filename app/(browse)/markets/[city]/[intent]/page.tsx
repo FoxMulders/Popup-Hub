@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props) {
   if (!city || !intent) {
     return buildPublicMetadata({
       title: 'Markets',
-      description: 'Discover makers markets near you on Popup Hub.',
+      description: 'Discover markets published on Popup Hub near you.',
       path: `/markets/${citySlug}/${intentSlug}`,
       noIndex: true,
     })

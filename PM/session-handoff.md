@@ -2,8 +2,8 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Critical bug investigation (post SEO merge `8e2ea50`)
-- **Trigger:** Push to `master` — advanced SEO optimization merge.
+## Active work — Critical bug investigation (merging to `master`)
+- **Trigger:** Push to `master` — advanced SEO optimization merge (`8e2ea50f`).
 - **Findings (fixed on `cursor/critical-bug-investigation-5a7c`):**
   1. **Publish-assist RLS no-op** — admin approve/reject used `createServiceClient()` (cookie-bound JWT); migration 134 has no admin UPDATE policy → status never persisted. Fixed: `createAdminClient()`.
   2. **`is_test` catalog leak** — QA scenario markets visible on discover/vendor/widget/event surfaces. Fixed: `excludeTestMarkets()` helper + filters across catalog queries; vendor apply API rejects `is_test`.
@@ -12,7 +12,32 @@
 - **Tests:** `npx tsx lib/queries/public-market-catalog.test.ts` passes.
 - **Next:** Merge PR; smoke admin publish-assist approve/reject; native OAuth sign-in on TestFlight.
 
-## Active work — Advanced SEO optimization (shipped `8e2ea50`)
+## Active work — Popup Hub-only market copy (shipped `6675bd95`, PR #166)
+- **Persona:** Patron · marketing homepage · city SEO landing pages (`/markets/[city]`).
+- **Goal:** Reword city cards and guides so copy reflects Popup Hub–published markets only, not general area listings.
+- **Shipped:**
+  - `lib/seo/market-city-pages.ts` — headlines, meta descriptions, and intros emphasize organizers publishing on Popup Hub.
+  - `lib/seo/market-city-intents.ts` — vendor/weekend/artisan intent pages aligned to platform-only listings.
+  - `marketing-local-markets.tsx` — section headline/subtitle and “Also on Popup Hub in …” footer line.
+  - `market-city-landing.tsx` — listing section headers and sibling “All Popup Hub markets” link.
+  - Fallback metadata on `/markets/[city]` routes updated.
+- **Verify:** Homepage local-markets section and `/markets/edmonton` hero + cards read as Popup Hub–hosted markets only.
+
+## Active work — Advanced SEO optimization (shipped `8e2ea50f`, PR #164)
+- **Persona:** Public marketing + discover surfaces (patrons, vendors, organizers landing).
+- **Goal:** Comprehensive SEO — metadata, OG/Twitter, JSON-LD, sitemap/robots, semantic HTML, dynamic OG images.
+- **Shipped:**
+  - **Global metadata** — `lib/seo/site-config.ts`, `lib/seo/public-metadata.ts` (Twitter site/creator env, `pageTitle` helper, canonical on root); `app/layout.tsx` title template order.
+  - **Title template fix** — short page titles across ~25 public routes (no duplicate `| Popup Hub`).
+  - **Static routes** — `/contact` page + ContactPage JSON-LD; `/about` → `/legal/about` redirect in `next.config.ts`.
+  - **Dynamic metadata** — richer event keywords/OG fallback, vendor bio/logo, organizer province, `my-night` noindex.
+  - **OG images** — shared `lib/seo/og-image-template.tsx`; per-event and per-city `opengraph-image.tsx` routes.
+  - **JSON-LD** — Organization `contactPoint`; WebSite `BrowseAction`; event organizer slug URL; province from market context.
+  - **Semantic/CWV** — `PassportPublicCard` `headingLevel` h1 on public profiles; LCP `priority` on event cover images.
+  - **Crawl** — sitemap includes `/contact`, completed events, coordinator profiles; robots blocks `/signup`, `/suggestions`.
+- **Note:** Title template spread order on `app/layout.tsx` regressed in SEO merge — fixed by critical-bug investigation branch above.
+- **Verify:** View source on `/`, `/contact`, `/events/{id}` — canonical, `og:locale=en_CA`, single title suffix; Rich Results Test on event page.
+- **Next:** Set `NEXT_PUBLIC_TWITTER_SITE` in Vercel if brand handle available.
 
 ## Active work — Remove Edmonton/Calgary area buttons and city links (shipped locally)
 - **Persona:** Patron · Discover map (`/discover`) · Vendor market browse · site footer · SEO guides.
