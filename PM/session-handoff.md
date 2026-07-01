@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS ITMS-90189 redundant build (build 22 bump)
+- **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
+- **Goal:** Fix App Store Connect **ITMS-90189** (redundant binary) — build **21** / v**1.191.0** already uploaded; next upload must use a new build string.
+- **Shipped (branch `cursor/ios-build-bump-1277`):**
+  - **`build-number.json`** — `iosBuild` 13 → **22** (aligns with ASC state: build 21 consumed).
+  - **`ios/App/App.xcodeproj/project.pbxproj`** — `CURRENT_PROJECT_VERSION` **22** (App + widget targets).
+- **Next:** Merge PR → `master` push triggers **Deploy to TestFlight** workflow. Confirm ASC shows build **22** / v**1.191.0** processing (no ITMS-90189). Answer Export Compliance if prompted.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
