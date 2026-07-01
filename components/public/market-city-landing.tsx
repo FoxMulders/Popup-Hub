@@ -156,7 +156,7 @@ export function MarketCityLanding({
                 href={`/markets/${city.slug}`}
                 className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:border-forest/40 hover:text-forest"
               >
-                All {shortName} markets
+                All Popup Hub markets in {shortName}
               </Link>
             </div>
           </section>
@@ -166,11 +166,12 @@ export function MarketCityLanding({
           <div className="mx-auto max-w-6xl">
             <h2 className="text-xl font-bold text-foreground sm:text-2xl">
               {intent?.discoverWhen === 'weekend'
-                ? `Markets this weekend near ${shortName}`
-                : `Upcoming markets near ${shortName}`}
+                ? `Popup Hub markets this weekend near ${shortName}`
+                : `Upcoming Popup Hub markets near ${shortName}`}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Published markets within 50 km — confirmed vendor counts shown on each listing.
+              Markets published on Popup Hub within 50 km — confirmed vendor counts shown on each
+              listing.
             </p>
 
             {nearby.length > 0 ? (
