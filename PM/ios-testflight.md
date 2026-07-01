@@ -74,7 +74,7 @@ In Xcode (**App** target):
 
 Processing in App Store Connect usually takes 5–30 minutes.
 
-**iOS build counter:** `build-number.json` → `iosBuild` (independent from the web `build` counter). `npm run mobile:assets` syncs `CURRENT_PROJECT_VERSION` from `iosBuild` and `MARKETING_VERSION` from `package.json`. Bump `iosBuild` before each TestFlight upload if App Store Connect rejects a duplicate build.
+**iOS build counter:** `build-number.json` → `iosBuild` (independent from the web `build` counter). The **Deploy to TestFlight** workflow auto-increments `iosBuild` before each archive (`scripts/bump-ios-build.mjs`), syncs `CURRENT_PROJECT_VERSION` via `mobile:assets`, and commits the new value back to `master` after a successful upload (`[skip ci]` avoids a deploy loop). For manual Mac archives, bump `iosBuild` yourself before uploading if App Store Connect rejects a duplicate build (ITMS-90189).
 
 ## 5. TestFlight — internal testing
 

@@ -8,6 +8,7 @@
 - **Shipped:**
   - **`build-number.json`** — `iosBuild` 13 → **25** (ASC already consumed builds through **24** for this marketing version).
   - **`ios/App/App.xcodeproj/project.pbxproj`** — `CURRENT_PROJECT_VERSION` synced to **25** (App + widget targets).
+  - **`scripts/bump-ios-build.mjs`** + **`.github/workflows/deploy.yml`** — CI auto-increments `iosBuild` before each TestFlight archive and commits the new value to `master` after successful upload (`[skip ci]`).
 - **Verify:** Re-run **Deploy to TestFlight** workflow on `master` after merge; App Store Connect should accept build **25** / v**1.191.0** without ITMS-90189.
 - **Next:** Confirm TestFlight processing; device smoke tests (`PM/ios-testflight.md` §5).
 

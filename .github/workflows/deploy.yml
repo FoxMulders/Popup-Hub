@@ -8,6 +8,8 @@ on:
 jobs:
   deploy:
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -273,6 +275,7 @@ jobs:
       - name: Build Web App and Sync Capacitor
         run: |
           npm run build
+          node scripts/bump-ios-build.mjs
           npm run assets:logo
           npm run mobile:assets
           npx cap sync ios
@@ -343,3 +346,18 @@ jobs:
                      -authenticationKeyPath "$ASC_KEY_PATH" \
                      -authenticationKeyID "$ASC_KEY_ID" \
                      -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Record iosBuild on master
+        if: success()
+        run: |
+          set -euo pipefail
+          IOS_BUILD=$(node -p "require('./build-number.json').iosBuild")
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add build-number.json ios/App/App.xcodeproj/project.pbxproj
+          if git diff --staged --quiet; then
+            echo "No iosBuild changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(ios): record iosBuild ${IOS_BUILD} after TestFlight upload [skip ci]"
+          git push origin HEAD:master
