@@ -1,32 +1,52 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import { Monitor } from 'lucide-react'
 import {
   FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX,
   FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX,
   isPocketSizedViewport,
-  useFloorPlanViewportDimensions,
 } from '@/hooks/use-floor-plan-viewport-tier'
 
 export const FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING =
   'The floor plan matrix is not optimized for small screens. Use a desktop-sized display to review or present booth assignments.'
 
+const SERVER_VIEWPORT_SNAPSHOT = 'server'
+
+function subscribeViewportChanges(onStoreChange: () => void) {
+  window.addEventListener('resize', onStoreChange)
+  window.addEventListener('orientationchange', onStoreChange)
+  return () => {
+    window.removeEventListener('resize', onStoreChange)
+    window.removeEventListener('orientationchange', onStoreChange)
+  }
+}
+
+function getViewportSnapshot() {
+  if (typeof window === 'undefined') return SERVER_VIEWPORT_SNAPSHOT
+  return `${window.innerWidth}x${window.innerHeight}`
+}
+
+function getServerViewportSnapshot() {
+  return SERVER_VIEWPORT_SNAPSHOT
+}
+
 export function DashboardLedgerViewportGuard({ children }: { children: ReactNode }) {
-  const { width, height } = useFloorPlanViewportDimensions()
-  const [hydrated, setHydrated] = useState(false)
+  const viewportSnapshot = useSyncExternalStore(
+    subscribeViewportChanges,
+    getViewportSnapshot,
+    getServerViewportSnapshot
+  )
 
-  useEffect(() => {
-    setHydrated(true)
-  }, [])
-
-  if (!hydrated) {
+  if (viewportSnapshot === SERVER_VIEWPORT_SNAPSHOT) {
     return (
       <div className="flex h-full min-h-screen items-center justify-center bg-stone-50 p-6 text-sm text-stone-600">
         Checking screen size…
       </div>
     )
   }
+
+  const [width, height] = viewportSnapshot.split('x').map(Number)
 
   if (isPocketSizedViewport(width, height)) {
     return (
