@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Mobile shopper bottom nav pin fix (branch `cursor/fix-bottom-nav-pin-7dea`)
+- **Persona:** Patron · Discover / Favorites / Profile · mobile Safari / Capacitor.
+- **Goal:** Restore Discover/Favorites/Profile tab bar pinned to the viewport bottom (was scrolling with page content on WebKit).
+- **Root cause:** `overflow-x-hidden` on `.site-app-shell` forces `overflow-y: auto`, creating a scroll container that breaks `position: fixed` for in-shell bottom nav on iOS.
+- **Shipped:**
+  - **`shopper-bottom-nav.tsx`**, **`vendor-bottom-nav.tsx`** — portal mobile tab bars to `document.body`.
+  - **`shopper-shell-client.tsx`**, **`site-app-shell.tsx`** — `overflow-x-clip` instead of `overflow-x-hidden`.
+  - **`globals.css`** — explicit fixed chrome rule; shell horizontal clip without scroll-container side effect.
+  - **`patron-mobile-chrome.spec.ts`** — asserts nav stays viewport-bottom after scroll and is portaled to body.
+- **Verify:** Mobile `/discover` — scroll through empty state; tab bar remains at screen bottom. iPhone Safari + Capacitor smoke.
+
 ## Active work — Popup Hub-only market copy (merged `6675bd95`, prod deploy pending)
 - **Persona:** Patron · marketing homepage · city SEO landing pages (`/markets/[city]`).
 - **Goal:** Reword city cards and guides so copy reflects Popup Hub–published markets only, not general area listings.
