@@ -740,8 +740,9 @@
   - **Layout guardrails:** `lib/floor-plan/layout-guardrails/` — heat-proximity melt zones, category cluster alerts, **outdoor open-lot exposure** (vendor booths outside room polygons on outdoor venues advised to move inside). HubGrid legend panel, orange tint, heat-source overlays, auto-arrange soft penalty.
   - **Booth sign:** `/events/[id]/vendors/[vendorId]` public profile page; `/vendor/events/[id]/booth-sign` print page; `VendorBoothSignPoster` + vendor applications entry point. Stable HTTPS QR (no expiry). Stamp QR unchanged.
   - **Offline ops:** `lib/pwa/coordinator-ops-offline.ts` IndexedDB snapshot + mutation queue; `POST /api/coordinator/events/[id]/ops-sync`; `useCoordinatorOpsSync` + Market Day offline banner; check-in + live ops wired through queue; SW `coordinator-ops-sync` background flush tag.
-- **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
-- **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
+  - **Bug fix (branch `cursor/critical-bug-investigation-35ef`):** `commitCoordinatorMutation` no longer reports `synced` when a *different* queued mutation applied in the same flush batch — prevents silent data loss on check-in/payment when stale queue items sync first. Per-event flush lock avoids duplicate concurrent sync POSTs.
+- **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Merge bug-fix PR; commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
 - **Goal:** Fix GitHub Actions TestFlight pipeline — archive/export to TestFlight via automatic signing + ASC API key (attempt #47 pushed).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
