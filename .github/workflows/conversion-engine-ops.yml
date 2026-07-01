@@ -20,10 +20,19 @@ on:
         required: false
         type: string
         default: Market Test 3
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/conversion-engine-ops.yml'
+      - 'supabase/migrations/136_conversion_engine_external_listing.sql'
+      - 'scripts/seed-external-listing-market.ts'
+      - 'scripts/verify-conversion-engine.ts'
 
 jobs:
   ops:
     runs-on: ubuntu-latest
+    env:
+      EVENT_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.event_name || 'Market Test 3' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +47,7 @@ jobs:
         run: npm ci
 
       - name: Supabase login
-        if: inputs.run_db_push == true
+        if: github.event_name != 'workflow_dispatch' || inputs.run_db_push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -49,7 +58,7 @@ jobs:
           npx supabase login --token "$SUPABASE_ACCESS_TOKEN"
 
       - name: Link Supabase project
-        if: inputs.run_db_push == true
+        if: github.event_name != 'workflow_dispatch' || inputs.run_db_push
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
@@ -60,16 +69,16 @@ jobs:
           npx supabase link --project-ref ensbggtbgabogvynqsqt --password "$SUPABASE_DB_PASSWORD"
 
       - name: Push migrations
-        if: inputs.run_db_push == true
+        if: github.event_name != 'workflow_dispatch' || inputs.run_db_push
         run: npm run db:push
 
       - name: Seed external listing test market
-        if: inputs.run_seed == true
+        if: github.event_name != 'workflow_dispatch' || inputs.run_seed
         id: seed
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          CONVERSION_ENGINE_EVENT_NAME: ${{ inputs.event_name }}
+          CONVERSION_ENGINE_EVENT_NAME: ${{ env.EVENT_NAME }}
         run: |
           if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
             echo "::error::Supabase URL/service role secrets are required for seeding"
@@ -85,7 +94,7 @@ jobs:
           echo "event_id=$EVENT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Verify conversion engine
-        if: inputs.run_seed == true
+        if: (github.event_name != 'workflow_dispatch' || inputs.run_seed) && steps.seed.outputs.event_id != ''
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -94,7 +103,7 @@ jobs:
         run: npx tsx scripts/verify-conversion-engine.ts --live
 
       - name: Deploy Vercel production
-        if: inputs.run_vercel_deploy == true
+        if: github.event_name != 'workflow_dispatch' || inputs.run_vercel_deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -105,3 +114,9 @@ jobs:
             exit 1
           fi
           npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: Summary
+        if: always() && steps.seed.outputs.event_id != ''
+        run: |
+          echo "Conversion Engine QA event: ${{ steps.seed.outputs.event_id }}"
+          echo "Studio URL: https://popuphub.ca/coordinator/studio?event=${{ steps.seed.outputs.event_id }}"
