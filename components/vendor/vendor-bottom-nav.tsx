@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ClipboardList, Home, Store, Ticket, User } from 'lucide-react'
@@ -21,7 +22,12 @@ interface VendorBottomNavProps {
 
 export function VendorBottomNav({ hide }: VendorBottomNavProps) {
   const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
   const visible = !hide && pathname.startsWith('/vendor')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!visible) return
@@ -31,11 +37,11 @@ export function VendorBottomNav({ hide }: VendorBottomNavProps) {
     }
   }, [visible])
 
-  if (!visible) return null
+  if (!visible || !mounted) return null
 
-  return (
+  return createPortal(
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t-2 border-stone-200 bg-cream/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
+      className="vendor-bottom-chrome fixed inset-x-0 bottom-0 z-50 border-t-2 border-stone-200 bg-cream/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
       aria-label="Vendor navigation"
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
@@ -59,6 +65,7 @@ export function VendorBottomNav({ hide }: VendorBottomNavProps) {
           )
         })}
       </div>
-    </nav>
+    </nav>,
+    document.body
   )
 }

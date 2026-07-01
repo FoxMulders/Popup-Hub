@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Compass, Heart, User } from 'lucide-react'
@@ -18,7 +19,12 @@ interface ShopperBottomNavProps {
 
 export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
   const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
   const visible = !hide && !pathname.startsWith('/auctions/')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!visible) return
@@ -28,11 +34,11 @@ export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
     }
   }, [visible])
 
-  if (!visible) return null
+  if (!visible || !mounted) return null
 
-  return (
+  return createPortal(
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t-2 border-stone-200 bg-cream/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
+      className="shopper-bottom-chrome fixed inset-x-0 bottom-0 z-50 border-t-2 border-stone-200 bg-cream/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
       aria-label="Shopper navigation"
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
@@ -53,6 +59,7 @@ export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
           )
         })}
       </div>
-    </nav>
+    </nav>,
+    document.body
   )
 }
