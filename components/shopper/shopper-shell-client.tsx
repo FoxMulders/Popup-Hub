@@ -26,7 +26,7 @@ function ShopperShellInner({
   const { open } = useFeatureRequest()
 
   return (
-    <div className="site-app-shell market-page site-surface flex min-h-0 flex-1 flex-col max-w-full overflow-x-hidden">
+    <div className="site-app-shell market-page site-surface flex min-h-0 flex-1 flex-col max-w-full overflow-x-clip">
       <SwipeBackHandler />
       <ShopperTopBar
         profile={profile}
@@ -37,7 +37,7 @@ function ShopperShellInner({
       <PageBackBar />
       <main
         id="site-main"
-        className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+        className="site-main-gutter w-full max-w-full overflow-x-clip pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
       >
         {children}
       </main>
@@ -55,7 +55,7 @@ export function ShopperShellClient({
 }: ShopperShellClientProps) {
   if (!profile) {
     return (
-      <div className="site-app-shell market-page site-surface flex min-h-0 flex-1 flex-col max-w-full overflow-x-hidden">
+      <div className="site-app-shell market-page site-surface flex min-h-0 flex-1 flex-col max-w-full overflow-x-clip">
         <SwipeBackHandler />
         <ShopperTopBar
           profile={profile}
@@ -65,7 +65,7 @@ export function ShopperShellClient({
         <PageBackBar />
         <main
           id="site-main"
-          className="site-main-gutter w-full max-w-full overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+          className="site-main-gutter w-full max-w-full overflow-x-clip pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
         >
           {children}
         </main>

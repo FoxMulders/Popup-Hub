@@ -250,6 +250,24 @@
     @apply min-h-0;
   }
 
+  /*
+   * Patron/vendor mobile bottom nav is portaled to <body>. Keep horizontal
+   * clipping without overflow-x:hidden — that pairing forces overflow-y:auto
+   * and breaks position:fixed inside WebKit scroll containers.
+   */
+  .site-app-shell {
+    overflow-x: clip;
+  }
+
+  @media (max-width: 767px) {
+    :is(.shopper-bottom-chrome, .vendor-bottom-chrome) {
+      position: fixed;
+      inset-inline: 0;
+      bottom: 0;
+      z-index: 50;
+    }
+  }
+
   .site-main-gutter {
     --page-gutter: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-left: var(--page-gutter);

@@ -38,7 +38,7 @@ export function SiteAppShell({
     >
       <div
         className={cn(
-          'market-page site-app-shell site-surface flex max-w-full flex-col overflow-x-hidden',
+          'market-page site-app-shell site-surface flex max-w-full flex-col overflow-x-clip',
           viewportFill ? 'h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden' : 'min-h-0 flex-1'
         )}
       >
@@ -56,7 +56,7 @@ export function SiteAppShell({
             viewportFill
               ? 'min-h-0 flex-1 overflow-hidden'
               : cn(
-                  'site-main-gutter w-full max-w-full overflow-x-hidden',
+                  'site-main-gutter w-full max-w-full overflow-x-clip',
                   vendorPortal &&
                     'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0'
                 )
