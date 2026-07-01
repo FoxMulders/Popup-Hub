@@ -5,14 +5,15 @@
 ## Active work - Blueprint layout responsiveness QA (shipping)
 - **Persona:** Coordinator - HubGrid / Blueprint Studio, Allocation Ledger, and standalone spatial layout editor.
 - **Goal:** Verify Blueprint Studio and matrix surfaces have a defensive small-screen handler, then patch missing surfaces with the desktop-size breaker / matrix regression message.
-- **Baseline:** branch `cursor/blueprint-layout-responsiveness-a2af`; starting `HEAD` @ `16ffd07f` (`chore(ios): record iosBuild 29 after TestFlight upload [skip ci]`).
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-a2af`; starting `HEAD` @ `16ffd07f` (`chore(ios): record iosBuild 29 after TestFlight upload [skip ci]`). Code commit `817c9724` pushed to `origin/cursor/blueprint-layout-responsiveness-a2af`.
 - **Shipped:**
   - `components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx` - new client guard with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` ("The floor plan matrix is not optimized for small screens. Recommended layout: desktop size.") and a 1024px x 550px minimum viewport note.
   - `app/coordinator/studio/ledger/page.tsx` - wraps `DashboardLedgerWindowClient` so Presenter / Wall Cast booth matrix views render the regression warning instead of the matrix on pocket-sized viewports.
   - `components/coordinator/spatial-layout/spatial-layout-editor.tsx` - wraps the full spatial editor with `FloorPlanViewportLayoutProvider`, renders `DesktopScreenRequiredOverlay`, and suppresses `FloorPlanV2` when `showDesktopRequired` is true; also fixed the existing save callback hook dependency list.
 - **Already covered by audit:** `/coordinator/studio` HubGrid canvas + in-tab ledger (via `DashboardBootstrapQa`) and setup wizard Step 3 (via `WizardStepFloorPlan`) already use the viewport provider / desktop-required overlay.
 - **Verify:** `npx eslint "app/coordinator/studio/ledger/page.tsx" "components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx" "components/coordinator/spatial-layout/spatial-layout-editor.tsx"` passes; `./node_modules/.bin/tsc --noEmit --pretty false` passes.
-- **Blockers / next:** Production deploy not run yet in this cloud session. If deploying from an authenticated machine, verify `/coordinator/studio/ledger?screen=presenter` and `/coordinator/events/{id}/layout` at widths below 1024px or heights below 550px show the warning/overlay and do not expose the matrix/canvas.
+- **Prod/deploy status:** `git push -u origin cursor/blueprint-layout-responsiveness-a2af` succeeded. `npx vercel deploy --prod --yes` was attempted from cloud, but Vercel CLI had no credentials and entered device-login flow; deploy stopped as auth-blocked.
+- **Blockers / next:** Run `npx vercel deploy --prod --yes` from an authenticated machine. Then verify `/coordinator/studio/ledger?screen=presenter` and `/coordinator/events/{id}/layout` at widths below 1024px or heights below 550px show the warning/overlay and do not expose the matrix/canvas.
 
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
