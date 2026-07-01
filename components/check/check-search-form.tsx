@@ -5,6 +5,7 @@ import { FormEvent, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { resetScrollToTop } from '@/lib/navigation/scroll-to-top'
 
 type Props = {
   initialQuery: string
@@ -20,7 +21,8 @@ export function CheckSearchForm({ initialQuery, region }: Props) {
     const params = new URLSearchParams()
     if (query.trim()) params.set('q', query.trim())
     if (region) params.set('region', region)
-    router.push(`/check?${params.toString()}`)
+    resetScrollToTop()
+    router.push(`/check?${params.toString()}`, { scroll: false })
   }
 
   return (
