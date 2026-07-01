@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MapPin, Globe, ShoppingBag } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { excludeTestMarkets } from '@/lib/queries/public-market-catalog'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
@@ -67,12 +68,13 @@ export default async function PublicVendorProfilePage({ params }: Props) {
   const supabase = await createClient()
 
   const [{ data: event }, { data: application }, { data: auth }] = await Promise.all([
-    supabase
-      .from('events')
-      .select('id, name, status')
-      .eq('id', eventId)
-      .in('status', ['published', 'active', 'completed'])
-      .maybeSingle(),
+    excludeTestMarkets(
+      supabase
+        .from('events')
+        .select('id, name, status')
+        .eq('id', eventId)
+        .in('status', ['published', 'active', 'completed'])
+    ).maybeSingle(),
     supabase
       .from('booth_applications')
       .select(`
