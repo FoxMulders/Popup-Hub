@@ -155,8 +155,6 @@ export const SEO_GUIDES: SeoGuide[] = [
     relatedLinks: [
       { href: '/for-vendors', label: 'Vendor passport' },
       { href: '/check', label: 'HubGuard organizer search' },
-      { href: '/markets/edmonton/vendor-applications', label: 'Edmonton vendor applications' },
-      { href: '/markets/calgary/vendor-applications', label: 'Calgary vendor applications' },
     ],
   },
   {
@@ -245,8 +243,6 @@ export const SEO_GUIDES: SeoGuide[] = [
     ],
     relatedLinks: [
       { href: '/discover', label: 'Discover markets' },
-      { href: '/markets/edmonton', label: 'Edmonton markets' },
-      { href: '/markets/calgary', label: 'Calgary markets' },
     ],
   },
   {

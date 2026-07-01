@@ -24,13 +24,6 @@ const FALLBACK_PRESET_LABEL: Record<DateFilterPreset, string> = {
   custom: 'Pick another date',
 }
 
-const CITY_LINKS = [
-  { href: '/markets/edmonton', label: 'Edmonton markets' },
-  { href: '/markets/calgary', label: 'Calgary markets' },
-  { href: '/markets/edmonton/vendor-applications', label: 'Edmonton vendor applications' },
-  { href: '/markets/calgary/vendor-applications', label: 'Calgary vendor applications' },
-] as const
-
 interface DiscoverEmptyStateProps {
   liveAuctionsOnly: boolean
   datePreset: DateFilterPreset
@@ -90,7 +83,7 @@ export function DiscoverEmptyState({
         </p>
       ) : !compact ? (
         <p className="mt-2 text-sm text-muted-foreground">
-          Try a broader date, browse Alberta city guides, or explore open vendor applications.
+          Try a broader date or widen your search.
         </p>
       ) : null}
       <div
@@ -155,19 +148,6 @@ export function DiscoverEmptyState({
           </Button>
         ) : null}
       </div>
-      {!compact ? (
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
-          {CITY_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="font-medium text-forest hover:underline underline-offset-2"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      ) : null}
       <div
         className={cn(
           'flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm',

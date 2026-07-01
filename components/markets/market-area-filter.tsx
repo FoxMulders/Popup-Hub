@@ -17,11 +17,6 @@ interface MarketAreaFilterProps {
   variant?: 'default' | 'vendor'
 }
 
-const QUICK_CITY_CENTERS = [
-  { label: 'Edmonton area', lat: 53.5461, lng: -113.4938 },
-  { label: 'Calgary area', lat: 51.0447, lng: -114.0719 },
-] as const
-
 export function MarketAreaFilter({
   radiusKm,
   onRadiusChange,
@@ -73,18 +68,6 @@ export function MarketAreaFilter({
             )}
             Use my location
           </Button>
-          {QUICK_CITY_CENTERS.map((city) => (
-            <Button
-              key={city.label}
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-10"
-              onClick={() => onAddressSelect(city.lat, city.lng, city.label)}
-            >
-              {city.label}
-            </Button>
-          ))}
         </div>
         <p className="inline-flex items-center gap-1 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
