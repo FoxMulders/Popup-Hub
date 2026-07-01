@@ -14,6 +14,17 @@
 - **Ops automation:** `scripts/seed-external-listing-market.ts`, `scripts/verify-conversion-engine.ts`, GitHub Actions `conversion-engine-ops.yml` (workflow_dispatch: db push, seed, Vercel prod).
 - **Prod status (Jul 1 2026):** popuphub.ca build still `45dad9f` — run Conversion Engine Ops workflow or `PM/Deploy-popuphub.bat` after migration.
 
+## Active work — Blueprint Studio responsive guard QA
+- **Persona:** Coordinator · Blueprint Studio / HubGrid Allocation Ledger / event layout editor.
+- **Goal:** Ensure dashboard/layout floor-plan surfaces either block undersized viewports or render the designated Booth Matrix small-screen regression warning.
+- **Baseline:** branch `cursor/layout-mobile-responsiveness-4ca7`; prior `HEAD` @ `d21430d8` before this QA patch.
+- **Shipped:**
+  - Added `DashboardLedgerViewportGuard` with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` and the shared 1024px x 550px floor-plan breakpoint.
+  - Wrapped `/coordinator/studio/ledger` and the in-app `DashboardAllocationLedger` so dense Booth Matrix tables are replaced by the warning on pocket-sized viewports.
+  - Wrapped the standalone event layout editor, plus included `src/qa_review` spatial/wizard mirrors, with `FloorPlanViewportLayoutProvider` and `DesktopScreenRequiredOverlay`; canvas mounts are skipped while the desktop-required overlay is active.
+- **Verify:** `npx eslint app/coordinator/studio/ledger/page.tsx components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx components/coordinator/dashboard/dashboard-allocation-ledger.tsx components/coordinator/spatial-layout/spatial-layout-editor.tsx src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa.tsx src/qa_review/components/coordinator/wizard/wizard-step-floor-plan_qa.tsx`; `npx tsc --noEmit --pretty false`.
+- **Next:** Browser-smoke `/coordinator/studio?view=ledger` and `/coordinator/studio/ledger` below/above 1024px x 550px when authenticated coordinator data is available.
+
 ## Active work — iOS ITMS-90189 redundant build (build 26 / v1.191.0) — TestFlight uploaded
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
 - **Goal:** Fix App Store Connect **ITMS-90189** — build **24** already uploaded for v**1.191.0**; increment `CFBundleVersion` before re-upload.
