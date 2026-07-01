@@ -66,7 +66,7 @@ In Xcode (**App** target):
 | Display Name | Popup Hub |
 | Bundle Identifier | `ca.popuphub.app` |
 | Version | `1.184.0` (match `package.json`; auto-synced via `mobile:assets`) |
-| Build | increment each upload via `build-number.json` → `iosBuild` (e.g. `12`; independent from web build counter) |
+| Build | increment each upload via `build-number.json` → `iosBuild` (e.g. `25`; independent from web build counter) |
 | Signing | Automatic + correct Team |
 | Deployment Target | iOS 15+ (Capacitor 7 default) |
 
