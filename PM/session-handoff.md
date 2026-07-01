@@ -2,15 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — iOS ITMS-90189 redundant build (build 25 / v1.191.0)
+## Active work — iOS ITMS-90189 redundant build (build 26 / v1.191.0) — TestFlight uploaded
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
 - **Goal:** Fix App Store Connect **ITMS-90189** — build **24** already uploaded for v**1.191.0**; increment `CFBundleVersion` before re-upload.
-- **Shipped:**
-  - **`build-number.json`** — `iosBuild` 13 → **25** (ASC already consumed builds through **24** for this marketing version).
-  - **`ios/App/App.xcodeproj/project.pbxproj`** — `CURRENT_PROJECT_VERSION` synced to **25** (App + widget targets).
-  - **`scripts/bump-ios-build.mjs`** + **`.github/workflows/deploy.yml`** — CI auto-increments `iosBuild` before each TestFlight archive and commits the new value to `master` after successful upload (`[skip ci]`).
-- **Verify:** Re-run **Deploy to TestFlight** workflow on `master` after merge; App Store Connect should accept build **25** / v**1.191.0** without ITMS-90189.
-- **Next:** Confirm TestFlight processing; device smoke tests (`PM/ios-testflight.md` §5).
+- **Shipped (merged PR #170 @ `0a077d58`):**
+  - **`build-number.json`** — `iosBuild` 13 → **25** (manual catch-up); CI auto-bumped to **26** on deploy.
+  - **`ios/App/App.xcodeproj/project.pbxproj`** — `CURRENT_PROJECT_VERSION` synced to **26** (App + widget).
+  - **`scripts/bump-ios-build.mjs`** + **`.github/workflows/deploy.yml`** — CI auto-increments `iosBuild` before archive; commits back to `master` after upload (`[skip ci]`).
+- **TestFlight:** **Deploy to TestFlight** run https://github.com/FoxMulders/Popup-Hub/actions/runs/28525792845 — **SUCCESS**; uploaded build **26** / v**1.191.0**; `master` @ `6dc367ab` records `iosBuild: 26`.
+- **Verify:** App Store Connect → TestFlight → build **26** / v**1.191.0** processing (no ITMS-90189). Answer Export Compliance when prompted.
+- **Web prod:** Pending — `vercel.json` disables git deploy; cloud agent has no Vercel credentials. Run `npx vercel deploy --prod --yes` from authenticated machine.
 
 ## Active work — Popup Hub-only market copy (merged `6675bd95`, prod deploy pending)
 - **Persona:** Patron · marketing homepage · city SEO landing pages (`/markets/[city]`).
