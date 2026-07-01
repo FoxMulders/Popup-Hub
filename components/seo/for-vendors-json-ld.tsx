@@ -11,7 +11,7 @@ export function ForVendorsJsonLd() {
         {
           '@context': 'https://schema.org',
           '@type': 'WebPage',
-          name: 'Vendor Market Application — Popup Hub',
+          name: 'Vendor Market Application',
           description: VENDORS_PAGE_DESCRIPTION,
           url: pageUrl,
           isPartOf: {

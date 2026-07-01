@@ -13,8 +13,10 @@ import {
   ABOUT_TRUST,
 } from '@/lib/legal/about-content'
 
+import { ABOUT_PAGE_TITLE } from '@/lib/seo/site-config'
+
 export const metadata = buildPublicMetadata({
-  title: 'About Us — Popup Hub',
+  title: ABOUT_PAGE_TITLE,
   description:
     'The Tipsy Fox origin story, why Popup Hub exists, and how our fees work — from Brad and Sonia, makers who became market-builders.',
   path: '/legal/about',

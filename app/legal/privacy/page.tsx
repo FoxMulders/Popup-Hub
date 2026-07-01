@@ -2,7 +2,7 @@ import { LegalDocument } from '@/components/legal/legal-document'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
-  title: 'Privacy Policy — Popup Hub',
+  title: 'Privacy Policy',
   description: 'How Popup Hub collects, stores, and shares personal information in Canada.',
   path: '/legal/privacy',
 })

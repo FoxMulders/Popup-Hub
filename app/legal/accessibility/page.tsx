@@ -2,7 +2,7 @@ import { LegalDocument } from '@/components/legal/legal-document'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
-  title: 'Accessibility Statement — Popup Hub',
+  title: 'Accessibility Statement',
   description: 'Popup Hub commitment to digital accessibility and WCAG 2.1 Level AA in Canada.',
   path: '/legal/accessibility',
 })

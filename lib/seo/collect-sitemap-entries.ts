@@ -27,6 +27,7 @@ const STATIC_PUBLIC_PATHS: Array<{
   { path: '/check/review', changeFrequency: 'weekly', priority: 0.7 },
   { path: '/supplies', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/legal/about', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/contact', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/legal/guides', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/legal/terms', changeFrequency: 'monthly', priority: 0.3 },
   { path: '/legal/privacy', changeFrequency: 'monthly', priority: 0.3 },
@@ -96,8 +97,8 @@ async function appendDynamicEntries(origin: string | undefined, entries: Sitemap
 
     const { data: events, error: eventsError } = await supabase
       .from('events')
-      .select('id, updated_at, start_at, status')
-      .in('status', ['published', 'active'])
+      .select('id, updated_at, start_at, status, coordinator_id')
+      .in('status', ['published', 'active', 'completed'])
       .eq('is_test', false)
       .order('start_at', { ascending: false })
       .limit(500)
@@ -110,8 +111,26 @@ async function appendDynamicEntries(origin: string | undefined, entries: Sitemap
       entries.push(
         makeEntry(origin, `/events/${event.id}`, {
           lastModified: safeDate(event.updated_at),
-          changeFrequency: 'daily',
-          priority: event.status === 'active' ? 0.85 : 0.75,
+          changeFrequency: event.status === 'completed' ? 'monthly' : 'daily',
+          priority:
+            event.status === 'active' ? 0.85 : event.status === 'completed' ? 0.6 : 0.75,
+        }),
+      )
+    }
+
+    const coordinatorIds = [
+      ...new Set(
+        (events ?? [])
+          .map((event) => event.coordinator_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ]
+
+    for (const coordinatorId of coordinatorIds) {
+      entries.push(
+        makeEntry(origin, `/coordinators/${coordinatorId}`, {
+          changeFrequency: 'weekly',
+          priority: 0.65,
         }),
       )
     }

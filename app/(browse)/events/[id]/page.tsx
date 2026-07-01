@@ -4,6 +4,7 @@ import { EventJsonLd } from '@/components/seo/event-json-ld'
 import { JsonLdScript } from '@/components/seo/json-ld-script'
 import { buildBreadcrumbJsonLd } from '@/lib/seo/breadcrumb-json-ld'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
+import { resolveOrganizerSlugForCoordinator } from '@/lib/organizers/resolve-organizer-slug-for-coordinator'
 import { format } from 'date-fns'
 
 interface Props {
@@ -16,6 +17,8 @@ type PublicEventMetadataRow = {
   location_name: string | null
   cover_image_url: string | null
   start_at: string | null
+  city: string | null
+  market_city: string | null
 }
 
 type PublicEventStructuredRow = {
@@ -32,6 +35,7 @@ type PublicEventStructuredRow = {
   cover_image_url: string | null
   status: string | null
   coordinator_id: string | null
+  market_city: string | null
   coordinator?: { id?: string; full_name?: string | null } | { id?: string; full_name?: string | null }[] | null
 }
 
@@ -57,14 +61,14 @@ export async function generateMetadata({ params }: Props) {
   const publicDb = supabase as unknown as UntypedSupabaseClient
   const { data: event } = (await publicDb
     .from('events')
-    .select('name, description, location_name, cover_image_url, start_at')
+    .select('name, description, location_name, cover_image_url, start_at, city, market_city')
     .eq('id', id)
     .in('status', ['published', 'active', 'completed'])
     .maybeSingle()) as { data: PublicEventMetadataRow | null }
 
   if (!event) {
     return buildPublicMetadata({
-      title: 'Market not found — Popup Hub',
+      title: 'Market not found',
       description: 'This market listing is unavailable or has been removed.',
       path: `/events/${id}`,
     })
@@ -77,12 +81,24 @@ export async function generateMetadata({ params }: Props) {
     event.description?.trim() ||
     `Pop-up market at ${event.location_name}${dateLabel ? ` on ${dateLabel}` : ''}. Browse confirmed vendors and plan your visit.`
 
+  const cityLabel = event.city?.trim() || event.market_city?.trim()
+  const keywords = [
+    event.name,
+    'popup market',
+    'makers market',
+    ...(cityLabel ? [`${cityLabel} markets`, `${cityLabel} popup market`] : []),
+    ...(event.location_name ? [event.location_name] : []),
+  ]
+
+  const ogImage = event.cover_image_url?.trim() || `/events/${id}/opengraph-image`
+
   return buildPublicMetadata({
-    title: `${event.name} — Popup Hub`,
+    title: event.name,
     description,
     path: `/events/${id}`,
-    imageUrl: event.cover_image_url,
+    imageUrl: ogImage,
     type: 'article',
+    keywords,
   })
 }
 
@@ -95,7 +111,7 @@ export default async function PublicEventPage({ params }: Props) {
     publicDb
       .from('events')
       .select(
-        'id, name, description, start_at, end_at, location_name, address, city, latitude, longitude, cover_image_url, status, coordinator_id, coordinator:profiles!events_coordinator_id_fkey(id, full_name)'
+        'id, name, description, start_at, end_at, location_name, address, city, market_city, latitude, longitude, cover_image_url, status, coordinator_id, coordinator:profiles!events_coordinator_id_fkey(id, full_name)'
       )
       .eq('id', id)
       .in('status', ['published', 'active', 'completed'])
@@ -130,6 +146,12 @@ export default async function PublicEventPage({ params }: Props) {
       : event.coordinator
     : null
 
+  const coordinatorId = coordinator?.id ?? event?.coordinator_id ?? null
+  const organizerSlug =
+    coordinatorId && event
+      ? await resolveOrganizerSlugForCoordinator(supabase as never, coordinatorId)
+      : null
+
   return (
     <>
       {event ? (
@@ -138,7 +160,8 @@ export default async function PublicEventPage({ params }: Props) {
             event={event}
             vendorCount={vendorCount ?? 0}
             vendorNames={vendorNames}
-            organizerId={coordinator?.id ?? event.coordinator_id ?? null}
+            organizerId={coordinatorId}
+            organizerSlug={organizerSlug}
           />
           <JsonLdScript
             data={buildBreadcrumbJsonLd([

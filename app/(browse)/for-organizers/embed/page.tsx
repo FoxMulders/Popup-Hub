@@ -5,7 +5,7 @@ import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { publicAppUrl } from '@/lib/url/public-app-url'
 
 export const metadata = buildPublicMetadata({
-  title: 'Official Application Badges — Popup Hub',
+  title: 'Official Application Badges',
   description:
     'Embed verified Popup Hub badges on your market website — link vendors to your official application page and earn trust backlinks.',
   path: '/for-organizers/embed',

@@ -1,4 +1,5 @@
 import { ORGANIZATION, SITE_NAME } from '@/lib/seo/site-config'
+import { SUPPORT_CONTACT_EMAIL } from '@/lib/legal/contacts'
 import { publicAppUrl } from '@/lib/url/public-app-url'
 
 export function buildOrganizationJsonLd() {
@@ -10,6 +11,13 @@ export function buildOrganizationJsonLd() {
     url: ORGANIZATION.url,
     logo: publicAppUrl(ORGANIZATION.logoPath),
     ...(ORGANIZATION.sameAs.length > 0 ? { sameAs: ORGANIZATION.sameAs } : {}),
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: SUPPORT_CONTACT_EMAIL,
+      areaServed: 'CA',
+      availableLanguage: 'English',
+    },
   }
 }
 
@@ -28,12 +36,8 @@ export function buildWebSiteJsonLd() {
       url: ORGANIZATION.url,
     },
     potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${publicAppUrl('/discover')}?when=weekend`,
-      },
-      'query-input': 'optional name=search_term_string',
+      '@type': 'BrowseAction',
+      target: publicAppUrl('/discover'),
     },
   }
 }

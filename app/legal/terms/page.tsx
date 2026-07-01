@@ -4,7 +4,7 @@ import { LEGAL_ENTITY_NAME, PLATFORM_OPERATOR_LINE, PRODUCT_BRAND_NAME } from '@
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
-  title: 'Terms of Service — Popup Hub',
+  title: 'Terms of Service',
   description: 'Terms governing use of the Popup Hub marketplace platform in Canada.',
   path: '/legal/terms',
 })

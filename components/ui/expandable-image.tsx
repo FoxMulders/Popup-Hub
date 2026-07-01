@@ -12,6 +12,10 @@ interface ExpandableImageProps {
   containerClassName?: string
   /** Prevents parent links from navigating when the image is tapped. */
   stopClickPropagation?: boolean
+  /** Hint LCP image for above-the-fold hero covers. */
+  priority?: boolean
+  width?: number
+  height?: number
 }
 
 export function ExpandableImage({
@@ -20,6 +24,9 @@ export function ExpandableImage({
   className,
   containerClassName,
   stopClickPropagation = false,
+  priority = false,
+  width,
+  height,
 }: ExpandableImageProps) {
   const [open, setOpen] = useState(false)
 
@@ -43,7 +50,16 @@ export function ExpandableImage({
         aria-label={`View full size: ${alt}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} className={className} />
+        <img
+          src={src}
+          alt={alt}
+          className={className}
+          width={width}
+          height={height}
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
+          decoding={priority ? 'sync' : 'async'}
+        />
         <span
           className="pointer-events-none absolute inset-0 flex items-end justify-end p-2 opacity-100 transition sm:opacity-0 sm:group-hover/img:opacity-100 sm:group-focus-visible/img:opacity-100"
           aria-hidden

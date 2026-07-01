@@ -6,7 +6,7 @@ import LoginForm from './login-form'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
-  title: 'Sign In — Popup Hub',
+  title: 'Sign In',
   description: 'Sign in to Popup Hub to discover markets, manage vendor applications, or run your event.',
   path: '/login',
   noIndex: true,

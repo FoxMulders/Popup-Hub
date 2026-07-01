@@ -21,9 +21,10 @@ export async function generateMetadata({ params }: Props) {
   return buildPublicMetadata({
     title: event
       ? `My Night at the Auction — ${event.name}`
-      : 'My Night at the Auction — Popup Hub',
+      : 'My Night at the Auction',
     description: 'Your personal recap of vendors discovered and auction items backed at this market.',
     path: `/events/${id}/my-night`,
+    noIndex: true,
   })
 }
 

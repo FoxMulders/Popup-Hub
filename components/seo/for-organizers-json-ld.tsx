@@ -11,7 +11,7 @@ export function ForOrganizersJsonLd() {
         {
           '@context': 'https://schema.org',
           '@type': 'WebPage',
-          name: 'Market Organizer Software — Popup Hub',
+          name: 'Market Organizer Software',
           description: ORGANIZERS_PAGE_DESCRIPTION,
           url: pageUrl,
           isPartOf: {
