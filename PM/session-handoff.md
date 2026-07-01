@@ -11,7 +11,8 @@
   - **API** — `enforceNativeMarketPermissions` on coordinator ops routes + `/api/v1/markets/[id]/{applications,floorplan/layout,invoices,vendor-broadcast,payouts}`; `POST …/track-click` (public 302); `POST …/upgrade-to-native` (owner txn + Square authorize URL).
   - **UI** — `LockedModuleOverlay`, `DashboardWorkspace` 3-column mocks @ opacity-35, unlock fade + `patchEventListingMode`; wired into `Dashboard_qa` / studio page.
 - **Smoke-test:** `npm run build` passes. Apply migration via `npm run db:push`. Set `is_external_listing=true` on a test event to verify studio overlays + `403 FEATURE_LOCKED_EXTERNAL_TIER` on gated APIs.
-- **Next:** Admin/trust path to create external listings; prod deploy after merge.
+- **Ops automation:** `scripts/seed-external-listing-market.ts`, `scripts/verify-conversion-engine.ts`, GitHub Actions `conversion-engine-ops.yml` (workflow_dispatch: db push, seed, Vercel prod).
+- **Prod status (Jul 1 2026):** popuphub.ca build still `45dad9f` — run Conversion Engine Ops workflow or `PM/Deploy-popuphub.bat` after migration.
 
 ## Active work — iOS ITMS-90189 redundant build (build 26 / v1.191.0) — TestFlight uploaded
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
