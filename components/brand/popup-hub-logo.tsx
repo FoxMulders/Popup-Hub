@@ -273,6 +273,48 @@ export function BrandLogoLockup({
   return lockup
 }
 
+/** "PopupHub" wordmark only — no storefront icon. */
+export function BrandWordmark({
+  className,
+  href,
+  size = 'header',
+}: {
+  className?: string
+  href?: string
+  size?: BrandLogoMarkSize
+}) {
+  const wordmark = (
+    <Image
+      src={brandWordmarkSrc()}
+      alt="Popup Hub"
+      width={BRAND_WORDMARK.width}
+      height={BRAND_WORDMARK.height}
+      unoptimized
+      priority
+      draggable={false}
+      className={cn(
+        'pointer-events-none mx-auto block w-auto max-w-full select-none object-contain object-center',
+        MARK_HEIGHTS[size],
+        className,
+      )}
+    />
+  )
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="inline-flex shrink-0 items-center rounded-md"
+        aria-label="Popup Hub"
+      >
+        {wordmark}
+      </Link>
+    )
+  }
+
+  return wordmark
+}
+
 export function BrandLogoMark({ size = 'nav', className, href }: BrandLogoMarkProps) {
   return (
     <PopupHubLogo
