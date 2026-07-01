@@ -166,19 +166,21 @@
 - **Blockers:** None locally. Production needs commit + deploy; after deploy the SW updates on next visit (may need one reload/relaunch to swap the icon).
 - **Next:** Commit when user asks; smoke browser tab after deploy (relaunch the in-app browser / reload twice so the new SW activates).
 
-## Active work — iOS 26 glass app icon + App Store icon validation fix (local, not committed)
-- **Goal:** Resolve TestFlight `exportArchive` icon validation failures while adding the requested iOS/iPad glass-style icon treatment.
-- **Persona:** All users · native iOS/iPadOS app icon · TestFlight/App Store.
-- **Baseline:** `master` at `bb22eaab`; no deploy run in this task.
+## Active work — iOS archive fix: CompileAssetCatalogVariant + glass icon (local, not committed)
+- **Goal:** Fix TestFlight `archive` failure (`CompileAssetCatalogVariant` on `AppIcon.icon` + `Assets.xcassets`, exit code 65) while keeping Liquid Glass icon treatment.
+- **Persona:** All users · native iOS/iPadOS app icon · TestFlight CI.
+- **Root cause:** `.github/workflows/deploy.yml` used `macos-latest` + `xcode-version: latest-stable`, which resolved to **Xcode 26.5**. Apple's `actool` has a known regression in 26.5 that crashes on **any** `AppIcon.icon` (Icon Composer / Liquid Glass) input during `CompileAssetCatalogVariant`. Archive reached asset compilation (not signing).
 - **Fix:**
-  - `scripts/mobile/generate-ios-resources.mjs` now composites legacy `AppIcon.appiconset` PNGs onto an opaque cream background so the App Store marketing icon has no alpha channel.
-  - The generated `Contents.json` now uses an explicit iPhone/iPad image list, including the required iPad Pro `AppIcon-167.png` entry (`83.5x83.5`, `2x`).
-  - Added generated `ios/App/App/AppIcon.icon` with an opaque brand-glass background layer and transparent logo foreground layer for Xcode 26 Icon Composer / Liquid Glass rendering.
-  - `ios/App/App.xcodeproj/project.pbxproj` now references `AppIcon.icon` as `folder.iconcomposer.icon` and includes it in the App target resources, while retaining the legacy `AppIcon.appiconset` fallback.
-  - Running `npm run mobile:assets` also synced native versions to package `1.187.0` and refreshed generated Android/mobile resource files.
-- **Verify:** Plan implemented and re-verified this session: `npm run assets:logo` + `npm run mobile:assets` PASS; Sharp metadata — `AppIcon-1024.png` 1024×1024 RGB/no alpha, `AppIcon-167.png` 167×167 RGB/no alpha; `Contents.json` includes iPad `83.5x83.5` → `AppIcon-167.png`; `AppIcon.icon/Assets/Logo.png` transparent for glass, `Background.png` RGB/no alpha.
-- **Blockers:** Cannot run `xcodebuild archive`/`exportArchive` on this Windows host; next verification is CI/TestFlight on macOS/Xcode 26.
-- **Next:** Commit + push when ready, then re-run Deploy to TestFlight and confirm export validation clears.
+  - **`.github/workflows/deploy.yml`** — `runs-on: macos-26`; pin `xcode-version: '26.4.1'`; verify step fails fast if Xcode ≥ 26.5; new **actool smoke test** after `mobile:assets` / `cap sync ios` before `xcodebuild archive`.
+  - **`scripts/mobile/generate-ios-resources.mjs`** — added idempotent `ensureAppIconIconInPbxproj()` so `AppIcon.icon` stays a `folder.iconcomposer.icon` bundle in Resources (not exploded by `cap sync`).
+  - **`scripts/mobile/verify-testflight-signing-config.mjs`** — added checks for AppIcon.icon bundle wiring, no exploded `icon.json` Resources, macos-26 runner, Xcode 26.4.1 pin, and actool smoke step.
+  - Removed stale unreferenced `AppIcon-512@2x.png` from `AppIcon.appiconset`.
+- **Verify:** `node --check` on both scripts PASS; `npm run mobile:verify-signing` PASS (15 checks).
+- **Blockers:** Cannot run `xcrun actool` / `xcodebuild archive` on this Linux host; confirm on CI **Deploy to TestFlight**.
+- **Next:** Commit + push → re-run Deploy to TestFlight → expect actool smoke + `ARCHIVE SUCCEEDED` → confirm `exportArchive` clears ITMS-90717/90023. **Do not** bump CI to `latest-stable` / Xcode 26.5 until Apple fixes actool.
+
+## Active work — iOS 26 glass app icon + App Store icon validation (prior work, included above)
+- Legacy `AppIcon.appiconset` PNGs are opaque (no alpha) for App Store validation; `AppIcon.icon` provides Liquid Glass on iOS 26+. `Contents.json` includes iPad Pro `83.5x83.5` → `AppIcon-167.png`.
 
 ## Active work — iOS archive fix: duplicate widget Info.plist (local, not committed)
 - **Goal:** Stop the TestFlight `archive` failure (`CreateBuildDirectory … (1 failure)`, exit code 65) caused by the `duplicate output file … PopupHubWidgetExtension.appex/Info.plist` warning.

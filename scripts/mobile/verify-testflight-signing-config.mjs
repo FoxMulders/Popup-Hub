@@ -18,8 +18,8 @@ function read(path) {
   return readFileSync(join(root, path), 'utf8')
 }
 
-function expect(name, content, pattern, detail) {
-  const ok = pattern.test(content)
+function expect(name, content, pattern, detail, invert = false) {
+  const ok = invert ? !pattern.test(content) : pattern.test(content)
   checks.push({ name, ok, detail })
   return ok
 }
@@ -76,6 +76,49 @@ expect(
   pbxproj,
   new RegExp(`CURRENT_PROJECT_VERSION = ${buildMeta.iosBuild};`),
   `All targets should use CURRENT_PROJECT_VERSION = ${buildMeta.iosBuild}`
+)
+expect(
+  'pbxproj AppIcon.icon bundle reference',
+  pbxproj,
+  /folder\.iconcomposer\.icon; path = AppIcon\.icon/,
+  'AppIcon.icon must be a folder.iconcomposer.icon bundle (not exploded child files)'
+)
+expect(
+  'pbxproj AppIcon.icon in Resources',
+  pbxproj,
+  /AppIcon\.icon in Resources/,
+  'App target Resources must include AppIcon.icon bundle'
+)
+expect(
+  'pbxproj ASSETCATALOG_COMPILER_APPICON_NAME',
+  pbxproj,
+  /ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/,
+  'App target must set ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon'
+)
+expect(
+  'pbxproj no exploded icon.json in Resources',
+  pbxproj,
+  /icon\.json in Resources/,
+  'AppIcon.icon must not be exploded into icon.json Resources entries',
+  true
+)
+expect(
+  'deploy.yml macos-26 runner',
+  deployYml,
+  /runs-on:\s*macos-26/,
+  'TestFlight deploy must use macos-26 runner for iOS 26 SDK'
+)
+expect(
+  'deploy.yml pins Xcode 26.4.1',
+  deployYml,
+  /xcode-version:\s*'26\.4\.1'/,
+  "CI must pin xcode-version to '26.4.1' (Xcode 26.5 actool crashes on AppIcon.icon)"
+)
+expect(
+  'deploy.yml actool smoke test',
+  deployYml,
+  /xcrun actool ios\/App\/App\/AppIcon\.icon/,
+  'CI must run actool smoke test before archive'
 )
 
 const failed = checks.filter((c) => !c.ok)
