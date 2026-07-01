@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Remove Edmonton/Calgary area buttons (shipped locally)
+- **Persona:** Patron · Discover map (`/discover`) · Vendor market browse.
+- **Goal:** Remove Edmonton and Calgary area quick-pick buttons from the market area filter.
+- **Shipped:** Removed `QUICK_CITY_CENTERS` and related buttons from `components/markets/market-area-filter.tsx`. "Use my location" and address/postal search remain.
+- **Verify:** Discover and vendor market grids show only "Use my location" under Near — no Edmonton/Calgary shortcuts.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
