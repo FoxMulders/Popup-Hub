@@ -17,6 +17,7 @@ import { LayoutEditorHelpHost } from '@/components/coordinator/floor-plan-v2/too
 import { DashboardNoRoomEmptyState } from '@/components/coordinator/dashboard/dashboard-no-room-empty-state'
 import { HubGridMarketPicker } from '@/components/coordinator/dashboard/hub-grid-market-picker'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import { DashboardWorkspace } from '@/components/coordinator/conversion/dashboard-workspace'
 import {
   DesktopScreenRequiredOverlay,
   FloorPlanViewportLayoutProvider,
@@ -48,27 +49,30 @@ export function QaAccordionHeader({ children }: { children: ReactNode }) {
 
 export interface DashboardBootstrapQaProps {
   header: ReactNode
+  squareConnected: boolean
 }
 
 /**
  * QA dashboard bootstrap — top toolbar strip, inline first-room empty state,
  * portal-friendly toolbar mount (no left curation column).
  */
-export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
+export function DashboardBootstrapQa({ header, squareConnected }: DashboardBootstrapQaProps) {
   return (
     <FloorPlanViewportLayoutProvider>
       <DesktopScreenRequiredOverlay />
-      <DashboardBootstrapQaInner header={header} />
+      <DashboardBootstrapQaInner header={header} squareConnected={squareConnected} />
     </FloorPlanViewportLayoutProvider>
   )
 }
 
-function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
+function DashboardBootstrapQaInner({ header, squareConnected }: DashboardBootstrapQaProps) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const { fullscreen: immersive, previewMode } = useCommandCenterFullscreen()
   const { isBlueprint, isLedger } = useDashboardWorkspaceView()
   const { selectedEventId, events, setSelectedEventId, layoutRooms, setLayoutRooms } =
     useMarketManagement()
+  const selectedEvent = events.find((event) => event.id === selectedEventId)
+  const isExternalListing = selectedEvent?.isExternalListing === true
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
   const [liveMessage, setLiveMessage] = useState('Booth layout designer loading.')
@@ -103,77 +107,106 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
   }, [])
 
   const showBlueprint = false
-  const mountCanvas = Boolean(selectedEventId && hasInitialRoom && !showDesktopRequired)
+  const mountCanvas = Boolean(
+    selectedEventId && hasInitialRoom && !showDesktopRequired && !isExternalListing
+  )
   const showMarketPicker = !selectedEventId && !showDesktopRequired
   const showToolbarStrip = !isBlueprint
+
+  const centerNative = showDesktopRequired ? (
+    <div className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center" aria-hidden />
+  ) : showMarketPicker ? (
+    <HubGridMarketPicker events={events} onSelect={setSelectedEventId} />
+  ) : isLedger ? (
+    <>
+      <DashboardAllocationLedger />
+      {mountCanvas ? (
+        <div className="sr-only" aria-hidden inert>
+          <DashboardSplitWorkspace
+            blueprint={
+              <DashboardCanvasColumn
+                showBlueprint={showBlueprint}
+                mountCanvas={mountCanvas}
+                reducedMotion={reducedMotion}
+                onCanvasInteractive={handleCanvasInteractive}
+              />
+            }
+          />
+        </div>
+      ) : null}
+    </>
+  ) : showNoRoomEmpty ? (
+    <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
+  ) : (
+    <DashboardSplitWorkspace
+      blueprint={
+        <DashboardCanvasColumn
+          showBlueprint={showBlueprint}
+          mountCanvas={mountCanvas}
+          reducedMotion={reducedMotion}
+          onCanvasInteractive={handleCanvasInteractive}
+        />
+      }
+    />
+  )
 
   return (
     <DashboardToolbarPortalProvider>
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {liveMessage}
       </span>
-      <DashboardAppShell
-        header={header}
-        toolbarStrip={
-          showToolbarStrip ? (
-            <DashboardTopToolbarStrip
-              hidden={previewMode || immersive || !isBlueprint || showMarketPicker}
-            />
-          ) : null
-        }
-        immersive={immersive || previewMode}
-        ariaBusy={ariaBusy}
-        className="dashboard-app-shell--qa-global-scroll"
-        center={
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {selectedEventId && !showMarketPicker && !showDesktopRequired ? (
+        <DashboardWorkspace
+          header={header}
+          toolbarStrip={
+            showToolbarStrip ? (
+              <DashboardTopToolbarStrip
+                hidden={previewMode || immersive || !isBlueprint || showMarketPicker}
+              />
+            ) : null
+          }
+          immersive={immersive || previewMode}
+          ariaBusy={ariaBusy}
+          className="dashboard-app-shell--qa-global-scroll"
+          squareConnected={squareConnected}
+          ready={!ariaBusy}
+          animate={!reducedMotion}
+          centerNative={
             <div
               className={cn(QA_CANVAS_VIEWPORT_CLASS, 'min-h-0 flex-1 overflow-hidden')}
               data-dashboard-preview={previewMode ? 'true' : undefined}
             >
-              {showDesktopRequired ? (
-                <div
-                  className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
-                  aria-hidden
-                />
-              ) : showMarketPicker ? (
-                <HubGridMarketPicker events={events} onSelect={setSelectedEventId} />
-              ) : isLedger ? (
-                <>
-                  <DashboardAllocationLedger />
-                  {mountCanvas ? (
-                    <div className="sr-only" aria-hidden inert>
-                      <DashboardSplitWorkspace
-                        blueprint={
-                          <DashboardCanvasColumn
-                            showBlueprint={showBlueprint}
-                            mountCanvas={mountCanvas}
-                            reducedMotion={reducedMotion}
-                            onCanvasInteractive={handleCanvasInteractive}
-                          />
-                        }
-                      />
-                    </div>
-                  ) : null}
-                </>
-              ) : showNoRoomEmpty ? (
-                <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
-              ) : (
-                <DashboardSplitWorkspace
-                  blueprint={
-                    <DashboardCanvasColumn
-                      showBlueprint={showBlueprint}
-                      mountCanvas={mountCanvas}
-                      reducedMotion={reducedMotion}
-                      onCanvasInteractive={handleCanvasInteractive}
-                    />
-                  }
-                />
-              )}
+              {centerNative}
             </div>
-            <DashboardWorkspaceFooter />
-          </div>
-        }
-      />
+          }
+          centerFooter={<DashboardWorkspaceFooter />}
+        />
+      ) : (
+        <DashboardAppShell
+          header={header}
+          toolbarStrip={
+            showToolbarStrip ? (
+              <DashboardTopToolbarStrip
+                hidden={previewMode || immersive || !isBlueprint || showMarketPicker}
+              />
+            ) : null
+          }
+          immersive={immersive || previewMode}
+          ariaBusy={ariaBusy}
+          className="dashboard-app-shell--qa-global-scroll"
+          center={
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div
+                className={cn(QA_CANVAS_VIEWPORT_CLASS, 'min-h-0 flex-1 overflow-hidden')}
+                data-dashboard-preview={previewMode ? 'true' : undefined}
+              >
+                {centerNative}
+              </div>
+              <DashboardWorkspaceFooter />
+            </div>
+          }
+        />
+      )}
       {!showMarketPicker && !isBlueprint ? (
         <LayoutEditorHelpHost showFloatingFab={isLedger} />
       ) : (

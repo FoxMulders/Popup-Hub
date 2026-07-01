@@ -5,6 +5,7 @@ import {
   computeVendorPlatformHistory,
   type VendorHistoryApplication,
 } from '@/lib/applications/vendor-review-stats'
+import { enforceNativeMarketPermissionsForApplication } from '@/lib/markets/enforce-native-market-permissions'
 
 async function assertCoordinatorOwnsApplication(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -113,6 +114,9 @@ export async function PATCH(
   if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissionsForApplication(supabase, applicationId)
+  if (nativeGate) return nativeGate
 
   const ownership = await assertCoordinatorOwnsApplication(supabase, applicationId, user.id)
   if ('error' in ownership && ownership.error) return ownership.error

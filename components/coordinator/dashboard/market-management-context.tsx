@@ -42,6 +42,9 @@ export interface DashboardEventSummary {
   status: string
   location_name?: string | null
   address?: string | null
+  isExternalListing?: boolean
+  destinationUrl?: string | null
+  adCampaignStatus?: string | null
 }
 
 export interface EventLayoutBundle {
@@ -104,6 +107,8 @@ export interface MarketManagementState {
   canvasVendorBoothCount: number
   /** Event category cap names for booth tagging and palette rotation. */
   eventCategoryNames: string[]
+  /** Flip external listing tier after native migration without full reload. */
+  patchEventListingMode: (eventId: string, isExternalListing: boolean) => void
 }
 
 const MarketManagementContext = createContext<MarketManagementState | null>(null)
@@ -150,15 +155,28 @@ export function MarketManagementProvider({
   const router = useRouter()
   const resolvedInitialEventId =
     initialEventId && events.some((event) => event.id === initialEventId) ? initialEventId : null
+  const [eventsState, setEventsState] = useState(events)
   const [selectedEventId, setSelectedEventIdState] = useState(resolvedInitialEventId)
+
+  useEffect(() => {
+    setEventsState(events)
+  }, [events])
+
+  const patchEventListingMode = useCallback((eventId: string, isExternalListing: boolean) => {
+    setEventsState((prev) =>
+      prev.map((event) =>
+        event.id === eventId ? { ...event, isExternalListing } : event
+      )
+    )
+  }, [])
 
   const setSelectedEventId = useCallback(
     (id: string) => {
-      if (!events.some((event) => event.id === id)) return
+      if (!eventsState.some((event) => event.id === id)) return
       setSelectedEventIdState(id)
       router.replace(coordinatorStudioHref(id), { scroll: false })
     },
-    [events, router]
+    [eventsState, router]
   )
   const [approvedByEventIdState, setApprovedByEventIdState] =
     useState(approvedByEventId)
@@ -563,7 +581,7 @@ export function MarketManagementProvider({
 
   const value = useMemo(
     (): MarketManagementState => ({
-      events,
+      events: eventsState,
       selectedEventId,
       setSelectedEventId,
       pendingApplications,
@@ -593,10 +611,12 @@ export function MarketManagementProvider({
       setHubGridLayoutMode,
       canvasVendorBoothCount,
       eventCategoryNames,
+      patchEventListingMode,
     }),
     [
-      events,
+      eventsState,
       selectedEventId,
+      setSelectedEventId,
       pendingApplications,
       approvedPool,
       layoutRooms,
@@ -623,6 +643,7 @@ export function MarketManagementProvider({
       setHubGridLayoutMode,
       canvasVendorBoothCount,
       eventCategoryNames,
+      patchEventListingMode,
     ]
   )
 

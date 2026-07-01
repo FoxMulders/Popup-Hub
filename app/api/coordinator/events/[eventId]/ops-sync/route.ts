@@ -7,6 +7,7 @@ import {
 } from '@/lib/events/coordinator-event-ownership'
 import { createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
+import { enforceNativeMarketPermissions } from '@/lib/markets/enforce-native-market-permissions'
 
 export async function POST(
   request: Request,
@@ -31,6 +32,9 @@ export async function POST(
   if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Coordinator account required' }, { status: 403 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissions(supabase, eventId)
+  if (nativeGate) return nativeGate
 
   const scope = await getCoordinatorScope(supabase, user.id)
   const { data: event, error: eventError } = await applyCoordinatorEventScope(

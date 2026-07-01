@@ -33,6 +33,7 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/api/square/oauth/callback') ||
     pathname.startsWith('/api/reminders/') ||
     pathname.startsWith('/api/cron/') ||
+    (pathname.startsWith('/api/v1/markets/') && pathname.endsWith('/track-click')) ||
     pathname.startsWith('/favicon') ||
     pathname === '/sw.js' ||
     pathname === '/manifest.json' ||
