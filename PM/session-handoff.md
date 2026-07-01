@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (push `b589d66f`)
+- **Trigger:** `master` @ `b589d66f` (iOS build 28 bump after Conversion Engine #172).
+- **Findings:** Three high-severity bugs still on master; fixes on `cursor/critical-bug-investigation-8b56` (PR pending).
+  1. **Publish-assist approve/reject silent failure** — routes used cookie-bound `createServiceClient()`; admin has SELECT-only RLS on `event_publish_assist_requests` / `events`, so approve returned `{ ok: true }` while draft stayed unpublished. **Fix:** `createAdminClient()` in approve/reject routes.
+  2. **`is_test` discover leak** — public catalog queries (`cached-public-markets`, widget `fetchOpenMarkets`) omitted `.eq('is_test', false)`; QA scenario markets surfaced on `/discover`. **Fix:** `excludeTestMarkets()` helper + filter on catalog queries.
+  3. **Native OAuth session loss** — `CapacitorInit` used `router.push` for `/api/auth/callback`; login/signup use `window.location.replace` so Set-Cookie persists. **Fix:** match login/signup deep-link handling.
+- **Conversion Engine #172:** Reviewed — permission gates + RLS split look sound; no additional critical issues found in that diff.
+- **Next:** Merge PR; prod deploy; smoke publish-assist approve + native OAuth on TestFlight.
+
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
 - **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.

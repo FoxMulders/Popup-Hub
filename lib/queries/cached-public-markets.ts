@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache'
 import { createPublicSupabaseClient } from '@/lib/supabase/public'
 import { fetchCapacitySummariesForEvents, type EventCapacitySummary } from '@/lib/queries/event-capacity'
 import {
+  excludeTestMarkets,
   VENDOR_EVENT_SELECT,
   VENDOR_MARKET_STATUSES,
   type OpenEventStatus,
@@ -15,13 +16,14 @@ const OPEN_MARKET_STATUSES: OpenEventStatus[] = ['published', 'active']
 
 async function fetchDiscoverMarkets(): Promise<Event[]> {
   const supabase = createPublicSupabaseClient()
-  const { data, error } = await supabase
-    .from('events')
-    .select(
-      '*, event_days(*), coordinator:profiles!events_coordinator_id_fkey(id, full_name, reliability_score, recent_late_cancellation_at, coordinator_is_verified)'
-    )
-    .in('status', OPEN_MARKET_STATUSES)
-    .order('start_at', { ascending: true })
+  const { data, error } = await excludeTestMarkets(
+    supabase
+      .from('events')
+      .select(
+        '*, event_days(*), coordinator:profiles!events_coordinator_id_fkey(id, full_name, reliability_score, recent_late_cancellation_at, coordinator_is_verified)'
+      )
+      .in('status', OPEN_MARKET_STATUSES)
+  ).order('start_at', { ascending: true })
 
   if (error) throw new Error(`discover markets: ${error.message}`)
   return (data ?? []) as Event[]
@@ -29,11 +31,9 @@ async function fetchDiscoverMarkets(): Promise<Event[]> {
 
 async function fetchVendorDirectoryMarkets(): Promise<Event[]> {
   const supabase = createPublicSupabaseClient()
-  const { data, error } = await supabase
-    .from('events')
-    .select(VENDOR_EVENT_SELECT)
-    .in('status', VENDOR_MARKET_STATUSES)
-    .order('start_at', { ascending: true })
+  const { data, error } = await excludeTestMarkets(
+    supabase.from('events').select(VENDOR_EVENT_SELECT).in('status', VENDOR_MARKET_STATUSES)
+  ).order('start_at', { ascending: true })
 
   if (error) throw new Error(`vendor directory markets: ${error.message}`)
   return (data ?? []) as Event[]
@@ -41,10 +41,9 @@ async function fetchVendorDirectoryMarkets(): Promise<Event[]> {
 
 async function fetchApprovedVendorCounts(): Promise<Record<string, number>> {
   const supabase = createPublicSupabaseClient()
-  const { data: events, error: eventsError } = await supabase
-    .from('events')
-    .select('id')
-    .in('status', OPEN_MARKET_STATUSES)
+  const { data: events, error: eventsError } = await excludeTestMarkets(
+    supabase.from('events').select('id').in('status', OPEN_MARKET_STATUSES)
+  )
 
   if (eventsError) throw new Error(`vendor counts events: ${eventsError.message}`)
 
