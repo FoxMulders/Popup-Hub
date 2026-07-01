@@ -95,6 +95,13 @@ export function sortEventsByStartDesc<T extends Pick<Event, 'start_at'>>(events:
   )
 }
 
+/** Exclude QA scenario markets from public patron/vendor catalog queries. */
+export function excludeTestMarkets<T extends { eq: (column: string, value: boolean) => T }>(
+  query: T
+): T {
+  return query.eq('is_test', false)
+}
+
 /** Vendor-facing markets query statuses (active feed + history). */
 export const VENDOR_MARKET_STATUSES: EventStatus[] = [
   'published',

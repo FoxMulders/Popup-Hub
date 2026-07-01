@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { isApplicationAwaitingBoothPayment, isApplicationPaid } from '@/lib/applications/payment-fields'
+import { excludeTestMarkets } from '@/lib/queries/events'
 import { ensureVendorInterestDaily } from '@/lib/widget/interest-daily'
 import type {
   WidgetCoordinatorEventPulse,
@@ -100,10 +101,12 @@ async function fetchWallet(supabase: SupabaseClient, userId: string) {
 }
 
 async function fetchOpenMarkets(supabase: SupabaseClient): Promise<Event[]> {
-  const { data } = await supabase
-    .from('events')
-    .select('id, name, status, start_at, end_at, location_name, latitude, longitude')
-    .in('status', [...OPEN_STATUSES])
+  const { data } = await excludeTestMarkets(
+    supabase
+      .from('events')
+      .select('id, name, status, start_at, end_at, location_name, latitude, longitude')
+      .in('status', [...OPEN_STATUSES])
+  )
     .order('start_at', { ascending: true })
     .limit(20)
   return (data ?? []) as Event[]
