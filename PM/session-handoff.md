@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio responsive guard QA
+- **Persona:** Coordinator · Blueprint Studio / HubGrid matrix and layout views.
+- **Goal:** Automated QA pass for Blueprint Studio/dashboard layout responsiveness: matrix surfaces must show the small-screen regression warning, and floor-plan canvas routes must use the desktop-required viewport guard.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-c4b0`; pre-change HEAD `b589d66f`; production deploy not run from this scoped QA branch.
+- **Shipped this session:**
+  - **Matrix guard:** Added `DashboardLedgerViewportGuard` with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` ("The floor plan matrix is not optimized for small screens...") and the shared 1024px × 550px breaker.
+  - **Blueprint Studio ledger surfaces:** Wrapped `/coordinator/studio/ledger` and `DashboardAllocationLedger` so Booth Matrix rows/subscriptions do not mount on small screens; users see the regression warning instead.
+  - **Layout canvas surfaces:** Added `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` to the standalone spatial layout editor and QA mirrors; FloorPlanV2 remains unmounted while `showDesktopRequired` is active.
+  - **QA mirrors:** Updated `src/qa_review` and the excluded recovery copy under `qa_review/` so repository-wide static scans do not see stale unguarded spatial/wizard layout surfaces.
+- **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; affected-file `npx eslint ...` PASS. Static scan confirms ledger matrix entry points use `DashboardLedgerViewportGuard` and floor-plan layout entry points use `FloorPlanViewportLayoutProvider` / `DesktopScreenRequiredOverlay`.
+- **Next:** Browser smoke on `/coordinator/studio?view=ledger`, `/coordinator/studio/ledger`, and `/coordinator/events/[id]/layout` at <1024px or <550px and at desktop size; deploy after PR review/merge.
+
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
 - **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.

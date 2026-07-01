@@ -5,6 +5,11 @@ import {
   FloorPlanV2WizardQa,
   type FloorPlanV2Props,
 } from '@/src/qa_review/components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import { LayoutPlannerHeader } from '@/components/coordinator/layout-planner/layout-planner-header'
 import { LayoutPlannerShellQa } from '@/src/qa_review/components/coordinator/layout-planner/layout-planner-shell_qa'
@@ -27,6 +32,38 @@ export interface WizardStepFloorPlanProps extends FloorPlanV2Props {
   plannerOverlap?: boolean
 }
 
+type WizardFloorPlanForwardProps = Omit<
+  FloorPlanV2Props,
+  | 'eventId'
+  | 'layoutRooms'
+  | 'layoutActiveRoomId'
+  | 'onLayoutRoomsChange'
+  | 'onAddRoom'
+  | 'onRenameRoom'
+  | 'onDeleteRoom'
+  | 'layoutCapacity'
+  | 'onPlacedCountChange'
+  | 'chrome'
+  | 'className'
+>
+
+interface WizardStepFloorPlanInnerProps {
+  mode: 'wizard' | 'standalone'
+  layoutCapacity: number
+  eventDisplayName: string
+  onBack: () => void
+  navDisabled: boolean
+  plannerOverlap: boolean
+  eventId: FloorPlanV2Props['eventId']
+  layoutRooms: FloorPlanV2Props['layoutRooms']
+  layoutActiveRoomId: FloorPlanV2Props['layoutActiveRoomId']
+  onLayoutRoomsChange: FloorPlanV2Props['onLayoutRoomsChange']
+  onAddRoom: FloorPlanV2Props['onAddRoom']
+  onRenameRoom: FloorPlanV2Props['onRenameRoom']
+  onDeleteRoom: FloorPlanV2Props['onDeleteRoom']
+  floorPlanProps: WizardFloorPlanForwardProps
+}
+
 export function WizardStepFloorPlan({
   mode = 'wizard',
   layoutCapacity,
@@ -43,6 +80,46 @@ export function WizardStepFloorPlan({
   onDeleteRoom,
   ...floorPlanProps
 }: WizardStepFloorPlanProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay eventId={eventId ?? undefined} />
+      <WizardStepFloorPlanInner
+        mode={mode}
+        layoutCapacity={layoutCapacity}
+        eventDisplayName={eventDisplayName}
+        onBack={onBack}
+        navDisabled={navDisabled}
+        plannerOverlap={plannerOverlap}
+        eventId={eventId}
+        layoutRooms={layoutRooms}
+        layoutActiveRoomId={layoutActiveRoomId}
+        onLayoutRoomsChange={onLayoutRoomsChange}
+        onAddRoom={onAddRoom}
+        onRenameRoom={onRenameRoom}
+        onDeleteRoom={onDeleteRoom}
+        floorPlanProps={floorPlanProps}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function WizardStepFloorPlanInner({
+  mode,
+  layoutCapacity,
+  eventDisplayName,
+  onBack,
+  navDisabled,
+  plannerOverlap,
+  eventId,
+  layoutRooms,
+  layoutActiveRoomId,
+  onLayoutRoomsChange,
+  onAddRoom,
+  onRenameRoom,
+  onDeleteRoom,
+  floorPlanProps,
+}: WizardStepFloorPlanInnerProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const [placedCount, setPlacedCount] = useState(0)
 
   function handleSelectRoom(roomId: string) {
@@ -95,20 +172,27 @@ export function WizardStepFloorPlan({
         </div>
       }
     >
-      <FloorPlanV2WizardQa
-        {...floorPlanProps}
-        eventId={eventId}
-        layoutRooms={layoutRooms}
-        layoutActiveRoomId={layoutActiveRoomId}
-        onLayoutRoomsChange={onLayoutRoomsChange}
-        onAddRoom={onAddRoom}
-        onRenameRoom={onRenameRoom}
-        onDeleteRoom={onDeleteRoom}
-        layoutCapacity={layoutCapacity}
-        onPlacedCountChange={setPlacedCount}
-        chrome="embedded"
-        className="w-full flex-1"
-      />
+      {showDesktopRequired ? (
+        <div
+          className="flex min-h-[40vh] items-center justify-center p-6 text-center"
+          aria-hidden
+        />
+      ) : (
+        <FloorPlanV2WizardQa
+          {...floorPlanProps}
+          eventId={eventId}
+          layoutRooms={layoutRooms}
+          layoutActiveRoomId={layoutActiveRoomId}
+          onLayoutRoomsChange={onLayoutRoomsChange}
+          onAddRoom={onAddRoom}
+          onRenameRoom={onRenameRoom}
+          onDeleteRoom={onDeleteRoom}
+          layoutCapacity={layoutCapacity}
+          onPlacedCountChange={setPlacedCount}
+          chrome="embedded"
+          className="w-full flex-1"
+        />
+      )}
     </LayoutPlannerShellQa>
   )
 }
