@@ -201,18 +201,20 @@ export function ShopperTopBar({
       <div className="mx-auto flex max-w-full overflow-x-hidden px-4 py-2 sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
         {stackedHeader ? (
           <div className="flex w-full min-w-0 flex-col items-center gap-2">
-            <div className="relative flex w-full min-w-0 items-center justify-center">
+            <div className="flex w-full min-w-0 items-center justify-center">
               <BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />
-              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-2">
-                {rightActions}
-              </div>
             </div>
-            <PortalTabs
-              availablePortals={availablePortals}
-              activePortal={activePortal}
-              compact
-              className="mx-auto max-w-full"
-            />
+            <div className="flex w-full min-w-0 items-center gap-2">
+              <div className="flex min-w-0 flex-1 justify-center">
+                <PortalTabs
+                  availablePortals={availablePortals}
+                  activePortal={activePortal}
+                  compact
+                  className="max-w-full"
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-2">{rightActions}</div>
+            </div>
           </div>
         ) : (
           <CenteredHeaderRow
