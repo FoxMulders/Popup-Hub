@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Compass, Heart, User } from 'lucide-react'
+import { getBuildInfo } from '@/lib/build-info'
+import { COPYRIGHT_NOTICE, PRODUCT_BRAND_NAME } from '@/lib/legal/entity'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -19,6 +21,8 @@ interface ShopperBottomNavProps {
 export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
   const pathname = usePathname()
   const visible = !hide && !pathname.startsWith('/auctions/')
+  const build = getBuildInfo()
+  const buildLine = `v${build.version} · build ${build.buildNumber} · ${build.commit}`
 
   useEffect(() => {
     if (!visible) return
@@ -32,7 +36,7 @@ export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t-2 border-stone-200 bg-cream/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
+      className="shopper-bottom-chrome fixed bottom-0 left-0 right-0 z-50 border-t-2 border-stone-200 bg-cream/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
       aria-label="Shopper navigation"
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
@@ -52,6 +56,29 @@ export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
             </Link>
           )
         })}
+      </div>
+      <div className="border-t border-stone-200/70 px-4 py-1.5 text-center">
+        <Link
+          href="/legal/about"
+          className="inline-flex min-h-7 items-center text-[11px] font-medium text-foreground/75 transition-colors hover:text-forest hover:underline touch-manipulation"
+        >
+          About Us
+        </Link>
+        <p className="m-0 text-[10px] leading-snug text-muted-foreground">
+          <span>{PRODUCT_BRAND_NAME}</span>
+          <span aria-hidden> · </span>
+          <span>{COPYRIGHT_NOTICE}</span>
+          <span
+            className="sr-only font-mono"
+            data-testid="build-version-footer"
+            data-build-version={build.version}
+            data-build-number={build.buildNumber}
+            data-build-commit={build.commit}
+            data-build-environment={build.environment}
+          >
+            {buildLine}
+          </span>
+        </p>
       </div>
     </nav>
   )

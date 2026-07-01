@@ -148,6 +148,7 @@
   --sidebar-ring: #8fb892;
 
   --app-nav-height: 3.25rem;
+  --shopper-bottom-chrome-height: 6rem;
   --app-nav-height-stacked: 6rem;
   --build-strip-height: 1.17rem;
   --command-center-left: 320px;
@@ -1275,8 +1276,7 @@
     }
 
     body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {
-      margin-top: auto;
-      padding-bottom: calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
+      display: none !important;
     }
 
     body[data-event-action-bar='true'] .popup-hub-chrome-footer {
@@ -1284,10 +1284,17 @@
     }
 
     body[data-mobile-bottom-nav='shopper'] .site-app-shell #site-main {
-      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(
+        var(--shopper-bottom-chrome-height) + env(safe-area-inset-bottom, 0px)
+      );
     }
 
-    body[data-mobile-bottom-nav] .passport-wizard-action-bar {
+    body[data-mobile-bottom-nav='shopper'] .passport-wizard-action-bar {
+      bottom: calc(var(--shopper-bottom-chrome-height) + env(safe-area-inset-bottom, 0px));
+      padding-bottom: 0.75rem;
+    }
+
+    body[data-mobile-bottom-nav='vendor'] .passport-wizard-action-bar {
       bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
       padding-bottom: 0.75rem;
     }
