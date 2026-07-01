@@ -2,11 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Remove Edmonton/Calgary area buttons (shipped locally)
-- **Persona:** Patron · Discover map (`/discover`) · Vendor market browse.
-- **Goal:** Remove Edmonton and Calgary area quick-pick buttons from the market area filter.
-- **Shipped:** Removed `QUICK_CITY_CENTERS` and related buttons from `components/markets/market-area-filter.tsx`. "Use my location" and address/postal search remain.
-- **Verify:** Discover and vendor market grids show only "Use my location" under Near — no Edmonton/Calgary shortcuts.
+## Active work — Remove Edmonton/Calgary area buttons and city links (shipped locally)
+- **Persona:** Patron · Discover map (`/discover`) · Vendor market browse · site footer · SEO guides.
+- **Goal:** Remove Edmonton/Calgary area quick-picks and city-specific market/vendor-application navigation links.
+- **Shipped:**
+  - `market-area-filter.tsx` — removed Edmonton/Calgary area quick-pick buttons; "Use my location" + address search remain.
+  - `discover-empty-state.tsx` — removed Edmonton/Calgary markets + vendor-application links; updated empty-state helper copy.
+  - `site-footer-links.ts` — removed Edmonton/Calgary Markets footer links.
+  - `guide-registry.ts` — removed Edmonton/Calgary related links from guide related-links.
+- **Verify:** Discover empty state and footer no longer show Edmonton/Calgary shortcuts; filter Near row has only "Use my location".
 
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
