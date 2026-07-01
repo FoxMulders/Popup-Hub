@@ -28,6 +28,7 @@ export interface BoothContractSnapshot {
 }
 export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'
 export type EventStatus = 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
+export type AdCampaignStatus = 'inactive' | 'active' | 'paused' | 'expired'
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'cancelled' | 'pending_insurance'
 export type PaymentStatus = 'unpaid' | 'pending' | 'payment_required' | 'processing' | 'paid' | 'refunded'
 export type PaymentMethod = 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH'
@@ -268,6 +269,11 @@ export interface Event {
   status: EventStatus
   /** QA/scenario markets — purge via scripts/purge-test-markets.ts before go-live. */
   is_test?: boolean
+  /** External ad listing — ops locked until coordinator upgrades to native market. */
+  is_external_listing?: boolean
+  destination_url?: string | null
+  ad_campaign_status?: AdCampaignStatus
+  ad_campaign_expires_at?: string | null
   cover_image_url: string | null
   square_merchant_id: string | null
   accepts_square?: boolean
@@ -968,6 +974,15 @@ export interface VendorInvitation {
   expires_at: string
   accepted_at: string | null
   created_at: string
+}
+
+export interface AdClickLog {
+  id: number
+  market_id: string
+  vendor_id: string | null
+  clicked_at: string
+  ip_address_hash: string
+  user_agent: string | null
 }
 
 export interface MarketFeedback {

@@ -17,6 +17,7 @@ import {
 } from '@/lib/coordinator/verification'
 import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
 import { PAYMENT_CHASE_CLEARED_FIELDS } from '@/lib/applications/payment-deadline'
+import { enforceNativeMarketPermissions } from '@/lib/markets/enforce-native-market-permissions'
 
 const COMPLETED_PAYMENT_STATUSES = new Set(['COMPLETED', 'APPROVED'])
 
@@ -124,6 +125,9 @@ export async function POST(request: Request) {
   if (!application) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissions(supabase, application.event_id)
+  if (nativeGate) return nativeGate
 
   if (application.vendor_id !== user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

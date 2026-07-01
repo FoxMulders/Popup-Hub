@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { extractClientIp } from '@/lib/audit/security-audit-log'
 import { confirmOfflinePayment } from '@/lib/applications/confirm-offline-payment'
+import { enforceNativeMarketPermissionsForApplication } from '@/lib/markets/enforce-native-market-permissions'
 
 export async function POST(
   request: Request,
@@ -17,6 +18,12 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissionsForApplication(
+    serviceSupabase,
+    applicationId
+  )
+  if (nativeGate) return nativeGate
 
   const { data: application } = await serviceSupabase
     .from('booth_applications')

@@ -21,6 +21,7 @@ import {
   notifyVendorApplicationStatus,
   shouldNotifyVendorApplicationStatus,
 } from '@/lib/applications/notify-vendor-application-status'
+import { enforceNativeMarketPermissionsForApplication } from '@/lib/markets/enforce-native-market-permissions'
 
 const ALLOWED_STATUSES: ApplicationStatus[] = [
   'approved',
@@ -52,6 +53,9 @@ export async function POST(
   if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissionsForApplication(supabase, applicationId)
+  if (nativeGate) return nativeGate
 
   const body = (await request.json()) as {
     status?: ApplicationStatus

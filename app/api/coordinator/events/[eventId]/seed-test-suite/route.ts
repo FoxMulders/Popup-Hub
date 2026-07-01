@@ -7,6 +7,7 @@ import {
   COORDINATOR_EVENT_NOT_OWNER_MESSAGE,
 } from '@/lib/events/coordinator-event-ownership'
 import { persistTestSuiteApplications, resolveTestSuiteTargetVendorCount } from '@/lib/booth-planner/persist-test-suite-applications'
+import { enforceNativeMarketPermissions } from '@/lib/markets/enforce-native-market-permissions'
 
 /** Kill switch only — coordinator auth + event scope are enforced below. */
 function testSuiteSeedAllowed(): boolean {
@@ -41,6 +42,9 @@ export async function POST(
   if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Coordinator account required' }, { status: 403 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissions(supabase, eventId)
+  if (nativeGate) return nativeGate
 
   const scope = await getCoordinatorScope(supabase, user.id)
 

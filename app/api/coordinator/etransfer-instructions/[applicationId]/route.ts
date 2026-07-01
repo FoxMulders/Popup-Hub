@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-instructions-service'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import type { EventListingType } from '@/types/database'
+import { enforceNativeMarketPermissionsForApplication } from '@/lib/markets/enforce-native-market-permissions'
 
 export async function POST(
   _request: Request,
@@ -18,6 +19,12 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissionsForApplication(
+    serviceSupabase,
+    applicationId
+  )
+  if (nativeGate) return nativeGate
 
   const { data: application } = await serviceSupabase
     .from('booth_applications')
