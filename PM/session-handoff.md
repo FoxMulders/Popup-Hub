@@ -2,7 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Conversion Engine MVP (external listing tier)
+## Active work — Critical bug fixes (publish-assist RLS, conversion engine, is_test leak, native OAuth)
+- **Persona:** All · admin publish-assist · conversion engine · patron discover · iOS native auth.
+- **Goal:** Fix high-severity correctness bugs found in post-`16ffd07f` investigation on `cursor/critical-bug-investigation-ea95`.
+- **Baseline:** branch `cursor/critical-bug-investigation-ea95` @ `e9786d5b`; prior `master` @ `16ffd07f`.
+- **Shipped (PR pending):**
+  - **publish-assist RLS** — approve/reject routes use `createAdminClient()` (cookie-bound `createServiceClient` silently matched 0 rows; migration 134 has no admin UPDATE policy).
+  - **Conversion engine** — `track-click` + `upgrade-to-native` use `createAdminClient()` (`ad_clicks_log` INSERT policy is `WITH CHECK (false)`).
+  - **is_test catalog leak** — `excludeTestMarkets()` on discover/vendor/widget/event surfaces; vendor apply rejects `is_test` markets.
+  - **Native OAuth** — `CapacitorInit` uses `window.location.replace` for OAuth callback deep links.
+  - **SEO** — restore `title.template` spread order in root layout.
+- **Validation:** `npx tsx lib/queries/public-market-catalog.test.ts` passes.
+- **Next:** Merge PR; deploy prod; smoke-test publish-assist approve, external listing track-click while logged in, native OAuth sign-in.
+
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
 - **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.
 - **Baseline:** branch `cursor/conversion-engine-mvp-d6a9` (pending commit); prior `master` @ `6d0d1fdd`.
