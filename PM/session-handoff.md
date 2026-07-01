@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Global back-to-top button (local, not deployed)
+- **Persona:** All users · long-scroll pages (marketing, vendor/coordinator lists, discover, legal, profile).
+- **Goal:** Floating control to return to the top on pages with substantial vertical scroll.
+- **Shipped locally:**
+  - **`components/navigation/scroll-to-top-button.tsx`** — forest-green circular button, bottom-right; fades in after 400px scroll; respects reduced motion.
+  - **`hooks/use-scroll-to-top-button.ts`** — capture-phase scroll listener across window + nested hosts; hides on immersive canvas routes and fullscreen DOM modes.
+  - **`lib/navigation/scroll-to-top.ts`** — `getMaxScrollOffset`, `smoothScrollAllHostsToTop`, `routeSuppressesScrollToTopButton` (studio, layout editor, print/check-in, experience designer).
+  - **`app/layout.tsx`** — mounted globally beside install prompt.
+  - **`globals.css`** — lifts button above mobile bottom nav when `body[data-mobile-bottom-nav]` is set.
+- **Verify:** Scroll `/`, `/vendor/applications`, `/legal/faq` — button appears after ~400px; tap scrolls to top. Hidden on `/coordinator/studio` and layout editor.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Mobile discover header safe area + stacked portal tabs (shipped `45dad9f8`, prod live)
 - **Persona:** Patron · Discover map (`/discover`) · mobile shell / Capacitor.
 - **Goal:** Restore visible iOS status bar (time, signal, battery); stop Coordinator tab truncation; stack centered PopupHub logo above Patron/Vendor/Coordinator on mobile.
