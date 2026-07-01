@@ -192,7 +192,7 @@ const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
   auth: 'h-14 w-auto sm:h-16',
   /** Single-row sticky header: logo beside portal tabs. */
   header: 'h-9 w-auto sm:h-10',
-  /** Full-screen loader overlay — wordmark 2.5× header below the animation. */
+  /** Full-screen loader overlay — wordmark 2.5× header above the animation. */
   loader: 'h-[5.625rem] w-auto sm:h-[6.25rem]',
   /** Slim icon rail (HubGrid nav dock). */
   rail: 'h-7 w-7 min-h-0 min-w-7 sm:h-7',
@@ -218,14 +218,37 @@ export function BrandLogoLockup({
   className,
   href,
   size = 'header',
+  wordmarkOnly = false,
 }: {
   className?: string
   href?: string
   size?: BrandLogoMarkSize
+  /** Loader overlay — wordmark only, no storefront icon beside it. */
+  wordmarkOnly?: boolean
 }) {
   const iconSrc = useBrandLogoSrc()
 
-  const lockup = (
+  const wordmark = (
+    <Image
+      src={brandWordmarkSrc()}
+      alt="Popup Hub"
+      width={BRAND_WORDMARK.width}
+      height={BRAND_WORDMARK.height}
+      unoptimized
+      priority
+      draggable={false}
+      className={cn(
+        'pointer-events-none w-auto max-w-full select-none object-contain',
+        wordmarkOnly ? 'object-center' : 'object-left',
+        MARK_HEIGHTS[size],
+        className,
+      )}
+    />
+  )
+
+  const lockup = wordmarkOnly ? (
+    <span className="inline-flex shrink-0 items-center justify-center">{wordmark}</span>
+  ) : (
     <span className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2">
       <Image
         src={iconSrc}
@@ -241,20 +264,7 @@ export function BrandLogoLockup({
           LOCKUP_ICON_HEIGHTS[size],
         )}
       />
-      <Image
-        src={brandWordmarkSrc()}
-        alt="Popup Hub"
-        width={BRAND_WORDMARK.width}
-        height={BRAND_WORDMARK.height}
-        unoptimized
-        priority
-        draggable={false}
-        className={cn(
-          'pointer-events-none w-auto max-w-full select-none object-contain object-left',
-          MARK_HEIGHTS[size],
-          className,
-        )}
-      />
+      {wordmark}
     </span>
   )
 
