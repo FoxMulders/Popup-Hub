@@ -20,6 +20,7 @@
         "db:push": "npx supabase db push",
         "seed:external-listing": "npx tsx scripts/seed-external-listing-market.ts",
         "verify:conversion-engine": "npx tsx scripts/verify-conversion-engine.ts",
+        "ops:conversion-engine": "bash scripts/run-conversion-engine-ops.sh",
         "seed:edmonton:import": "npx tsx scripts/import-edmonton-seed.ts",
         "seed:edmonton:publish": "npx tsx scripts/publish-edmonton-organizers.ts",
         "db:diff": "npx supabase db diff",
