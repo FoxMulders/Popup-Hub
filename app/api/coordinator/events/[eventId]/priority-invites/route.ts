@@ -11,6 +11,7 @@ import { sendPriorityBoothInviteEmail } from '@/lib/email/priority-booth-invite'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { BoothCell } from '@/types/database'
 import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
+import { enforceNativeMarketPermissions } from '@/lib/markets/enforce-native-market-permissions'
 
 const PRIORITY_WINDOW_HOURS = 24
 
@@ -134,6 +135,9 @@ export async function POST(_request: Request, context: RouteContext) {
   } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const nativeGate = await enforceNativeMarketPermissions(supabase, eventId)
+  if (nativeGate) return nativeGate
 
   const event = await loadCoordinatorEvent(supabase, eventId, user.id)
   if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 })

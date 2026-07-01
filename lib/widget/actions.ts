@@ -5,6 +5,7 @@ import { dispatchNativePushToUsers } from '@/lib/mobile/push-dispatch'
 import { buildWidgetFeed } from '@/lib/widget/fetch-data'
 import { cycleMarketFilter } from '@/lib/widget/feed'
 import type { WidgetAuthContext, WidgetPatronFeed } from '@/lib/widget/types'
+import { enforceNativeMarketPermissions } from '@/lib/markets/enforce-native-market-permissions'
 
 export type WidgetActionName =
   | 'refresh'
@@ -140,6 +141,17 @@ async function broadcastAction(
   const eventId = body.eventId?.trim()
   if (!message || !eventId) {
     return { ok: false as const, status: 400, error: 'eventId and message required' }
+  }
+
+  const nativeGate = await enforceNativeMarketPermissions(service, eventId)
+  if (nativeGate) {
+    const payload = (await nativeGate.json()) as { error: string; code?: string; message?: string }
+    return {
+      ok: false as const,
+      status: 403,
+      error: payload.message ?? payload.error,
+      code: payload.code,
+    }
   }
 
   const scope = await getCoordinatorScope(service, context.userId)

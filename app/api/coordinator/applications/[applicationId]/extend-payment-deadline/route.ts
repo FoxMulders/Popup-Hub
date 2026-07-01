@@ -9,6 +9,7 @@ import {
   snapshotApplicationAuditState,
 } from '@/lib/audit/security-audit-log'
 import { createClient } from '@/lib/supabase/server'
+import { enforceNativeMarketPermissionsForApplication } from '@/lib/markets/enforce-native-market-permissions'
 
 const ALLOWED_HOURS = new Set([24, 48])
 
@@ -35,6 +36,9 @@ export async function POST(
   if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+
+  const nativeGate = await enforceNativeMarketPermissionsForApplication(supabase, applicationId)
+  if (nativeGate) return nativeGate
 
   const body = (await request.json()) as { hours?: number }
   const hours = body.hours

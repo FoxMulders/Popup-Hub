@@ -2,6 +2,28 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio small-screen matrix guard (PR automation)
+- **Persona:** Coordinator · HubGrid / Blueprint Studio dual-screen Booth Matrix (`/coordinator/studio/ledger`).
+- **Goal:** QA scan layout/dashboard Blueprint Studio views and ensure small screens either use the shared desktop-required guard or render the floor-plan matrix regression warning.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-cc5b` @ latest pushed `HEAD` (implementation through `c7dbd93c`, handoff included); base task triggered from PR #172 context (`cursor/conversion-engine-mvp-d6a9` @ `a7f5e171`). No production deploy from this QA branch.
+- **Shipped:**
+  - `components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx` — reusable client guard with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`, 1024px × 550px breaker, alert UI, and `data-testid="floor-plan-matrix-small-screen-warning"`.
+  - `components/coordinator/dashboard/dashboard-ledger-window-client.tsx` — wraps presenter/wall-cast matrix UI in the guard so BroadcastChannel subscriptions and table rows mount only after a desktop-sized viewport is confirmed.
+  - Existing HubGrid studio / in-tab Allocation Ledger path verified through `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; canvas mount remains gated by `showDesktopRequired`, preserving live `MarketManagementProvider` matrix sync on desktop.
+- **Verify:** `npx eslint components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx components/coordinator/dashboard/dashboard-ledger-window-client.tsx`; `./node_modules/.bin/tsc --noEmit --pretty false`; static `rg` confirmed guard + warning message.
+- **Next:** Open `/coordinator/studio/ledger?screen=presenter` at <1024px width or <550px height to visually confirm the alert; at desktop size confirm presenter/wall-cast still sync from HubGrid without manual refresh.
+
+## Active work — Conversion Engine MVP (external listing tier)
+- **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
+- **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.
+- **Baseline:** branch `cursor/conversion-engine-mvp-d6a9` (pending commit); prior `master` @ `6d0d1fdd`.
+- **Shipped:**
+  - **Migration `136_conversion_engine_external_listing.sql`** — `events.is_external_listing`, `destination_url`, `ad_campaign_status`, `ad_campaign_expires_at`; `ad_clicks_log` + dedupe index; RLS read/write split on `booth_layouts` and `booth_applications`.
+  - **API** — `enforceNativeMarketPermissions` on coordinator ops routes + `/api/v1/markets/[id]/{applications,floorplan/layout,invoices,vendor-broadcast,payouts}`; `POST …/track-click` (public 302); `POST …/upgrade-to-native` (owner txn + Square authorize URL).
+  - **UI** — `LockedModuleOverlay`, `DashboardWorkspace` 3-column mocks @ opacity-35, unlock fade + `patchEventListingMode`; wired into `Dashboard_qa` / studio page.
+- **Smoke-test:** `npm run build` passes. Apply migration via `npm run db:push`. Set `is_external_listing=true` on a test event to verify studio overlays + `403 FEATURE_LOCKED_EXTERNAL_TIER` on gated APIs.
+- **Next:** Admin/trust path to create external listings; prod deploy after merge.
+
 ## Active work — iOS ITMS-90189 redundant build (build 26 / v1.191.0) — TestFlight uploaded
 - **Persona:** All users · native `ca.popuphub.app` · TestFlight / App Store.
 - **Goal:** Fix App Store Connect **ITMS-90189** — build **24** already uploaded for v**1.191.0**; increment `CFBundleVersion` before re-upload.

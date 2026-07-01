@@ -340,6 +340,24 @@ export async function persistLayoutDraft(
 ): Promise<{ error: Error | null }> {
   if (!eventId) return { error: new Error('Missing event id for layout save') }
 
+  const { data: eventRow, error: eventError } = await supabase
+    .from('events')
+    .select('is_external_listing')
+    .eq('id', eventId)
+    .maybeSingle()
+
+  if (eventError) {
+    return { error: errorFromSupabase(eventError) }
+  }
+
+  if (eventRow?.is_external_listing === true) {
+    return {
+      error: new Error(
+        'This operational function requires a Native Market migration.'
+      ),
+    }
+  }
+
   const sanitizedPayload = {
     ...layoutPayload,
     spacing_mode: spacingModeForPersist(layoutPayload.spacing_mode),

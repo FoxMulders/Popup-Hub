@@ -5,6 +5,7 @@ import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { debitWalletWithdrawal } from '@/lib/wallet/debit-withdrawal'
 import { adjustWalletBalanceForUser } from '@/lib/wallet/adjust-balance'
 import { ensureWallet } from '@/lib/wallet/credit-deposit'
+import { enforceNativeMarketPermissions } from '@/lib/markets/enforce-native-market-permissions'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -56,6 +57,9 @@ export async function POST(request: Request) {
     if (!event || event.coordinator_id !== user.id) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
+
+    const nativeGate = await enforceNativeMarketPermissions(supabase, body.eventId)
+    if (nativeGate) return nativeGate
   }
 
   const admin = createAdminClient()

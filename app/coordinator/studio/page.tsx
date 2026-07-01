@@ -45,7 +45,7 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
 
   const eventsQuery = supabase
     .from('events')
-    .select('id, name, start_at, end_at, status, listing_type, booth_price_cents, multi_table_discount_percent, location_name, address')
+    .select('id, name, start_at, end_at, status, listing_type, booth_price_cents, multi_table_discount_percent, location_name, address, is_external_listing, destination_url, ad_campaign_status')
     .order('start_at', { ascending: false })
 
   const { data: eventRows } = scope.isAdmin
@@ -105,6 +105,9 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
     status: e.status,
     location_name: e.location_name,
     address: e.address,
+    isExternalListing: e.is_external_listing === true,
+    destinationUrl: e.destination_url ?? null,
+    adCampaignStatus: e.ad_campaign_status ?? null,
   }))
 
   const eventIds = new Set(events.map((e) => e.id))
