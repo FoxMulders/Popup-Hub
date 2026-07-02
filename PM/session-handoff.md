@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical catalog/conversion/OAuth fixes (PR pending)
+- **Persona:** Patron · Discover ad listings; Coordinator · advertise funnel; Admin · publish-assist; Native app OAuth.
+- **Goal:** Fix pre-existing critical bugs still on `master` after iosBuild 36 trigger review (amplified by PR #214 homepage city counts).
+- **Shipped locally:**
+  - **track-click / upgrade-to-native:** `createAdminClient()` — `ad_clicks_log` RLS INSERT is `WITH CHECK (false)`; cookie-bound `createServiceClient()` 500s for logged-in patrons.
+  - **advertise route:** `coordinatorPublishBlockReason` before publishing external listings.
+  - **Public catalog:** `.eq('is_test', false)` on discover/vendor/widget queries; vendor apply rejects `is_test` markets.
+  - **publish-assist approve/reject:** `createAdminClient()` — RLS silently dropped admin writes.
+  - **CapacitorInit OAuth:** `window.location.replace` to `/api/auth/callback` so session cookies persist (regression from `router.push`).
+  - **Tests:** `lib/markets/ad-click-tracking.test.ts`, `lib/queries/cached-public-markets.test.ts`.
+- **Verify:** Logged-in patron clicks external listing → redirect (not 500). Homepage city counts exclude QA test markets. Suspended coordinator blocked on advertise POST. Native Google sign-in completes with session. Admin publish-assist approve updates request + publishes draft.
+- **Next:** Merge PR + production deploy.
+
 ## Active work — Hero white pill buttons + vendor CTA (PR pending)
 - **Persona:** Patron · public marketing homepage (`/`).
 - **Goal:** All hero CTA pills solid white; four pathways (patron, vendor, advertise, run natively).
