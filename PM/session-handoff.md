@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session — Critical bug scan (`4de815bd` scroll preservation #217)
+- **Automation:** Deep review of scroll-preservation merge on `master` @ `4de815bd`.
+- **Result:** No critical bugs found — no PR opened.
+- **Reviewed:** `RouteScrollToTop` pathname-only reset, `scroll-position` utilities, wallet/verification `refreshPreservingScroll`, error-boundary `retryPreservingScroll`, vendor filter scroll removal.
+- **Non-critical notes:** `WalletReclaimPanel.refundToCard` may show stale reclaim UI until manual refresh (API enforces limits); `CoordinatorPassportExtras` client state may lag after soft refresh; `reloadPreservingScroll` unused in prod paths.
+- **Next:** None for this scan.
+
 ## Shipped this session — Preserve scroll on same-page reload (branch `cursor/preserve-scroll-on-reload-a9cc`)
 - **Persona:** All portals · in-place filters, wallet/verification saves, segment error retries.
 - **Goal:** Buttons that reload or refresh the current page should not jump back to the top.
