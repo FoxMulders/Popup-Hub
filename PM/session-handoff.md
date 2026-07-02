@@ -9,8 +9,8 @@
   - **`/compare`** — `CompareLanding` + `MarketingIntentComparison` (pillar grid, objection accordion, final CTA).
   - **Homepage promo** — `MarketingAdvertiseMarketPromo` → `/compare` (“Why intent beats impressions →”).
   - **SEO** — metadata + sitemap entry.
-- **Hotfix (pending deploy):** `/compare` added to `lib/auth/public-paths.ts` — was redirecting guests to login.
-- **Prod:** Merged to `master` @ `155e0ac0`; Vercel git deploy triggered. Alias https://popuphub.ca once build completes.
+- **Hotfix:** `/compare` added to `lib/auth/public-paths.ts` — was redirecting guests to login.
+- **Prod (Jul 2 2026):** https://popuphub.ca/compare — `master` @ `c2bc9313` (PR #192 + auth hotfix). Vercel deployment **success**.
 - **Smoke-test:** `/compare` loads for guests; homepage promo link works; advertise CTA → signup flow.
 
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
