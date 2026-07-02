@@ -2,7 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Center loader logo and animation (branch `cursor/center-loader-logo-animation-7dcc`)
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-5892`)
+- **Trigger:** Push `484bd82a` (loader centering PR #208) — no critical bugs in that diff.
+- **Found (from PR #181 conversion engine still on master):**
+  - **track-click RLS:** `createServiceClient()` inherits patron JWT → `ad_clicks_log` INSERT denied (`WITH CHECK (false)`) → 500 for logged-in users clicking ad listings.
+  - **advertise fraud gate:** `/api/coordinator/events/advertise` skipped `coordinatorPublishBlockReason` — suspended/rejected coordinators could publish ad listings.
+  - **is_test catalog leak:** Discover/vendor directory queries omitted `.eq('is_test', false)` — QA scenario markets visible publicly.
+- **Fix @ `2d191037`:** `createAdminClient()` for track-click + upgrade-to-native; fraud gate on advertise; is_test filters; unit test.
+- **Next:** Merge PR + production deploy.
+
+## Active work — Center loader logo and animation (merged PR #208 @ `484bd82a`)
 - **Goal:** Center the wordmark and loader animation as a single vertically-centered group on the full-screen loader overlay.
 - **Persona:** All users · initial page-load loader and replay overlay.
 - **Root cause:** Centering fix from `cursor/loader-logo-below-animation-8703` never merged — inner column still used `h-full`, so the animation + wordmark group did not center as a compact unit on the viewport.
