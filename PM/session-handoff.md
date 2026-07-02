@@ -2,6 +2,31 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint layout responsiveness guard QA (branch `cursor/blueprint-layout-responsiveness-8be8`)
+- **Persona:** Coordinator · HubGrid / Blueprint Studio / Allocation Ledger dual-screen matrix.
+- **Goal:** Scan Blueprint layout/dashboard views and ensure small screens either hit the floor-plan viewport guard or render the designated matrix regression warning.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-8be8` @ `dcfb2fc1` before local changes.
+- **Shipped:**
+  - **Standalone matrix route** — `/coordinator/studio/ledger` wraps `DashboardLedgerWindowClient` in `DashboardLedgerViewportGuard`.
+  - **Regression copy** — `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`: “The floor plan matrix is not optimized for small screens. Recommended layout: desktop size.”
+  - **Canvas layout editors** — production spatial layout editor plus TypeScript QA/recovery mirrors now use `FloorPlanViewportLayoutProvider`, `DesktopScreenRequiredOverlay`, and `showDesktopRequired` to block `FloorPlanV2` below the desktop-size breaker.
+  - **Regression test** — `dashboard-ledger-viewport-guard.test.ts` covers the exact copy and 1024px × 550px threshold behavior.
+- **Verify:** `npx tsx components/coordinator/dashboard/dashboard-ledger-viewport-guard.test.ts`; `./node_modules/.bin/tsc --noEmit --pretty false`; targeted `npm run lint`; `next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx`; browser walkthrough on `/coordinator/studio/ledger` at iPhone XR 414×896 with local Supabase auth/profile stub shows the exact warning and no matrix rows.
+- **Caveats:** `next dev` still trips the existing unrelated dynamic route slug conflict (`id` vs `eventId`); production-mode build/start was used for route verification. Local stub only covers auth/profile, so unrelated console noise from REST/realtime endpoints is expected during the walkthrough.
+- **Next:** Standard PR review; no production deploy from this automation run.
+
+## Active work — Location Discovery Engine (branch `cursor/location-discovery-engine-50c6`)
+- **Persona:** Patron · marketing homepage (`/`).
+- **Goal:** Replace static city card stack with dynamic geo-personalized discovery engine — search bar, live weekend market counts, responsive hub grid.
+- **Shipped:**
+  - **`lib/marketing/detect-visitor-city.ts`** — Vercel `x-vercel-ip-city` geo-targeting; Edmonton fallback in dev.
+  - **`lib/marketing/city-market-counts.ts`** — weekend + 50 km hub counts from `getCachedDiscoverMarkets()`.
+  - **`LocationSearchBar`** — native Tailwind postal/city input + `#FF6B35` “Open Interactive Map” CTA; geocode → discover routing.
+  - **`LocationDiscoveryEngine`** — hero, search, 4-column hub grid with emerald count badges, bullet suburb ribbon.
+  - **`MarketingLocalMarkets`** — async server wrapper; optional `detectedCity` prop override.
+- **Smoke-test:** `npm run build` passes. Homepage shows personalized hero, search bar above grid, hover lift on cards, live count badges.
+- **Next:** Visual QA on production after deploy; confirm Vercel geo headers personalize Calgary visitors.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
