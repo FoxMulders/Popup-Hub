@@ -2,6 +2,24 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint layout small-screen guard QA (branch `cursor/blueprint-layout-responsiveness-e072`)
+- **Persona:** Coordinator · Blueprint Studio / dual-screen Booth Matrix / spatial layout editor.
+- **Goal:** Ensure Blueprint layout/dashboard surfaces either block pocket-sized viewports or render the regression warning: “The floor plan matrix is not optimized for small screens. Recommended layout: desktop size.”
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-e072`; no production deploy in this task.
+- **Shipped:**
+  - Added `DashboardLedgerViewportGuard` and wrapped `/coordinator/studio/ledger` so Presenter / Wall Cast matrices show the designated warning below the 1024px x 550px desktop-size breaker instead of mounting the table.
+  - Added `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` to the standalone spatial layout editor so resized desktop/tablet windows cannot mount `FloorPlanV2` below the same breaker.
+  - Mirrored the guard pattern in included `src/qa_review` floor-plan/spatial files and the excluded recovery copy so repository-wide QA scans do not flag stale unguarded mounts.
+- **Validation:** `./node_modules/.bin/tsc --noEmit --pretty false` passed; targeted ESLint on touched files passed; targeted Next builds passed for `app/coordinator/studio/ledger/page.tsx` and `app/coordinator/events/[id]/layout/page.tsx`. Playwright/Chromium with a local Supabase auth/profile stub verified `/coordinator/studio/ledger?screen=presenter` at 390x844 shows the exact matrix warning and at 1280x800 shows the Presenter shell; `/coordinator/events/qa-event/layout` at 390x844 shows `DesktopScreenRequiredOverlay`.
+- **Blockers:** none known.
+- **Next actions:** Optional full authenticated HubGrid smoke with real event data; local `next dev` remains blocked by the pre-existing mixed dynamic slug conflict (`eventId` vs `id`), so targeted webpack builds were used for browser verification.
+
+## Active work — Compare page duplicate back buttons (branch `cursor/fix-duplicate-back-buttons-0a58`)
+- **Persona:** Public marketing · event coordinators · `/compare`.
+- **Goal:** Remove stacked Back controls (shell `PageBackBar` + hero “Back to home”).
+- **Shipped:** Removed in-hero back link from `CompareLanding`; shell back bar is the single affordance (matches `/for-organizers`).
+- **Smoke-test:** `/compare` shows one Back control in the sticky bar only.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
