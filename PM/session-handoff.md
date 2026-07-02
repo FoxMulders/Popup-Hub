@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-1f4c` @ `e265681e`)
+- **Trigger:** `master` push @ `3169d86c` (docs handoff after PR #218).
+- **Reviewed:** PRs #217 (scroll preserve), #218 (hero pills), #214 (location discovery engine).
+- **Found (pre-existing, not introduced by latest commits):**
+  1. **Ad click 500** — `track-click` RLS blocks `ad_clicks_log` INSERT for logged-in patrons.
+  2. **`is_test` catalog leak** — QA scenario markets on Discover/homepage/widget/vendor directory.
+  3. **Advertise fraud bypass** — `/api/coordinator/events/advertise` skips `coordinatorPublishBlockReason`.
+  4. **Native OAuth** — CapacitorInit `router.push` may drop Set-Cookie from auth callback.
+  5. **Publish-assist RLS** — approve/reject used cookie-bound service client.
+  6. **Vendor apply to test markets** — no `is_test` guard.
+- **Shipped:** PR open on `cursor/critical-bug-investigation-1f4c` — cherry-pick of validated fix set + unit tests.
+- **Tests:** `ad-click-tracking.test.ts`, `cached-public-markets.test.ts` pass.
+- **Next:** Merge PR; deploy; smoke external listing click while logged in; confirm `is_test` markets absent from `/discover`.
+
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02 — PR #218 hero white pills)
 - **Baseline:** `master` @ `1f0b5dcb` · web build `14` · iOS `iosBuild` **36** / v**1.191.0**
 - **Web (Vercel):** Git integration production deploy **success** on `5efd7b7b` (merge PR #218) — https://popuphub.ca (alias live). Hero shows four solid white pill CTAs: Browse markets as a shopper, Apply as a vendor, Advertise on Discover, Run applications natively.
