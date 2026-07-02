@@ -2,12 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Hero white pill buttons + vendor CTA (PR pending)
+## Shipped this session — Hero white pill buttons + vendor CTA (PR #218 @ `5efd7b7b`)
 - **Persona:** Patron · public marketing homepage (`/`).
 - **Goal:** All hero CTA pills solid white; four pathways (patron, vendor, advertise, run natively).
 - **Shipped:** `marketing-pill--secondary` → solid `bg-white`; ghost hero CTAs switched to secondary pill; fourth hero pill **Apply as a vendor** → `/for-vendors` (Patrons→Vendors→Organizers order).
 - **Verify:** Homepage hero shows four white pill buttons — shopper browse, apply as vendor, advertise, run natively.
-- **Next:** Merge PR + production deploy.
+- **Next:** none — merged to `master`.
+
+## Investigation 1735 (2026-07-02 @ `5efd7b7b`)
+- **Trigger:** push merge PR #218 (hero white buttons).
+- **Reviewed:** PR #218 diff (marketing CSS/CTA only); PR #217 scroll preservation (`scroll-position.ts`, `RouteScrollToTop`, wallet refresh callers).
+- **Result:** No critical bugs in pushed commits. Scroll unit tests pass (`npx tsx lib/navigation/scroll-position.test.ts`).
+- **Note:** Pre-existing conversion/catalog issues still on `master` (is_test catalog leak, track-click RLS, advertise fraud gate) — fix on `cursor/critical-bug-investigation-2acf` (`e245b28a`), not introduced by this push.
 
 ## Shipped this session — Preserve scroll on same-page reload (PR #217 @ `4de815bd`)
 - **Persona:** All portals · in-place filters, wallet/verification saves, segment error retries.
