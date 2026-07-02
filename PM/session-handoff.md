@@ -12,7 +12,8 @@
   - **Markets list + home** — Ad listing / Native market badges, campaign + upgrade actions, dual CTAs.
   - **Post-login** — `resolvePostLoginPath` defaults coordinators to `/coordinator/welcome` (deep links preserved).
 - **Smoke-test:** `npm run build` passes. Coordinator login → welcome → advertise form → campaign page; external market shows badges on `/coordinator/markets`.
-- **Next:** Prod deploy (`npx vercel deploy --prod --yes`); wire Discover cards to `track-click`; Stripe for ad billing.
+- **Prod (Jul 2 2026):** https://popuphub.ca — build **8** @ `ef2c2f3` (includes PR #181 portal funnel). Merged PR #181 → enabled `master` git deploy in `vercel.json` → Vercel production deployment succeeded.
+- **Next:** Wire Discover cards to `track-click`; Stripe for ad billing.
 
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
