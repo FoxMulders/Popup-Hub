@@ -5,7 +5,7 @@
 ## Active work — Blueprint layout responsiveness guard (branch `cursor/blueprint-layout-responsiveness-6a6e`)
 - **Persona:** Coordinator · Blueprint Studio / Allocation Ledger / standalone layout editor.
 - **Goal:** QA scan and patch Blueprint/dashboard matrix surfaces so pocket-sized viewports either hit the existing desktop overlay or render the regression warning: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
-- **Baseline:** branch `cursor/blueprint-layout-responsiveness-6a6e` @ `d333bb4f`; no production deploy in this task.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-6a6e` @ `d333bb4f`; production deploy attempted after push but blocked by missing Vercel CLI credentials (device-login flow).
 - **Shipped:**
   - **`DashboardLedgerViewportGuard`** — shared client guard using the floor-plan 1024px x 550px pocket-size breaker and exact matrix regression copy.
   - **`/coordinator/studio/ledger`** — wraps the dual-screen presenter / wall-cast matrix before the matrix window renders.
