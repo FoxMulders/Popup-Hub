@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CalendarDays, Megaphone } from 'lucide-react'
+import { CalendarDays, MapPin, Megaphone } from 'lucide-react'
 import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
 import {
   COORDINATOR_ADVERTISE_SIGNUP_HREF,
@@ -22,7 +22,14 @@ export function MarketingHero() {
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg">
             {HOME_HERO.subhead}
           </p>
-          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <Link
+              href="/discover"
+              className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
+            >
+              <MapPin className="h-4 w-4" aria-hidden />
+              Browse markets as a shopper
+            </Link>
             <Link
               href={COORDINATOR_ADVERTISE_SIGNUP_HREF}
               className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
@@ -40,10 +47,7 @@ export function MarketingHero() {
           </div>
           <p className="mx-auto mt-4 max-w-xl text-sm text-white/65">
             Advertise on Discover with a trackable link to your site — or run applications, booth
-            layout, and payments natively.{' '}
-            <Link href="/discover" className="font-medium text-white/90 underline-offset-2 hover:underline">
-              Browse markets as a shopper →
-            </Link>
+            layout, and payments natively.
           </p>
         </div>
       </div>
