@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { RequestPublishAssistButton } from '@/components/coordinator/request-publish-assist-button'
 import { usePublishAssistPending } from '@/hooks/use-publish-assist-pending'
+import { useRefreshPreservingScroll } from '@/lib/navigation/use-refresh-preserving-scroll'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
 interface CoordinatorVerificationBannerProps {
@@ -34,6 +35,7 @@ export function CoordinatorVerificationBanner({
   paymentTrustComplete = false,
   eventId = null,
 }: CoordinatorVerificationBannerProps) {
+  const refreshPreservingScroll = useRefreshPreservingScroll()
   const [pending, startTransition] = useTransition()
   const [expanded, setExpanded] = useState(verificationStatus === 'unverified')
   const [orgName, setOrgName] = useState(organizationName ?? '')
@@ -77,7 +79,7 @@ export function CoordinatorVerificationBanner({
       }
 
       toast.success(data.message ?? 'Verification submitted')
-      window.location.reload()
+      refreshPreservingScroll()
     })
   }
 
