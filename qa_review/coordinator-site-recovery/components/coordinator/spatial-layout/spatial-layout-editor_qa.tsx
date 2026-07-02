@@ -4,6 +4,11 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2/floor-plan-v2'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import type { BoothLayout, Event } from '@/types/database'
@@ -29,6 +34,24 @@ export function SpatialLayoutEditor({
   existingLayout,
   applications = [],
 }: SpatialLayoutEditorProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <SpatialLayoutEditorInner
+        eventId={eventId}
+        event={event}
+        existingLayout={existingLayout}
+        applications={applications}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function SpatialLayoutEditorInner({
+  eventId,
+  event,
+  existingLayout,
+  applications = [],
+}: SpatialLayoutEditorProps) {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
@@ -48,6 +71,7 @@ export function SpatialLayoutEditor({
     handleDeleteRoom,
     handleBaselineTableLengthChange,
   } = useSpatialLayoutState({ event, existingLayout })
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
 
   const handleSave = useCallback(async () => {
     if (hasOverlap) {
@@ -102,30 +126,38 @@ export function SpatialLayoutEditor({
         />
       }
     >
-      <FloorPlanV2
-        eventId={eventId}
-        layoutRooms={rooms}
-        layoutActiveRoomId={activeRoomId}
-        onLayoutRoomsChange={handleLayoutRoomsChange}
-        saveLayoutRef={saveLayoutRef}
-        eventCategoryNames={eventCategoryNames}
-        onAddRoom={handleAddRoom}
-        onRenameRoom={handleRenameRoom}
-        onDeleteRoom={handleDeleteRoom}
-        baselineTableLengthFt={baselineTableLengthFt}
-        onBaselineTableLengthChange={handleBaselineTableLengthChange}
-        layoutCapacity={layoutCapacity}
-        applications={applications}
-        onOverlapChange={setHasOverlap}
-        onPlacedCountChange={setPlacedCount}
-        onSaveMarket={handleSave}
-        saveMarketDisabled={hasOverlap || saving}
-        saveMarketLoading={saving}
-        chrome="default"
-        preferServerLayout
-        debugGeometry={false}
-        className="h-full min-h-0"
-      />
+      <DesktopScreenRequiredOverlay eventId={eventId} />
+      {showDesktopRequired ? (
+        <div
+          className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
+          aria-hidden
+        />
+      ) : (
+        <FloorPlanV2
+          eventId={eventId}
+          layoutRooms={rooms}
+          layoutActiveRoomId={activeRoomId}
+          onLayoutRoomsChange={handleLayoutRoomsChange}
+          saveLayoutRef={saveLayoutRef}
+          eventCategoryNames={eventCategoryNames}
+          onAddRoom={handleAddRoom}
+          onRenameRoom={handleRenameRoom}
+          onDeleteRoom={handleDeleteRoom}
+          baselineTableLengthFt={baselineTableLengthFt}
+          onBaselineTableLengthChange={handleBaselineTableLengthChange}
+          layoutCapacity={layoutCapacity}
+          applications={applications}
+          onOverlapChange={setHasOverlap}
+          onPlacedCountChange={setPlacedCount}
+          onSaveMarket={handleSave}
+          saveMarketDisabled={hasOverlap || saving}
+          saveMarketLoading={saving}
+          chrome="default"
+          preferServerLayout
+          debugGeometry={false}
+          className="h-full min-h-0"
+        />
+      )}
     </SpatialLayoutShell>
   )
 }

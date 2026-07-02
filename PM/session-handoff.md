@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio responsive guard QA (branch `cursor/blueprint-layout-responsiveness-5096`)
+- **Persona:** Coordinator · Blueprint Studio / HubGrid booth matrix and spatial layout editor.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-5096` @ `9b3dcd34` (`master` bot commit recording iOS build 30). No production deploy from this task.
+- **Goal:** Audit Blueprint/dashboard layout surfaces and ensure pocket-sized viewports either use the desktop-required floor-plan guard or render the designated matrix warning.
+- **Shipped:**
+  - `DashboardLedgerViewportGuard` wraps `/coordinator/studio/ledger` and renders: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+  - `components/coordinator/spatial-layout/spatial-layout-editor.tsx` now uses `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and suppresses `FloorPlanV2` while `showDesktopRequired` is active.
+  - QA spatial editor mirrors were aligned so broad scans do not flag stale unguarded copies.
+  - `scripts/verify-blueprint-responsive-guards.ts` asserts the guarded Blueprint Studio, booth matrix, wizard, and QA mirror surfaces.
+- **Verify:** `npx tsx scripts/verify-blueprint-responsive-guards.ts` PASS; targeted `npx eslint ...` PASS; `npx tsc --noEmit --pretty false` PASS. Manual Chromium harness confirmed desktop child content is hidden below the breaker and the exact matrix warning renders; artifact `ledger_guard_small_screen_warning.mp4`.
+- **Blockers / notes:** `next dev` and `next dev --webpack` are still blocked by the existing unrelated dynamic route slug conflict (`eventId` !== `id`), so route-level manual testing used a temporary harness importing the actual guard component.
+- **Next:** Normalize mixed dynamic route slug names so the full Next dev server can run route-level manual smoke tests.
+
 ## Active work — Portal-first conversion funnel (branch `cursor/portal-first-conversion-d6a9`)
 - **Persona:** Coordinator · portal home/markets/welcome (mobile-safe).
 - **Goal:** Conversion is not HubGrid-only — coordinators can advertise without native ops; post-login welcome gate + dual create paths.
