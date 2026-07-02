@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio small-screen matrix guard (PR #180 QA)
+- **Persona:** Coordinator · Blueprint Studio / Allocation Ledger (`/coordinator/studio/ledger`, `/coordinator/events/[id]/layout`).
+- **Goal:** Ensure Blueprint layout/dashboard matrix surfaces either gate pocket-sized viewports or render the designated floor-plan matrix small-screen regression warning.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-4b0b`; QA automation triggered from PR #180 context.
+- **Shipped:**
+  - Added `DashboardLedgerViewportGuard` with exact warning copy: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+  - Wrapped standalone dual-screen Booth Matrix route (`/coordinator/studio/ledger`) in the guard so presenter/wall-cast matrix content does not render under the 1024px × 550px breaker.
+  - Wrapped `SpatialLayoutEditor` with `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and suppresses `FloorPlanV2` when `showDesktopRequired` is true.
+  - Mirrored the spatial/wizard guard pattern into `src/qa_review` Blueprint files so repository scans and TypeScript include guarded QA surfaces.
+- **Verify:** `npx tsc --noEmit --pretty false`; focused `npx eslint ...`; `npx next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx`; static scans for guard/warning wiring all pass.
+- **Manual note:** Browser visual capture of the real route was blocked by existing auth middleware and the repo's unrelated Next runtime slug conflict (`vendor/events/[id]` vs `[eventId]`) when trying dev/full production servers. A temporary local auth bypass was tested and removed; no bypass code remains.
+- **Next:** Standardize the vendor dynamic segment names so `next dev` / full `next start` can support authenticated manual QA without route-conflict failures.
+
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
 - **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.
