@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Critical bug investigation e355 (2026-07-02 @ `e0289b85`)
+- **Trigger:** Push to `master` — docs handoff after TestFlight build 34 (`e0289b85`).
+- **Reviewed:** PR #212 (start on `/`), #211 (hero shopper CTA), #208 (loader centering), `/compare` auth hotfix, iOS build bumps.
+- **Result:** No new critical bugs in recent commits. Changes are intentional UX (marketing home default, hero CTA order, loader layout) or docs/chore.
+- **Pre-existing on master (not introduced here):** conversion-engine RLS/is_test/advertise fixes on draft PR #210; native OAuth `router.push` in `CapacitorInit` (fix exists on unmerged branches).
+- **Next:** Merge PR #210 when ready; no action from this investigation.
+
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02)
 - **Baseline:** `master` @ `368a98ff` · web build `12` · iOS `iosBuild` **34** / v**1.191.0**
 - **Web (Vercel):** Git integration deploy **success** on `278b7b9b` — https://popuphub.ca (alias live). Includes PRs #208 (loader centering), #211 (hero shopper CTA first), #212 (start on `/`).
