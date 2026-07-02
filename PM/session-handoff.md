@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Compare page shopper intent bubble (branch `cursor/compare-shopper-bubble-6bb4`)
+- **Persona:** Public marketing · patrons + coordinators · `/compare`.
+- **Goal:** Add "Browse markets as a shopper" pill before "For event coordinators" in the hero, matching existing bubble styling.
+- **Shipped:**
+  - **`compare-landing.tsx`** — flex row of two pills; shopper bubble links to `/discover`, coordinator label unchanged.
+- **Smoke-test:** `npm run build` passes. `/compare` hero shows shopper pill first, then coordinator pill.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
