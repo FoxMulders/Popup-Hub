@@ -416,13 +416,8 @@
 - **Note:** Future `npm run seed:scenario-markets` re-runs do NOT clear covers (seed payload omits `cover_image_url`); re-run the apply script if markets are purged + re-seeded.
 - **Next:** User commit + deploy when ready (commits the public images + scripts; the cover_image_url values are already live in prod DB).
 
-## Active work — Center loader logo and animation (local, not deployed)
-- **Goal:** Center the worded logo and loader animation as a single vertically-centered group on the full-screen loader overlay, preserving the gap between them.
-- **Personas:** All users · initial page-load loader and replay overlay.
-- **Shipped locally:**
-  - **`components/brand/popup-loader-provider.tsx`** — removed `flex-1` from the animation wrapper so the wordmark + animation stack as a compact group centered by the column's `justify-center`; kept `gap-3` spacing.
-- **Verify:** Static layout check — outer `#loader-screen` flex-centers the column; inner column `justify-center` now applies because both children (`BrandLogoLockup`, `.loader-screen__lottie`) use intrinsic height (`shrink-0`); CSS gives animation `height: min(72vh, 520px)` (mobile `min(60vh, 360px)`). Smoke: fresh tab initial loader + logo replay — wordmark and animation centered together on desktop and mobile.
-- **Next:** User commit + deploy when ready.
+## Active work — Center loader logo and animation (superseded — see top of file)
+- Superseded by branch `cursor/center-loader-logo-animation-7dcc`.
 
 ## Shipped this session (Postal code lookup fix, deployed 2026-06-28)
 - **Goal:** Make the public Discover area filter resolve Canadian postal codes with or without a space once the Google Geocoding server key is configured.
