@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (track-click RLS) — branch `cursor/critical-bug-investigation-1aa5`
+- **Persona:** Patron · Discover click-through; Coordinator · upgrade-to-native.
+- **Bug:** `POST /api/v1/markets/:id/track-click` used cookie-bound `createServiceClient()`. `ad_clicks_log` INSERT policy is `WITH CHECK (false)`, so logged-in patrons got **500** (click not recorded, no redirect). Same pattern risked silent failure on `upgrade-to-native`.
+- **Fix:** `createAdminClient()` for both writes; `ad-click-tracking.test.ts` guards route import.
+- **Also noted (not fixed this PR):** Discover patron UI still links to `/events/:id` instead of `track-click`; `coordinatorPublishBlockReason` not enforced on `/api/coordinator/events/advertise`; unmerged `e9786d5b` fixes (publish-assist RLS, `is_test` discover leak) still off master.
+- **Next:** Merge PR; wire Discover cards to `track-click`; consider advertise publish gate for suspended accounts.
+
 ## Active work — Portal-first conversion funnel (branch `cursor/portal-first-conversion-d6a9`)
 - **Persona:** Coordinator · portal home/markets/welcome (mobile-safe).
 - **Goal:** Conversion is not HubGrid-only — coordinators can advertise without native ops; post-login welcome gate + dual create paths.
