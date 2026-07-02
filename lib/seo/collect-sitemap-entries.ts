@@ -20,6 +20,7 @@ const STATIC_PUBLIC_PATHS: Array<{
 }> = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
   { path: '/for-organizers', changeFrequency: 'weekly', priority: 0.95 },
+  { path: '/compare', changeFrequency: 'monthly', priority: 0.85 },
   { path: '/for-vendors', changeFrequency: 'weekly', priority: 0.95 },
   { path: '/for-organizers/embed', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/discover', changeFrequency: 'hourly', priority: 0.9 },

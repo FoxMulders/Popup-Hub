@@ -11,6 +11,11 @@ export const DEFAULT_SITE_TITLE = 'Discover Local Makers Markets'
 export const DEFAULT_SITE_DESCRIPTION =
   'Discover local pop-up markets across Canada, browse confirmed vendors before you go, and run booth layout and day-of operations with Popup Hub.'
 
+export const COMPARE_PAGE_TITLE = 'Intent vs. Impressions: Market Marketing Comparison'
+
+export const COMPARE_PAGE_DESCRIPTION =
+  'Street signs, social feeds, and free listings vs. PopupHub — a structural breakdown for event coordinators on where marketing budget actually drives foot traffic.'
+
 export const ORGANIZERS_PAGE_TITLE = 'Market Organizer Software'
 
 export const ORGANIZERS_PAGE_DESCRIPTION =
