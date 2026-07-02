@@ -2,6 +2,27 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio responsive guard QA (branch `cursor/blueprint-layout-responsiveness-79d3`)
+- **Persona:** Coordinator · HubGrid / Blueprint Studio / Allocation Ledger.
+- **Baseline:** branch pushed to `origin/cursor/blueprint-layout-responsiveness-79d3`; HEAD `f4e718a4` (`Clean spatial layout hook dependencies`). No production deploy in this automation run.
+- **Goal:** Scan Blueprint Studio layout/dashboard surfaces and add defensive small-screen handling where floor-plan canvas or matrix surfaces could render without the desktop-size breaker.
+- **Shipped:**
+  - **Standalone dual-screen booth matrix** (`/coordinator/studio/ledger`) now wraps `DashboardLedgerWindowClient` in `DashboardLedgerViewportGuard`.
+  - **Regression copy:** `The floor plan matrix is not optimized for small screens. Recommended layout: desktop size.`
+  - **Event spatial layout editor** now uses `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; `FloorPlanV2` is not mounted when `showDesktopRequired` is true.
+  - **QA mirrors** under `src/qa_review` for spatial layout and wizard floor-plan step now use the same viewport provider/overlay pattern.
+  - Hook dependency cleanup in `spatial-layout-editor.tsx` so touched-file lint is clean.
+- **Verify:**
+  - `npx eslint "app/coordinator/studio/ledger/page.tsx" "components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx" "components/coordinator/spatial-layout/spatial-layout-editor.tsx" "src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa.tsx" "src/qa_review/components/coordinator/wizard/wizard-step-floor-plan_qa.tsx"` — pass.
+  - `npx tsc --noEmit --pretty false` — pass.
+  - `npx tsx -e` smoke for `isPocketSizedViewport(390,844)`, short desktop `1200x500`, desktop `1280x720`, and exact warning copy — pass.
+  - Runtime React/JSDOM harness mounted `DashboardLedgerViewportGuard`: warning replaces matrix child at `390x844`, matrix child returns at `1280x720`, warning returns at `1200x500` — pass (temporary `jsdom` install reverted via `npm ci`).
+  - `npx next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx` and full `npx next build --webpack` — pass during verification.
+- **Blockers / notes:**
+  - Browser route verification could not be completed through `next dev` / `next start` because the repo currently throws the existing dynamic route slug conflict: `You cannot use different slug names for the same dynamic path ('eventId' !== 'id')`. Local route access also requires Supabase env/auth; temporary auth bypass attempts were reverted and not committed.
+  - HubGrid store sync path unchanged: desktop canvas mutations still flow through `FloorPlanV2` / `MarketManagementProvider`; mobile guard suppresses canvas/matrix render instead of creating a parallel booth source.
+- **Next:** Standardize mixed `[eventId]` vs `[id]` route params so local Next dev/start can serve authenticated coordinator routes for future browser smoke tests.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
