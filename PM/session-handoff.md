@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-53a2`)
+- **Trigger:** Push `4cd3d192` (PR #186 landing advertise promo) — substantive recent code is PR #181 portal funnel + conversion engine.
+- **Bugs found & fixed:**
+  1. **track-click RLS** — `createServiceClient()` inherits patron JWT; `ad_clicks_log` INSERT policy is `WITH CHECK (false)` → 500 for logged-in users. Fixed: `createAdminClient()`.
+  2. **upgrade-to-native** — same RLS pattern for migration write. Fixed: `createAdminClient()`.
+  3. **advertise fraud bypass (PR #181)** — `POST /api/coordinator/events/advertise` published without `coordinatorPublishBlockReason` → rejected/unverified coordinators could list on Discover. Fixed: gate before insert.
+  4. **is_test catalog leak** — `getCachedDiscoverMarkets` / vendor directory omitted `.eq('is_test', false)` → QA test markets visible publicly. Fixed.
+- **Validation:** `npx tsx lib/markets/ad-click-tracking.test.ts` passes.
+- **Next:** Merge PR; wire Discover patron cards to `track-click`.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
