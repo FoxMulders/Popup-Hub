@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical conversion engine fixes (branch `cursor/critical-bug-investigation-9988`)
+- **Persona:** Patron · Discover ad click-through; Coordinator · advertise publish gate.
+- **Bugs fixed:**
+  - **`track-click`** — `createServiceClient()` inherited patron JWT; `ad_clicks_log` INSERT policy is `WITH CHECK (false)` → logged-in patrons got 500 on ad click-through. Switched to `createAdminClient()`.
+  - **`/api/coordinator/events/advertise`** — skipped `coordinatorPublishBlockReason`; rejected/suspended coordinators could publish ad listings. Gate added.
+  - **Discover/vendor catalog** — missing `.eq('is_test', false)` leaked QA scenario markets publicly.
+  - **`upgrade-to-native`** — admin client for reliable external→native migration write.
+- **Validation:** `npx tsx lib/markets/ad-click-tracking.test.ts` passes.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
