@@ -1,6 +1,12 @@
 /** Coordinator home landing (`/coordinator`). */
 export const COORDINATOR_HOME_PATH = '/coordinator'
 
+/** Post-login conversion gate — advertise vs native funnel (mobile-safe). */
+export const COORDINATOR_WELCOME_PATH = '/coordinator/welcome'
+
+/** Slim advertise-only market creation. */
+export const COORDINATOR_ADVERTISE_PATH = '/coordinator/events/advertise'
+
 /** All-markets list — browse hubs, payments, and studio entry points. */
 export const COORDINATOR_MARKETS_PATH = '/coordinator/markets'
 

@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Portal-first conversion funnel (branch `cursor/portal-first-conversion-d6a9`)
+- **Persona:** Coordinator · portal home/markets/welcome (mobile-safe).
+- **Goal:** Conversion is not HubGrid-only — coordinators can advertise without native ops; post-login welcome gate + dual create paths.
+- **Shipped:**
+  - **`/coordinator/welcome`** — `PortalConversionGate`: advertise vs native choice, FOMO feature cards, upgrade CTA for external listings.
+  - **`/coordinator/events/advertise`** — slim form + `POST /api/coordinator/events/advertise` (external listing, campaign activation stub).
+  - **`/coordinator/events/[id]/campaign`** — click analytics dashboard from `ad_clicks_log` + upgrade CTA.
+  - **Markets list + home** — Ad listing / Native market badges, campaign + upgrade actions, dual CTAs.
+  - **Post-login** — `resolvePostLoginPath` defaults coordinators to `/coordinator/welcome` (deep links preserved).
+- **Smoke-test:** `npm run build` passes. Coordinator login → welcome → advertise form → campaign page; external market shows badges on `/coordinator/markets`.
+- **Next:** Prod deploy (`npx vercel deploy --prod --yes`); wire Discover cards to `track-click`; Stripe for ad billing.
+
 ## Active work — Conversion Engine MVP (external listing tier)
 - **Persona:** Coordinator · HubGrid studio (`/coordinator/studio`).
 - **Goal:** External listing teaser UI with API/RLS locks; free native migration + Square OAuth handoff.

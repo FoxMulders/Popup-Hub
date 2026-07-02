@@ -1,6 +1,5 @@
-import { SitePageBand } from '@/components/layout/site-page-band'
 import Link from 'next/link'
-import { CalendarDays, ChevronRight, Plus } from 'lucide-react'
+import { CalendarDays, ChevronRight, Megaphone, Sparkles } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
@@ -10,6 +9,10 @@ import { CoordinatorPaymentReadinessCallout } from '@/components/coordinator/coo
 import { CoordinatorPortalWelcome } from '@/components/coordinator/coordinator-portal-welcome'
 import { DemoMarketLauncher } from '@/components/coordinator/demo-market-launcher'
 import { VendorInviteCopyButton } from '@/components/coordinator/vendor-invite-copy-button'
+import { ListingTierBadge } from '@/components/coordinator/conversion/listing-tier-badge'
+import { COORDINATOR_ADVERTISE_PATH } from '@/lib/coordinator/coordinator-routes'
+import { SitePageBand } from '@/components/layout/site-page-band'
+import { coordinatorCampaignHref } from '@/lib/coordinator/conversion-listing'
 import type { OrganizerClaimSuggestion } from '@/lib/organizers/match-coordinator-organizers'
 import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
 import { cn } from '@/lib/utils'
@@ -20,6 +23,8 @@ export interface CoordinatorHomeMarket {
   start_at: string
   status: string
   coordinator_name?: string | null
+  is_external_listing?: boolean
+  ad_campaign_status?: string | null
 }
 
 interface CoordinatorHomeProps {
@@ -102,13 +107,19 @@ export function CoordinatorHome({
             {isAdminView ? 'All markets' : 'Your markets'}
           </h2>
           <ul className="flex flex-col gap-2" role="list">
-            {recentMarkets.map((market) => (
+            {recentMarkets.map((market) => {
+              const isExternal = market.is_external_listing === true
+              const href = isExternal
+                ? coordinatorCampaignHref(market.id)
+                : `/coordinator/events/${market.id}`
+
+              return (
               <li
                 key={market.id}
                 className="marketing-glass-card overflow-hidden transition-colors hover:border-forest/30"
               >
                 <Link
-                  href={`/coordinator/events/${market.id}`}
+                  href={href}
                   className="flex items-center gap-3 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
                 >
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-forest/10 text-forest">
@@ -124,11 +135,15 @@ export function CoordinatorHome({
                       <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium">
                         {statusLabel(market.status)}
                       </Badge>
+                      <ListingTierBadge
+                        isExternalListing={isExternal}
+                        adCampaignStatus={market.ad_campaign_status}
+                      />
                     </span>
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                 </Link>
-                {!isAdminView ? (
+                {!isAdminView && !isExternal ? (
                   <div className="border-t border-stone-200/80 px-4 py-2.5">
                     <VendorInviteCopyButton
                       eventId={market.id}
@@ -138,26 +153,40 @@ export function CoordinatorHome({
                   </div>
                 ) : null}
               </li>
-            ))}
+            )})}
           </ul>
         </section>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-1">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href={COORDINATOR_ADVERTISE_PATH}
+          className="marketing-glass-card group flex flex-col p-6 text-left transition-all hover:shadow-[var(--shadow-market-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2"
+        >
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-900 transition-colors group-hover:bg-amber-200/80">
+            <Megaphone className="h-5 w-5" aria-hidden />
+          </span>
+          <span className="mt-4 text-lg font-bold text-foreground">Advertise my market</span>
+          <span className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            List on Discover with a trackable link — no floor plan required.
+          </span>
+          <span className={cn(buttonVariants({ variant: 'outline' }), 'mt-5 w-full sm:w-auto')}>
+            Start ad listing
+          </span>
+        </Link>
+
         <Link
           href="/coordinator/events/new"
           className="marketing-glass-card group flex flex-col p-6 text-left transition-all hover:shadow-[var(--shadow-market-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2"
         >
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-900 transition-colors group-hover:bg-sky-200/80">
-            <Plus className="h-5 w-5" aria-hidden />
+            <Sparkles className="h-5 w-5" aria-hidden />
           </span>
-          <span className="mt-4 text-lg font-bold text-foreground">
-            Create a new market
-          </span>
+          <span className="mt-4 text-lg font-bold text-foreground">Run on PopupHub</span>
           <span className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Set up dates, venue, booth pricing, and your floor plan from the setup wizard.
+            Full native market — venue, floor plan, vendor applications, and booth payments.
           </span>
-          <span className={cn(buttonVariants(), 'mt-5 w-full sm:w-auto')}>Start setup</span>
+          <span className={cn(buttonVariants(), 'mt-5 w-full sm:w-auto')}>Open setup wizard</span>
         </Link>
       </div>
     </div>

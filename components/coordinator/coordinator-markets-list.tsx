@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import {
+  BarChart3,
   CalendarDays,
   ChevronRight,
   LayoutDashboard,
+  Megaphone,
   Plus,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -11,11 +13,16 @@ import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
 import { PageIntro } from '@/components/layout/page-intro'
 import {
   coordinatorStudioHref,
+  COORDINATOR_ADVERTISE_PATH,
 } from '@/lib/coordinator/coordinator-routes'
+import { coordinatorCampaignHref } from '@/lib/coordinator/conversion-listing'
+import { ListingTierBadge } from '@/components/coordinator/conversion/listing-tier-badge'
+import { MarketUpgradeButton } from '@/components/coordinator/conversion/market-upgrade-button'
 import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
 import { VendorInviteCopyButton } from '@/components/coordinator/vendor-invite-copy-button'
 import { CloneMarketButton } from '@/components/coordinator/clone-market-button'
 import { cn } from '@/lib/utils'
+import type { AdCampaignStatus } from '@/types/database'
 
 export interface CoordinatorMarketSummary {
   id: string
@@ -24,6 +31,8 @@ export interface CoordinatorMarketSummary {
   status: string
   is_test?: boolean
   coordinator_name?: string | null
+  is_external_listing?: boolean
+  ad_campaign_status?: AdCampaignStatus | string | null
 }
 
 interface CoordinatorMarketsListProps {
@@ -64,17 +73,25 @@ function MarketRow({
   showCommandCenterLink,
   showInviteLink,
   showCoordinatorName,
+  squareConnected,
 }: {
   market: CoordinatorMarketSummary
   showCommandCenterLink: boolean
   showInviteLink?: boolean
   showCoordinatorName?: boolean
+  squareConnected?: boolean
 }) {
+  const isExternal = market.is_external_listing === true
+
   return (
     <li className="marketing-glass-card transition-colors hover:border-forest/30 hover:shadow-[var(--shadow-market-md)]">
       <div className="flex items-center gap-3 p-4">
         <Link
-          href={`/coordinator/events/${market.id}`}
+          href={
+            isExternal
+              ? coordinatorCampaignHref(market.id)
+              : `/coordinator/events/${market.id}`
+          }
           className="flex min-w-0 flex-1 items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 rounded-lg"
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-forest/10 text-forest">
@@ -90,6 +107,10 @@ function MarketRow({
               <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium">
                 {statusLabel(market.status)}
               </Badge>
+              <ListingTierBadge
+                isExternalListing={isExternal}
+                adCampaignStatus={market.ad_campaign_status}
+              />
               {market.is_test ? (
                 <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
                   Test
@@ -99,7 +120,23 @@ function MarketRow({
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         </Link>
-        {showCommandCenterLink ? (
+        {isExternal ? (
+          <>
+            <Link
+              href={coordinatorCampaignHref(market.id)}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'hidden shrink-0 gap-1.5 sm:inline-flex'
+              )}
+            >
+              <BarChart3 className="h-3.5 w-3.5" aria-hidden />
+              Campaign
+            </Link>
+            <div className="hidden sm:block">
+              <MarketUpgradeButton eventId={market.id} squareConnected={squareConnected} size="sm" />
+            </div>
+          </>
+        ) : showCommandCenterLink ? (
           <Link
             href={coordinatorStudioHref(market.id)}
             className={cn(
@@ -122,11 +159,16 @@ function MarketRow({
             View layout
           </Link>
         )}
-        {showCloneAction(market.status) ? (
+        {!isExternal && showCloneAction(market.status) ? (
           <CloneMarketButton eventId={market.id} variant="ghost" />
         ) : null}
       </div>
-      {showInviteLink ? (
+      {isExternal ? (
+        <div className="border-t border-stone-200/80 px-4 py-2.5 sm:hidden">
+          <MarketUpgradeButton eventId={market.id} squareConnected={squareConnected} className="w-full" />
+        </div>
+      ) : null}
+      {showInviteLink && !isExternal ? (
         <div className="border-t border-stone-200/80 px-4 py-2.5">
           <VendorInviteCopyButton eventId={market.id} eventName={market.name} className="w-full sm:w-auto" />
         </div>
@@ -141,12 +183,14 @@ function MarketSection({
   showCommandCenterLink,
   showInviteLinks,
   showCoordinatorName,
+  squareConnected,
 }: {
   title: string
   markets: CoordinatorMarketSummary[]
   showCommandCenterLink: boolean
   showInviteLinks?: boolean
   showCoordinatorName?: boolean
+  squareConnected?: boolean
 }) {
   if (markets.length === 0) return null
 
@@ -163,6 +207,7 @@ function MarketSection({
             showCommandCenterLink={showCommandCenterLink}
             showInviteLink={showInviteLinks}
             showCoordinatorName={showCoordinatorName}
+            squareConnected={squareConnected}
           />
         ))}
       </ul>
@@ -209,10 +254,17 @@ export function CoordinatorMarketsList({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Link href="/coordinator/events/new" className={cn(buttonVariants(), 'gap-1.5')}>
           <Plus className="h-4 w-4" aria-hidden />
-          New market
+          Native market
+        </Link>
+        <Link
+          href={COORDINATOR_ADVERTISE_PATH}
+          className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}
+        >
+          <Megaphone className="h-4 w-4" aria-hidden />
+          Advertise only
         </Link>
         <Link
           href="/coordinator/payment-methods"
@@ -225,12 +277,18 @@ export function CoordinatorMarketsList({
       {totalCount === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            You have not created a market yet. Start with the setup wizard.
+            Start with an ad listing on Discover or run your full market on PopupHub.
           </p>
-          <Link href="/coordinator/events/new" className={cn(buttonVariants(), 'mt-4 gap-1.5')}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Create your first market
-          </Link>
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <Link href={COORDINATOR_ADVERTISE_PATH} className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}>
+              <Megaphone className="h-4 w-4" aria-hidden />
+              Advertise my market
+            </Link>
+            <Link href="/coordinator/events/new" className={cn(buttonVariants(), 'gap-1.5')}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Run on PopupHub
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
@@ -240,12 +298,14 @@ export function CoordinatorMarketsList({
             showCommandCenterLink
             showInviteLinks={!isAdminView}
             showCoordinatorName={isAdminView}
+            squareConnected={squareConnected}
           />
           <MarketSection
             title={`Past markets (${archivedMarkets.length})`}
             markets={archivedMarkets}
             showCommandCenterLink={false}
             showCoordinatorName={isAdminView}
+            squareConnected={squareConnected}
           />
         </div>
       )}
