@@ -19,6 +19,7 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/check') ||
     pathname.startsWith('/organizers/') ||
     pathname.startsWith('/for-organizers') ||
+    pathname.startsWith('/compare') ||
     pathname.startsWith('/for-vendors') ||
     pathname.startsWith('/markets/') ||
     pathname.startsWith('/supplies') ||
