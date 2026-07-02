@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint layout responsive defensive UI (branch `cursor/blueprint-layout-responsiveness-0352`)
+- **Persona:** Coordinator - HubGrid / Blueprint Studio, standalone spatial layout editor, and dual-screen Allocation Ledger.
+- **Baseline:** `e8238402` before responsive guard changes.
+- **Goal:** Scan Blueprint/layout/dashboard surfaces and ensure undersized viewports either hit the existing floor-plan desktop overlay or the regression warning: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+- **Shipped:**
+  - **Standalone Booth Matrix (`/coordinator/studio/ledger`)** - added `DashboardLedgerViewportGuard` with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`, blocking presenter/wall-cast matrix rendering below the floor-plan desktop breaker.
+  - **Spatial layout editor (`/coordinator/events/[id]/layout`)** - wrapped the client editor in `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and suppresses `FloorPlanV2` while `showDesktopRequired` is true.
+  - **QA mirror (`src/qa_review/.../spatial-layout-editor_qa.tsx`)** - kept the same defensive provider/canvas gate so included QA scan files do not drift.
+- **Sync path:** Desktop-sized HubGrid/ledger still derives from the live `MarketManagementProvider` floor-plan doc; the new guards only affect pocket-sized standalone escape routes and do not change canvas mutation -> store -> matrix sync.
+- **Verify:** Install dependencies, run type/static checks, and runtime-check the standalone ledger guard at mobile and desktop viewport sizes.
+- **Blockers:** None yet.
+
 ## Active work — Hero shopper CTA pill (branch `cursor/hero-shopper-cta-button-19be`)
 - **Persona:** Public marketing · homepage hero (`/`).
 - **Goal:** "Browse markets as a shopper" matches other hero pill CTAs and sits first in the button group.
