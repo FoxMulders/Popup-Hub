@@ -12,7 +12,10 @@ import { CoordinatorHome } from '@/components/coordinator/coordinator-home'
 import { formatCoordinatorOwnerLabel } from '@/lib/coordinator/coordinator-owner-label'
 import type { Event } from '@/types/database'
 
-type HomeEventRow = Pick<Event, 'id' | 'name' | 'start_at' | 'status'> & {
+type HomeEventRow = Pick<
+  Event,
+  'id' | 'name' | 'start_at' | 'status' | 'is_external_listing' | 'ad_campaign_status'
+> & {
   coordinator?:
     | {
         full_name?: string | null
@@ -34,6 +37,8 @@ function toHomeMarket(event: HomeEventRow, includeCoordinator: boolean) {
     name: event.name,
     start_at: event.start_at,
     status: event.status,
+    is_external_listing: event.is_external_listing ?? false,
+    ad_campaign_status: event.ad_campaign_status ?? null,
     coordinator_name: includeCoordinator ? formatCoordinatorOwnerLabel(coordinator) : undefined,
   }
 }
@@ -73,13 +78,13 @@ export default async function CoordinatorHomePage() {
       ? supabase
           .from('events')
           .select(
-            'id, name, start_at, status, coordinator:profiles!events_coordinator_id_fkey(full_name, coordinator_organization_name, email)'
+            'id, name, start_at, status, is_external_listing, ad_campaign_status, coordinator:profiles!events_coordinator_id_fkey(full_name, coordinator_organization_name, email)'
           )
           .order('start_at', { ascending: true })
           .limit(6)
       : supabase
           .from('events')
-          .select('id, name, start_at, status')
+          .select('id, name, start_at, status, is_external_listing, ad_campaign_status')
           .eq('coordinator_id', user.id)
           .order('start_at', { ascending: true })
           .limit(6),

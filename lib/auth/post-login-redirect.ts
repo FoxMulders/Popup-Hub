@@ -1,5 +1,9 @@
 import { getDefaultDashboard, parseActivePortal, type ActivePortal } from '@/lib/portals/active-portal'
 import { isMobileUserAgent } from '@/lib/auth/mobile-user-agent'
+import {
+  COORDINATOR_WELCOME_PATH,
+} from '@/lib/coordinator/coordinator-routes'
+import { isGenericCoordinatorLanding } from '@/lib/coordinator/conversion-listing'
 
 function safeRedirectPath(value: string | null | undefined, fallback = '/discover'): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
@@ -35,11 +39,14 @@ export function resolvePostLoginPath(input: {
     if (redirectTo.startsWith('/coordinator') && !isCoordinatorLayoutPath(redirectTo)) {
       return redirectTo
     }
-    return '/coordinator'
+    return COORDINATOR_WELCOME_PATH
   }
 
   if (role === 'coordinator') {
-    return redirectTo.startsWith('/coordinator') ? redirectTo : '/coordinator'
+    if (redirectTo.startsWith('/coordinator') && !isGenericCoordinatorLanding(redirectTo)) {
+      return redirectTo
+    }
+    return COORDINATOR_WELCOME_PATH
   }
 
   if (role === 'vendor') {

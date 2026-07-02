@@ -29,6 +29,7 @@ function isCoordinatorImmersiveRoute(pathname: string): boolean {
     /\/coordinator\/events\/[^/]+\/layout\/?$/.test(pathname) ||
     /\/coordinator\/events\/[^/]+\/setup\/?$/.test(pathname) ||
     pathname === '/coordinator/events/new' ||
+    pathname === '/coordinator/events/advertise' ||
     pathname === '/coordinator/experience-designer' ||
     pathname.startsWith('/coordinator/experience-designer/')
   )

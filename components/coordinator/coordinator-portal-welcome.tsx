@@ -25,8 +25,8 @@ export function CoordinatorPortalWelcome({ className }: CoordinatorPortalWelcome
             Plan layouts, approve vendors, and publish to Discover
           </p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Popup Hub keeps your floor plan, vendor ledger, and shopper map in sync — start with a
-            demo market or claim your HubGuard listing if you already run a market.
+            Advertise on Discover without running booth ops here, or run your full market natively —
+            floor plan, vendor ledger, and shopper map stay in sync.
           </p>
         </div>
         <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-forest/10 text-forest">
