@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical conversion engine bugs (branch `cursor/critical-bug-investigation-109f`)
+- **Persona:** Patron Discover · coordinator ad listings · public catalog.
+- **Goal:** Fix three high-severity bugs from portal-first conversion funnel (PR #181) still on `master` @ `0019f8dc`.
+- **Shipped (PR pending):**
+  - **`track-click`** — `createAdminClient()` so logged-in patrons can record ad clicks (`ad_clicks_log` INSERT RLS is `false`).
+  - **`upgrade-to-native`** — `createAdminClient()` + correct `coordinator_id` filter for admin upgrades.
+  - **`POST /api/coordinator/events/advertise`** — enforce `coordinatorPublishBlockReason` (suspended/fraud coordinators blocked).
+  - **Public catalog** — `.eq('is_test', false)` on Discover/vendor directory queries.
+  - **Test** — `lib/markets/ad-click-tracking.test.ts`.
+- **Smoke-test:** `npx tsx lib/markets/ad-click-tracking.test.ts` + `npx tsx scripts/verify-conversion-engine.ts` pass.
+- **Next:** Merge PR; prod deploy; wire Discover cards to `track-click`.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
