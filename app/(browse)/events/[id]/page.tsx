@@ -64,6 +64,7 @@ export async function generateMetadata({ params }: Props) {
     .select('name, description, location_name, cover_image_url, start_at, city, market_city')
     .eq('id', id)
     .in('status', ['published', 'active', 'completed'])
+    .eq('is_test', false)
     .maybeSingle()) as { data: PublicEventMetadataRow | null }
 
   if (!event) {
@@ -115,6 +116,7 @@ export default async function PublicEventPage({ params }: Props) {
       )
       .eq('id', id)
       .in('status', ['published', 'active', 'completed'])
+      .eq('is_test', false)
       .maybeSingle(),
     publicDb
       .from('booth_applications')
