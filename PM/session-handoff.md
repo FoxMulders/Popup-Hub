@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Compare page duplicate back buttons (branch `cursor/fix-duplicate-back-buttons-0a58`)
+- **Persona:** Public marketing · event coordinators · `/compare`.
+- **Goal:** Remove stacked Back controls (shell `PageBackBar` + hero “Back to home”).
+- **Shipped:** Removed in-hero back link from `CompareLanding`; shell back bar is the single affordance (matches `/for-organizers`).
+- **Smoke-test:** `/compare` shows one Back control in the sticky bar only.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
