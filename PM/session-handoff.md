@@ -2,12 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Hero white pill buttons + vendor CTA (PR pending)
+## Shipped this session (Web + TestFlight deploy, 2026-07-02 — PR #218 hero white pills)
+- **Baseline:** `master` @ `1f0b5dcb` · web build `14` · iOS `iosBuild` **36** / v**1.191.0**
+- **Web (Vercel):** Git integration production deploy **success** on `5efd7b7b` (merge PR #218) — https://popuphub.ca (alias live). Hero shows four solid white pill CTAs: Browse markets as a shopper, Apply as a vendor, Advertise on Discover, Run applications natively.
+- **TestFlight:** **Deploy to TestFlight** run https://github.com/FoxMulders/Popup-Hub/actions/runs/28599958858 — **SUCCESS**; uploaded build **36**; `master` records `iosBuild: 36` @ `1f0b5dcb`.
+- **Smoke:** https://popuphub.ca — hero pills all `marketing-pill--secondary` (solid white); vendor CTA present.
+- **Next:** App Store Connect → TestFlight → build **36** processing; answer Export Compliance if prompted.
+
+## Shipped this session — Hero white pill buttons + vendor CTA (PR #218 @ `5efd7b7b`)
 - **Persona:** Patron · public marketing homepage (`/`).
 - **Goal:** All hero CTA pills solid white; four pathways (patron, vendor, advertise, run natively).
 - **Shipped:** `marketing-pill--secondary` → solid `bg-white`; ghost hero CTAs switched to secondary pill; fourth hero pill **Apply as a vendor** → `/for-vendors` (Patrons→Vendors→Organizers order).
 - **Verify:** Homepage hero shows four white pill buttons — shopper browse, apply as vendor, advertise, run natively.
-- **Next:** Merge PR + production deploy.
+- **Prod:** Deployed 2026-07-02 on https://popuphub.ca.
+- **Next:** none — merged and deployed.
 
 ## Shipped this session — Preserve scroll on same-page reload (PR #217 @ `4de815bd`)
 - **Persona:** All portals · in-place filters, wallet/verification saves, segment error retries.
