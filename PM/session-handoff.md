@@ -2,7 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Hero shopper browse CTA (branch `cursor/hero-shopper-browse-button-7dcc`)
+## Active work — Always start on home page (branch `cursor/always-start-home-page-7dcc`)
+- **Goal:** App launch, PWA install, patron login, and default portal home should land on `/` (marketing home), not `/discover`.
+- **Shipped:**
+  - **`lib/nav/site-home.ts`** — `DEFAULT_START_PATH` alias.
+  - **`lib/portals/active-portal.ts`**, **`post-login-redirect.ts`**, **`rbac.ts`**, auth callback, login, dev mock — patron default `/`.
+  - **`public/manifest.json`** `start_url` → `/`; **`capacitor.config.ts`** + **`mobile/www/index.html`** launch URL → root.
+  - **`capacitor-init.tsx`** — removed native cold-launch redirect that sent vendors/coordinators away from home.
+  - **`public/sw.js`** — cache `v24`.
+- **Verify:** PWA/native cold open → `/`; patron sign-in without `next` → `/`; explicit `/discover` deep links unchanged.
+- **Next:** Merge + deploy.
+
+## Active work — Hero shopper browse CTA (merged PR #211)
 - **Persona:** Patron · public marketing homepage (`/`).
 - **Goal:** "Browse markets as a shopper" should be a pill button like the other hero CTAs and listed first.
 - **Shipped:**
