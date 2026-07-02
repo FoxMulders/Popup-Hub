@@ -151,7 +151,7 @@ export function AdvertiseMarketForm({ className }: AdvertiseMarketFormProps) {
       <button
         type="submit"
         disabled={submitting}
-        className={cn(buttonVariants(), 'gap-2 self-start')}
+        className={cn(buttonVariants(), 'gap-2 w-full sm:w-auto sm:self-start')}
       >
         <Megaphone className="h-4 w-4" aria-hidden />
         {submitting ? 'Creating…' : 'Activate campaign (beta — free)'}
