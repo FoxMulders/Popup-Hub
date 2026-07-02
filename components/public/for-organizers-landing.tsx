@@ -1,10 +1,14 @@
 import Link from 'next/link'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Megaphone } from 'lucide-react'
 import { ForOrganizersJsonLd } from '@/components/seo/for-organizers-json-ld'
 import { MarketingCtaBand } from '@/components/public/marketing/marketing-cta-band'
 import { MarketingFeatures } from '@/components/public/marketing/marketing-features'
 import { EventValueCalculator } from '@/components/public/event-value-calculator'
 import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
+import {
+  COORDINATOR_ADVERTISE_SIGNUP_HREF,
+  COORDINATOR_SIGNUP_HREF,
+} from '@/lib/marketing/home-hero'
 
 const STEPS = [
   {
@@ -25,6 +29,11 @@ const STEPS = [
 ] as const
 
 const FAQ = [
+  {
+    question: 'Can I advertise my market without running booth ops on Popup Hub?',
+    answer:
+      'Yes. The ad listing tier puts your market on Discover with a trackable link to your website. Upgrade to native tools — vendor intake, HubGrid layout, and booth payments — free whenever you are ready.',
+  },
   {
     question: 'Is Popup Hub market organizer software?',
     answer:
@@ -62,16 +71,24 @@ export function ForOrganizersLanding() {
               Market organizer software for pop-up &amp; makers markets
             </h1>
             <p className="mx-auto mt-4 max-w-3xl text-base leading-relaxed text-white/80 sm:text-lg">
-              Replace spreadsheets and DMs with one coordinator hub — vendor applications, booth
-              layouts, check-in, payouts, and a discovery map that drives foot traffic to your event.
+              Replace spreadsheets and DMs with one coordinator hub — or start by advertising on
+              Discover with a click-through link to your site. Vendor applications, booth layouts,
+              check-in, payouts, and patron discovery when you run natively.
             </p>
             <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
               <Link
-                href="/signup?role=coordinator&next=/coordinator/events/new"
+                href={COORDINATOR_ADVERTISE_SIGNUP_HREF}
                 className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
               >
+                <Megaphone className="h-4 w-4" aria-hidden />
+                Advertise your market
+              </Link>
+              <Link
+                href={COORDINATOR_SIGNUP_HREF}
+                className="marketing-pill inline-flex min-h-12 w-full items-center justify-center gap-2 border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+              >
                 <CalendarDays className="h-4 w-4" aria-hidden />
-                Start hosting a market
+                Run on PopupHub
               </Link>
               <Link
                 href="/legal/faq"

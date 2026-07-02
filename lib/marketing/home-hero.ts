@@ -8,3 +8,7 @@ export const HOME_HERO = {
 
 export const COORDINATOR_SIGNUP_HREF =
   '/signup?role=coordinator&next=/coordinator/events/new'
+
+/** Ad listing tier — list on Discover without native booth ops. */
+export const COORDINATOR_ADVERTISE_SIGNUP_HREF =
+  '/signup?role=coordinator&next=/coordinator/events/advertise'

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
+import { COORDINATOR_ADVERTISE_SIGNUP_HREF } from '@/lib/marketing/home-hero'
 
 export function MarketingCtaBand() {
   return (
@@ -9,12 +10,18 @@ export function MarketingCtaBand() {
           Ready to find your next market — or run one?
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-sm text-white/75 sm:text-base">
-          Browse events as a guest, apply with a free vendor passport, or publish your market and
-          replace spreadsheet chaos with one coordinator hub.
+          Browse events as a guest, apply with a free vendor passport, advertise your market on
+          Discover, or publish and run booth ops in one coordinator hub.
         </p>
-        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Link href="/discover" className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto">
             Discover markets
+          </Link>
+          <Link
+            href={COORDINATOR_ADVERTISE_SIGNUP_HREF}
+            className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+          >
+            Advertise your market
           </Link>
           <Link href="/for-vendors" className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
             Vendor passport

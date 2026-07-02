@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
+- **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
+- **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
+- **Shipped:**
+  - **`MarketingAdvertiseMarketPromo`** — homepage banner with Discover preview mock, click tracking copy, signup CTA.
+  - **Hero + path cards + CTA band** — `COORDINATOR_ADVERTISE_SIGNUP_HREF` links to advertise flow.
+  - **`/for-organizers`** — dual hero CTAs (advertise vs native) + FAQ entry for ad tier.
+- **Smoke-test:** `npm run build` passes. Homepage shows promo below path cards; CTA → `/signup?role=coordinator&next=/coordinator/events/advertise`.
+
 ## Active work — Portal-first conversion funnel (branch `cursor/portal-first-conversion-d6a9`)
 - **Persona:** Coordinator · portal home/markets/welcome (mobile-safe).
 - **Goal:** Conversion is not HubGrid-only — coordinators can advertise without native ops; post-login welcome gate + dual create paths.

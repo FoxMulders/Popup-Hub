@@ -4,6 +4,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, MapPin, Store } from 'lucide-react'
 import { goToDiscover } from '@/lib/marketing/browse-discover'
+import {
+  COORDINATOR_ADVERTISE_SIGNUP_HREF,
+  COORDINATOR_SIGNUP_HREF,
+} from '@/lib/marketing/home-hero'
 import { VENDOR_OPEN_MARKETS_HREF, VENDOR_PASSPORT_SIGNUP_PREVIEW } from '@/lib/marketing/vendor-journey'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 import { cn } from '@/lib/utils'
@@ -41,10 +45,14 @@ const PATHS = [
     href: '/for-organizers',
     icon: CalendarDays,
     eyebrow: 'Organizers',
-    title: 'Run the whole market',
+    title: 'Run or advertise your market',
     description:
-      'Applications, booth layouts, check-in, quarter auctions, and patron discovery — coordinator tools built for recurring pop-ups.',
+      'List on Discover with a click-through ad, or run the full stack — applications, booth layouts, check-in, and patron discovery.',
     cta: 'Organizer software',
+    secondaryHref: COORDINATOR_ADVERTISE_SIGNUP_HREF,
+    secondaryLabel: 'Advertise on Discover only',
+    tertiaryHref: COORDINATOR_SIGNUP_HREF,
+    tertiaryLabel: 'Run natively on PopupHub',
     accent: 'from-canvas to-cream border-stone-200/80 hover:border-forest/30',
     iconClass: 'bg-forest/10 text-forest',
   },

@@ -1,5 +1,11 @@
+import Link from 'next/link'
+import { CalendarDays, Megaphone } from 'lucide-react'
 import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
-import { HOME_HERO } from '@/lib/marketing/home-hero'
+import {
+  COORDINATOR_ADVERTISE_SIGNUP_HREF,
+  COORDINATOR_SIGNUP_HREF,
+  HOME_HERO,
+} from '@/lib/marketing/home-hero'
 
 export function MarketingHero() {
   return (
@@ -15,6 +21,29 @@ export function MarketingHero() {
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg">
             {HOME_HERO.subhead}
+          </p>
+          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+            <Link
+              href={COORDINATOR_ADVERTISE_SIGNUP_HREF}
+              className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
+            >
+              <Megaphone className="h-4 w-4" aria-hidden />
+              Advertise your market
+            </Link>
+            <Link
+              href={COORDINATOR_SIGNUP_HREF}
+              className="marketing-pill inline-flex min-h-12 w-full items-center justify-center gap-2 border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+            >
+              <CalendarDays className="h-4 w-4" aria-hidden />
+              Run a market on PopupHub
+            </Link>
+          </div>
+          <p className="mx-auto mt-4 max-w-xl text-sm text-white/65">
+            Advertise on Discover with a trackable link to your site — or run applications, booth
+            layout, and payments natively.{' '}
+            <Link href="/discover" className="font-medium text-white/90 underline-offset-2 hover:underline">
+              Browse markets as a shopper →
+            </Link>
           </p>
         </div>
       </div>
