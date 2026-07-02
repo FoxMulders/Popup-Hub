@@ -2,6 +2,25 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint layout responsive defensive UI (branch `cursor/blueprint-layout-responsiveness-0352`)
+- **Persona:** Coordinator - HubGrid / Blueprint Studio, standalone spatial layout editor, and dual-screen Allocation Ledger.
+- **Baseline:** `e8238402` before responsive guard changes.
+- **Goal:** Scan Blueprint/layout/dashboard surfaces and ensure undersized viewports either hit the existing floor-plan desktop overlay or the regression warning: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+- **Shipped:**
+  - **Standalone Booth Matrix (`/coordinator/studio/ledger`)** - added `DashboardLedgerViewportGuard` with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`, blocking presenter/wall-cast matrix rendering below the floor-plan desktop breaker.
+  - **Spatial layout editor (`/coordinator/events/[id]/layout`)** - wrapped the client editor in `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and suppresses `FloorPlanV2` while `showDesktopRequired` is true.
+  - **QA mirror (`src/qa_review/.../spatial-layout-editor_qa.tsx`)** - kept the same defensive provider/canvas gate so included QA scan files do not drift.
+- **Sync path:** Desktop-sized HubGrid/ledger still derives from the live `MarketManagementProvider` floor-plan doc; the new guards only affect pocket-sized standalone escape routes and do not change canvas mutation -> store -> matrix sync.
+- **Verify:** PASS - `npm ci`; targeted ESLint on edited TSX/page files; `./node_modules/.bin/tsc --noEmit --pretty false`; `next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx`; Playwright/Chrome route assertions against `/coordinator/studio/ledger?event=qa` with local Supabase stub (`mobile: warning true, presenter false`; `desktop: warning false, presenter true`); computer-use GUI smoke at 400px and 1280px; clean page-level artifacts captured.
+- **Blockers:** Unrelated local `next dev` startup fails with dynamic route slug conflict (`eventId` vs `id`), so runtime validation used targeted production build + `next start` instead.
+
+## Active work — Hero shopper CTA pill (branch `cursor/hero-shopper-cta-button-19be`)
+- **Persona:** Public marketing · homepage hero (`/`).
+- **Goal:** "Browse markets as a shopper" matches other hero pill CTAs and sits first in the button group.
+- **Shipped:**
+  - **`MarketingHero`** — shopper link promoted to `marketing-pill--secondary` with `MapPin` icon; ordered above advertise and run-market CTAs; footer copy no longer duplicates the link.
+- **Smoke-test:** Homepage hero shows three pill buttons; top CTA links to `/discover`.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
