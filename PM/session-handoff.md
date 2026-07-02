@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Hero shopper CTA pill (branch `cursor/hero-shopper-cta-button-19be`)
+- **Persona:** Public marketing · homepage hero (`/`).
+- **Goal:** "Browse markets as a shopper" matches other hero pill CTAs and sits first in the button group.
+- **Shipped:**
+  - **`MarketingHero`** — shopper link promoted to `marketing-pill--secondary` with `MapPin` icon; ordered above advertise and run-market CTAs; footer copy no longer duplicates the link.
+- **Smoke-test:** Homepage hero shows three pill buttons; top CTA links to `/discover`.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
