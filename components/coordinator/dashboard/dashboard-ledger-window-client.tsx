@@ -52,8 +52,11 @@ function DashboardLedgerWindowContent() {
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const selectedRow = rows.find((row) => row.id === selectedBoothId) ?? null
+  const selectionAnnouncement = selectedRow
+    ? `Selected booth ${selectedRow.label}, ${selectedRow.statusLabel}, vendor ${selectedRow.vendor}`
+    : ''
 
   useEffect(() => {
     document.title = isWallCast
@@ -76,14 +79,6 @@ function DashboardLedgerWindowContent() {
       }
     })
   }, [eventId])
-
-  useEffect(() => {
-    const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
-  }, [rows, selectedBoothId])
 
   useEffect(() => {
     if (!isWallCast || !selectedRowRef.current) return
