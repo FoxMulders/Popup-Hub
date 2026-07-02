@@ -139,13 +139,15 @@
 - **Verify:** Sign into email admin account → Profile → Connect Apple; run `npx tsx scripts/resolve-duplicate-email-accounts.ts --email bradmulders@gmail.com` (dry run) then `--apply` if safe.
 - **Next:** Enable Manual linking in Supabase Dashboard; commit + deploy; run ops script on prod for Brad duplicate; user links Apple from kept admin account.
 
-## Active work — Loader wordmark below animation (local, not committed)
-- **Goal:** Show "Popup Hub" wordmark below the loader animation instead of above it.
+## Active work — Loader wordmark below animation (shipped locally, pending commit)
+- **Goal:** Show centered "PopupHub" wordmark below the loader animation — no tiny tent icon on the loader footer.
 - **Persona:** All surfaces · global loader overlay (`PopupLoaderProvider`).
 - **Shipped locally:**
-  - Reordered flex column in `components/brand/popup-loader-provider.tsx` — animation (`loader-screen__lottie`) first, `BrandLogoLockup` second.
-  - **Wordmark 2.5×** — new `loader` size on `BrandLogoLockup` (`h-[5.625rem]` / `sm:h-[6.25rem]`, 2.5× header `h-9` / `sm:h-10`); provider uses `size="loader"`.
-- **Verify:** Hard refresh (or clear `popup-hub-initial-loader-shown` session key) — booth-deal / walk-to-market animation appears above a larger storefront + wordmark lockup.
+  - Reordered flex column in `components/brand/popup-loader-provider.tsx` — animation (`loader-screen__lottie`) first, wordmark second.
+  - **`BrandWordmark`** in `components/brand/popup-hub-logo.tsx` — wordmark-only (`object-center`, `mx-auto`); loader uses `size="loader"` (`h-[5.625rem]` / `sm:h-[6.25rem]`).
+  - Provider wraps wordmark in `flex w-full justify-center` — horizontally centered on mobile and desktop.
+  - Nav/header lockups unchanged (`BrandLogoLockup` still icon + wordmark).
+- **Verify:** Hard refresh (or clear `popup-hub-initial-loader-shown` session key) — booth-deal animation above centered wordmark only; no storefront icon below animation.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — Organizer claim approval silently failing (shipped `e88bab69`)

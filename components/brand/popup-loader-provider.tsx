@@ -16,7 +16,7 @@ import {
 import { PopupLoaderContext } from '@/components/brand/popup-loader-context'
 import { InitialLoaderReveal } from '@/components/brand/initial-loader-reveal'
 import { PopupLoaderScene } from '@/components/brand/popup-loader-scene'
-import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
+import { BrandWordmark } from '@/components/brand/popup-hub-logo'
 import {
   pickRandomLoaderVariant,
   type LoaderControllerMode,
@@ -143,7 +143,9 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
             />
           )}
         </div>
-        <BrandLogoLockup className="shrink-0" size="loader" />
+        <div className="flex w-full shrink-0 justify-center">
+          <BrandWordmark size="loader" />
+        </div>
       </div>
     </div>
   ) : null
