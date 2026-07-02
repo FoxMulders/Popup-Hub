@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { extractClientIp } from '@/lib/audit/security-audit-log'
 import { hashClientIpForAdClick, recordAdClick } from '@/lib/markets/ad-click-tracking'
 
@@ -12,7 +12,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: marketId } = await params
-  const service = await createServiceClient()
+  // ad_clicks_log INSERT policy is WITH CHECK (false) — cookie-bound clients inherit
+  // the patron JWT and RLS blocks the insert; admin client bypasses RLS.
+  const service = createAdminClient()
 
   const { data: market, error: marketError } = await service
     .from('events')

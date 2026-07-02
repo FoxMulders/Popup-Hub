@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (Critical bug investigation — catalog + conversion, 2026-07-02)
+- **Branch:** `cursor/critical-bug-investigation-2acf` @ `e245b28a`
+- **Trigger:** Post-PR #214 push review on `master` @ `00f34e2b`
+- **Bugs fixed (3 critical, pre-existing, amplified by PR #214 city counts):**
+  1. **is_test catalog leak** — QA scenario markets visible on `/discover`, homepage weekend counts, widget feed. Added `.eq('is_test', false)` to cached public catalog + widget; vendor apply API rejects test markets.
+  2. **track-click RLS failure** — `ad_clicks_log` INSERT policy is `WITH CHECK (false)`; cookie-bound `createServiceClient()` inherits patron JWT → 500 for logged-in ad clicks. Switched to `createAdminClient()`.
+  3. **advertise fraud gate bypass** — `/api/coordinator/events/advertise` skipped `coordinatorPublishBlockReason`. Suspended/fraud coordinators could publish external listings.
+- **Also:** `upgrade-to-native` uses `createAdminClient()` for reliable external→native migration.
+- **Tests:** `npx tsx lib/markets/ad-click-tracking.test.ts`, `npx tsx lib/queries/cached-public-markets.test.ts` — pass.
+- **Next:** Merge PR → production deploy; verify homepage counts exclude test markets; spot-check logged-in external listing click-through.
+
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02 — PR #214 location discovery)
 - **Baseline:** `master` @ `5158cab2` · web build `12` · iOS `iosBuild` **35** / v**1.191.0**
 - **Web (Vercel):** Git integration production deploy **success** on `5158cab2` (merge PR #214) — https://popuphub.ca (alias live). Location discovery engine live: personalized city headline, `#FF6B35` Open Interactive Map search, weekend city counts, suburb ribbon; hero pills alternate white/ghost/white.
