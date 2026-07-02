@@ -13,5 +13,8 @@ export const COORDINATOR_SIGNUP_HREF =
 export const COORDINATOR_ADVERTISE_SIGNUP_HREF =
   '/signup?role=coordinator&next=/coordinator/events/advertise'
 
+/** Vendor hub — passport, open markets, HubGuard. */
+export const VENDOR_HUB_HREF = '/for-vendors'
+
 /** Intent vs impressions marketing comparison page. */
 export { COMPARE_INTENT_HREF } from '@/lib/marketing/compare-intent'

@@ -2,7 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session — Preserve scroll on same-page reload (branch `cursor/preserve-scroll-on-reload-a9cc`)
+## Active work — Hero white pill buttons + vendor CTA (PR pending)
+- **Persona:** Patron · public marketing homepage (`/`).
+- **Goal:** All hero CTA pills solid white; four pathways (patron, vendor, advertise, run natively).
+- **Shipped:** `marketing-pill--secondary` → solid `bg-white`; ghost hero CTAs switched to secondary pill; fourth hero pill **Apply as a vendor** → `/for-vendors` (Patrons→Vendors→Organizers order).
+- **Verify:** Homepage hero shows four white pill buttons — shopper browse, apply as vendor, advertise, run natively.
+- **Next:** Merge PR + production deploy.
+
+## Shipped this session — Preserve scroll on same-page reload (PR #217 @ `4de815bd`)
 - **Persona:** All portals · in-place filters, wallet/verification saves, segment error retries.
 - **Goal:** Buttons that reload or refresh the current page should not jump back to the top.
 - **Shipped:**
@@ -15,7 +22,7 @@
   - **Tests** — `lib/navigation/scroll-position.test.ts`; `tests/e2e/scroll-preserve.spec.ts` (discover filters + vendor tabs when authed).
 - **Policy:** pathname navigation → scroll to top; same-path query/filter/refresh/reload → preserve scroll; wizard step changes unchanged.
 - **Smoke-test:** `/discover` — scroll down, tap **Tomorrow** or **Map** tab → scroll position unchanged. Wallet deposit/reclaim → page refreshes in place. Vendor `/applications` filter tabs → scroll preserved (when logged in).
-- **Next:** Merge PR, production deploy, run `test:e2e` scroll-preserve spec against staging/prod.
+- **Next:** none — merged to `master`.
 
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02 — PR #214 location discovery)
 - **Baseline:** `master` @ `5158cab2` · web build `12` · iOS `iosBuild` **35** / v**1.191.0**

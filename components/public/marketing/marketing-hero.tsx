@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { CalendarDays, MapPin, Megaphone } from 'lucide-react'
+import { CalendarDays, MapPin, Megaphone, Store } from 'lucide-react'
 import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
 import {
   COORDINATOR_ADVERTISE_SIGNUP_HREF,
   COORDINATOR_SIGNUP_HREF,
   HOME_HERO,
+  VENDOR_HUB_HREF,
 } from '@/lib/marketing/home-hero'
 
 export function MarketingHero() {
@@ -31,8 +32,15 @@ export function MarketingHero() {
               Browse markets as a shopper
             </Link>
             <Link
+              href={VENDOR_HUB_HREF}
+              className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
+            >
+              <Store className="h-4 w-4" aria-hidden />
+              Apply as a vendor
+            </Link>
+            <Link
               href={COORDINATOR_ADVERTISE_SIGNUP_HREF}
-              className="marketing-pill inline-flex min-h-12 w-full items-center justify-center gap-2 border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+              className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
             >
               <Megaphone className="h-4 w-4" aria-hidden />
               Advertise your market
@@ -46,8 +54,8 @@ export function MarketingHero() {
             </Link>
           </div>
           <p className="mx-auto mt-4 max-w-xl text-sm text-white/65">
-            Advertise on Discover with a trackable link to your site — or run applications, booth
-            layout, and payments natively on Popup Hub.
+            Vendors build one passport and apply to open markets. Advertise on Discover with a
+            trackable link — or run applications, booth layout, and payments natively on Popup Hub.
           </p>
         </div>
       </div>

@@ -59,7 +59,7 @@ export function ForVendorsLanding() {
               </Link>
               <Link
                 href={VENDOR_OPEN_MARKETS_HREF}
-                className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+                className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto"
               >
                 Browse open markets
               </Link>
