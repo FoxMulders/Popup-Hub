@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { canMutateCoordinatorEvent } from '@/lib/events/coordinator-event-ownership'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import {
   getSquareAppId,
   getSquareOAuthRedirectUri,
@@ -65,8 +65,8 @@ export async function POST(
     )
   }
 
-  const service = await createServiceClient()
-  const { data: updated, error: updateError } = await service
+  const admin = createAdminClient()
+  const { data: updated, error: updateError } = await admin
     .from('events')
     .update({
       is_external_listing: false,
@@ -75,7 +75,7 @@ export async function POST(
       updated_at: new Date().toISOString(),
     })
     .eq('id', marketId)
-    .eq('coordinator_id', user.id)
+    .eq('coordinator_id', market.coordinator_id)
     .select('id')
     .maybeSingle()
 
