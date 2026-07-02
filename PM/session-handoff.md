@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-e855`)
+- **Scope:** Latest master push (`c2bc9313` /compare public-path hotfix) + conversion engine paths on master.
+- **Recent push:** No new critical bugs in `/compare` hotfix — correct guest allowlist addition.
+- **Found on master (pre-existing, high severity):**
+  1. **`track-click` RLS** — `createServiceClient()` inherits patron JWT; `ad_clicks_log` INSERT policy is `WITH CHECK (false)` → logged-in patrons get 500 on ad click-through.
+  2. **`/api/coordinator/events/advertise`** — skips `coordinatorPublishBlockReason` → suspended/rejected/unverified coordinators can publish ad listings.
+  3. **Discover catalog** — `cached-public-markets.ts` missing `.eq('is_test', false)` → scenario test markets can appear publicly.
+- **Fix:** cherry-pick from `891f` — `createAdminClient()` for track-click + upgrade-to-native; fraud gate on advertise; is_test filters; unit test lock on track-click route.
+- **Next:** Merge PR; smoke-test logged-in patron track-click + rejected coordinator advertise POST.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
