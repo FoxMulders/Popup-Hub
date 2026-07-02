@@ -130,8 +130,8 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
       role="status"
       aria-label={session.mode === 'initial' ? 'Popup Hub loading' : 'Popup Hub market animation'}
     >
-      <div className="flex h-full w-full max-w-[min(92vw,520px)] flex-col items-center justify-center gap-3 px-4">
-        <div className="loader-screen__lottie w-full shrink-0">
+      <div className="flex w-full max-w-[min(92vw,520px)] flex-col items-center justify-center gap-4 px-4">
+        <div className="loader-screen__lottie shrink-0">
           {session.mode === 'initial' ? (
             <InitialLoaderReveal onReadyToDismiss={dismiss} />
           ) : (

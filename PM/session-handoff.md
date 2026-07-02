@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Center loader logo and animation (branch `cursor/center-loader-logo-animation-7dcc`)
+- **Goal:** Center the wordmark and loader animation as a single vertically-centered group on the full-screen loader overlay.
+- **Persona:** All users · initial page-load loader and replay overlay.
+- **Root cause:** Centering fix from `cursor/loader-logo-below-animation-8703` never merged — inner column still used `h-full`, so the animation + wordmark group did not center as a compact unit on the viewport.
+- **Shipped:**
+  - **`components/brand/popup-loader-provider.tsx`** — removed `h-full` from inner column; animation wrapper `shrink-0` only (no `w-full`/`flex-1`); `gap-4`; `BrandWordmark` below animation.
+  - **`app/globals.css`** — trimmed lottie height (`62vh/460px` desktop, `52vh/320px` mobile) so wordmark fits in centered group.
+  - **`public/sw.js`** — cache bump `v23`.
+- **Verify:** Hard refresh / clear `popup-hub-initial-loader-shown` — animation + centered wordmark grouped at viewport midline on desktop and mobile.
+- **Next:** Merge PR + production deploy.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
