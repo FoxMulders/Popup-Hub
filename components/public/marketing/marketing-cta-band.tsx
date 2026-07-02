@@ -19,16 +19,16 @@ export function MarketingCtaBand() {
           </Link>
           <Link
             href={COORDINATOR_ADVERTISE_SIGNUP_HREF}
-            className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+            className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto"
           >
             Advertise your market
           </Link>
-          <Link href="/for-vendors" className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto">
+          <Link href="/for-vendors" className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto">
             Vendor passport
           </Link>
           <Link
             href="/for-organizers"
-            className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+            className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto"
           >
             Run a market
           </Link>

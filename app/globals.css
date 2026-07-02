@@ -1479,7 +1479,7 @@
   }
 
   .marketing-pill--secondary {
-    @apply border border-white/50 bg-white/90 text-forest hover:bg-white;
+    @apply border border-white bg-white text-forest hover:bg-white/95;
     box-shadow: var(--shadow-market);
   }
 

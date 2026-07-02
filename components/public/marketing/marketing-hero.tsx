@@ -32,7 +32,7 @@ export function MarketingHero() {
             </Link>
             <Link
               href={COORDINATOR_ADVERTISE_SIGNUP_HREF}
-              className="marketing-pill inline-flex min-h-12 w-full items-center justify-center gap-2 border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+              className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
             >
               <Megaphone className="h-4 w-4" aria-hidden />
               Advertise your market

@@ -120,14 +120,14 @@ export function MarketCityLanding({
               </Link>
               <Link
                 href={intent?.vendorFocus ? '/signup?role=vendor' : '/for-vendors'}
-                className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+                className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto"
               >
                 {intent?.vendorFocus ? 'Create vendor passport' : 'Apply as a vendor'}
               </Link>
               {intent?.vendorFocus ? (
                 <Link
                   href="/check"
-                  className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
+                  className="marketing-pill marketing-pill--secondary min-h-12 w-full sm:w-auto"
                 >
                   Verify organizer (HubGuard)
                 </Link>
