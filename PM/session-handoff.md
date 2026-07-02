@@ -2,6 +2,21 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session — Preserve scroll on same-page reload (branch `cursor/preserve-scroll-on-reload-a9cc`)
+- **Persona:** All portals · in-place filters, wallet/verification saves, segment error retries.
+- **Goal:** Buttons that reload or refresh the current page should not jump back to the top.
+- **Shipped:**
+  - **`RouteScrollToTop`** — scroll reset only on **pathname** changes (query-string updates preserve position).
+  - **`lib/navigation/scroll-position.ts`** — capture/restore helpers, `reloadPreservingScroll`, `refreshPreservingScroll`, `retryPreservingScroll`.
+  - **`ScrollRestoreOnLoad`** — restores scroll after hard reload via sessionStorage.
+  - **Wallet + verification** — replaced `window.location.reload()` with `useRefreshPreservingScroll()`.
+  - **Vendor applications** — removed explicit `resetScrollToTop()` on filter tabs.
+  - **Error boundaries** — coordinator + notifications `unstable_retry` wrapped with scroll preservation.
+  - **Tests** — `lib/navigation/scroll-position.test.ts`; `tests/e2e/scroll-preserve.spec.ts` (discover filters + vendor tabs when authed).
+- **Policy:** pathname navigation → scroll to top; same-path query/filter/refresh/reload → preserve scroll; wizard step changes unchanged.
+- **Smoke-test:** `/discover` — scroll down, tap **Tomorrow** or **Map** tab → scroll position unchanged. Wallet deposit/reclaim → page refreshes in place. Vendor `/applications` filter tabs → scroll preserved (when logged in).
+- **Next:** Merge PR, production deploy, run `test:e2e` scroll-preserve spec against staging/prod.
+
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02 — PR #214 location discovery)
 - **Baseline:** `master` @ `5158cab2` · web build `12` · iOS `iosBuild` **35** / v**1.191.0**
 - **Web (Vercel):** Git integration production deploy **success** on `5158cab2` (merge PR #214) — https://popuphub.ca (alias live). Location discovery engine live: personalized city headline, `#FF6B35` Open Interactive Map search, weekend city counts, suburb ribbon; hero pills alternate white/ghost/white.

@@ -1,17 +1,16 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { resetScrollToTop } from '@/lib/navigation/scroll-to-top'
 
 /**
- * Scrolls to top on client-side route changes (Next.js App Router does not
- * restore window scroll the way Pages Router did).
+ * Scrolls to top on pathname changes (Next.js App Router does not restore
+ * window scroll the way Pages Router did). Query-string updates on the same
+ * path are left alone so in-place filters and reloads keep scroll position.
  */
 export function RouteScrollToTop() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const searchKey = searchParams.toString()
   const isFirstRender = useRef(true)
 
   useEffect(() => {
@@ -20,7 +19,7 @@ export function RouteScrollToTop() {
       return
     }
     resetScrollToTop()
-  }, [pathname, searchKey])
+  }, [pathname])
 
   return null
 }

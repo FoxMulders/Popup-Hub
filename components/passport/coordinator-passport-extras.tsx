@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { CreditCard, Landmark, Loader2, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useRefreshPreservingScroll } from '@/lib/navigation/use-refresh-preserving-scroll'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
 interface CoordinatorVerificationState {
@@ -22,6 +23,7 @@ interface CoordinatorVerificationState {
 }
 
 export function CoordinatorPassportExtras() {
+  const refreshPreservingScroll = useRefreshPreservingScroll()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [state, setState] = useState<CoordinatorVerificationState | null>(null)
@@ -82,7 +84,7 @@ export function CoordinatorPassportExtras() {
       }
 
       toast.success(data.message ?? 'Organization details saved')
-      window.location.reload()
+      refreshPreservingScroll()
     })
   }
 
