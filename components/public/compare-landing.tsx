@@ -16,9 +16,17 @@ export function CompareLanding() {
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Back to home
           </Link>
-          <p className="mt-6 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm">
-            For event coordinators
-          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <Link
+              href="/discover"
+              className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm transition-colors hover:bg-white/15"
+            >
+              Browse markets as a shopper
+            </Link>
+            <p className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm">
+              For event coordinators
+            </p>
+          </div>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/85 sm:text-base">
             A structural breakdown of where your marketing budget actually goes — and why intent-driven
             discovery beats passive impressions.
