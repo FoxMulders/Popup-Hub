@@ -29,7 +29,7 @@ export function DashboardLedgerViewportGuard({
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-forest/15 text-forest">
           <Monitor className="h-6 w-6" aria-hidden />
         </div>
-        <h1 className="font-heading text-xl font-semibold tracking-tight">
+        <h1 className="font-heading text-xl font-semibold tracking-tight text-stone-50">
           Booth Matrix needs a larger screen
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-stone-300">

@@ -11,8 +11,8 @@
   - **Spatial layout editor (`/coordinator/events/[id]/layout`)** - wrapped the client editor in `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and suppresses `FloorPlanV2` while `showDesktopRequired` is true.
   - **QA mirror (`src/qa_review/.../spatial-layout-editor_qa.tsx`)** - kept the same defensive provider/canvas gate so included QA scan files do not drift.
 - **Sync path:** Desktop-sized HubGrid/ledger still derives from the live `MarketManagementProvider` floor-plan doc; the new guards only affect pocket-sized standalone escape routes and do not change canvas mutation -> store -> matrix sync.
-- **Verify:** Install dependencies, run type/static checks, and runtime-check the standalone ledger guard at mobile and desktop viewport sizes.
-- **Blockers:** None yet.
+- **Verify:** PASS - `npm ci`; targeted ESLint on edited TSX/page files; `./node_modules/.bin/tsc --noEmit --pretty false`; `next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx`; Playwright/Chrome route assertions against `/coordinator/studio/ledger?event=qa` with local Supabase stub (`mobile: warning true, presenter false`; `desktop: warning false, presenter true`); computer-use GUI smoke at 400px and 1280px; clean page-level artifacts captured.
+- **Blockers:** Unrelated local `next dev` startup fails with dynamic route slug conflict (`eventId` vs `id`), so runtime validation used targeted production build + `next start` instead.
 
 ## Active work — Hero shopper CTA pill (branch `cursor/hero-shopper-cta-button-19be`)
 - **Persona:** Public marketing · homepage hero (`/`).
