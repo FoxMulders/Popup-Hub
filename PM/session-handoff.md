@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint layout responsiveness guard (branch `cursor/blueprint-layout-responsiveness-040b`)
+- **Persona:** Coordinator · HubGrid / Blueprint Studio / dual-screen Booth Matrix.
+- **Goal:** QA scan and patch layout/dashboard Blueprint surfaces so pocket-sized viewports either block floor-plan canvas rendering or show the designated matrix regression warning.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-040b` @ `7d202aed` (pushed to origin); base `master`.
+- **Shipped:**
+  - `DashboardLedgerViewportGuard` with regression copy: “The floor plan matrix is not optimized for small screens. Recommended layout: desktop size.”
+  - `/coordinator/studio/ledger` wraps `DashboardLedgerWindowClient` so presenter/wall-cast matrix children are suppressed below the desktop breaker.
+  - Spatial layout editor (live, `src/qa_review`, and excluded recovery copy) now uses `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and does not mount `FloorPlanV2` when `showDesktopRequired` is true.
+  - Dashboard floor-plan viewport now has an internal `showDesktopRequired` guard in addition to the HubGrid bootstrap guard.
+- **Verify:** `npx tsc --noEmit --pretty false` PASS; `npm run lint` PASS (existing repo warnings only; none in touched files); runtime React harness PASS for 390×844 warning/suppressed matrix and 1280×800 child rendering/provider ready state.
+- **Blocker:** Browser manual testing through `next dev` is blocked by pre-existing Next 16 dynamic route conflict: `You cannot use different slug names for the same dynamic path ('eventId' !== 'id')` in both Turbopack and webpack dev modes.
+- **Next:** Resolve/standardize conflicting dynamic route segment names, then re-run browser walkthrough for `/coordinator/studio/ledger` at mobile and desktop viewports.
+
 ## Active work — Portal-first conversion funnel (branch `cursor/portal-first-conversion-d6a9`)
 - **Persona:** Coordinator · portal home/markets/welcome (mobile-safe).
 - **Goal:** Conversion is not HubGrid-only — coordinators can advertise without native ops; post-login welcome gate + dual create paths.
