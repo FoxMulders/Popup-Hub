@@ -32,8 +32,13 @@ function assertContains(source: string, needle: string, msg: string): void {
   assert(source.includes(needle), msg)
 }
 
-function assertMatches(source: string, pattern: RegExp, msg: string): void {
-  assert(pattern.test(source), msg)
+function assertDesktopBreakerBranch(source: string, msg: string): void {
+  assert(
+    source.includes('!showDesktopRequired') ||
+      source.includes('showDesktopRequired ?') ||
+      source.includes('if (showDesktopRequired)'),
+    msg
+  )
 }
 
 const dashboardBootstrap = read('components/coordinator/dashboard/dashboard-bootstrap.tsx')
@@ -52,11 +57,7 @@ for (const [label, source] of [
   assertContains(source, 'FloorPlanViewportLayoutProvider', `${label} wraps with viewport provider`)
   assertContains(source, 'DesktopScreenRequiredOverlay', `${label} renders desktop-required overlay`)
   assertContains(source, 'useFloorPlanViewportLayout', `${label} reads viewport layout state`)
-  assertMatches(
-    source,
-    /showDesktopRequired[\s\S]{0,240}(\?|&&|!showDesktopRequired)/,
-    `${label} branches canvas UI on desktop-size breaker`
-  )
+  assertDesktopBreakerBranch(source, `${label} gates canvas UI on desktop-size breaker`)
 }
 
 assertContains(
