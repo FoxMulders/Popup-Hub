@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Intent vs impressions comparison page (branch `cursor/marketing-comparison-page-6965`)
+- **Persona:** Public marketing · event coordinators · `/compare`.
+- **Goal:** Dedicated high-converting comparison page (street signs / social / free listings vs PopupHub intent model), linked from homepage ad promo.
+- **Shipped:**
+  - **`/compare`** — browse route with `CompareLanding` hero + `MarketingIntentComparison` (pillar grid, objection accordion, final CTA).
+  - **`lib/marketing/compare-intent.ts`** — typed copy/constants for all sections.
+  - **Homepage promo** — `MarketingAdvertiseMarketPromo` secondary link → `/compare` (“Why intent beats impressions →”).
+  - **SEO** — `COMPARE_PAGE_TITLE` / `DESCRIPTION` in `site-config.ts`; `/compare` in sitemap.
+- **Smoke-test:** `npx tsc --noEmit` passes. Homepage ad promo link → `/compare`; CTA → advertise signup.
+- **Next:** Commit, push, PR; optional visual QA on mobile breakpoints.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
