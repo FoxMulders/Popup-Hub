@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical conversion engine fixes (branch `cursor/critical-bug-investigation-4a04`)
+- **Trigger:** Push to `master` @ `c53d1c4f` (iosBuild 35) — deep bug scan of recent commits.
+- **Bugs fixed:**
+  1. **track-click 500 for signed-in users** — `ad_clicks_log` RLS INSERT is `WITH CHECK (false)`; cookie-bound `createServiceClient()` inherited patron JWT → click-through failed with 500 instead of redirect.
+  2. **is_test markets on Discover** — public catalog queries omitted `.eq('is_test', false)` → QA scenario markets could appear in production Discover.
+  3. **advertise route fraud bypass** — `/api/coordinator/events/advertise` published ad listings without `coordinatorPublishBlockReason`.
+  4. **upgrade-to-native RLS** — migration update now uses `createAdminClient()` (same cookie-bound RLS class of bug).
+- **Validation:** `npx tsx lib/markets/ad-click-tracking.test.ts` (4/4 pass).
+- **Next:** Merge PR + production deploy; smoke signed-in patron track-click redirect + Discover excludes `is_test`.
+
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02)
 - **Baseline:** `master` @ `368a98ff` · web build `12` · iOS `iosBuild` **34** / v**1.191.0**
 - **Web (Vercel):** Git integration deploy **success** on `278b7b9b` — https://popuphub.ca (alias live). Includes PRs #208 (loader centering), #211 (hero shopper CTA first), #212 (start on `/`).
