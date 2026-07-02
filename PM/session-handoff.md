@@ -2,7 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Location discovery engine (branch `cursor/location-discovery-engine-bdfe`)
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-8ab2`)
+- **Trigger:** Post-merge audit of PR #214 (location discovery engine) on `master` @ `5158cab`.
+- **Finding:** Pre-existing `is_test` catalog leak — `getCachedDiscoverMarkets()` did not filter QA scenario markets. PR #214 amplified impact by showing live weekend counts on the homepage city grid.
+- **Fix:** Cherry-picked `excludeTestMarkets()` helper + `.eq('is_test', false)` on all public catalog queries; block vendor apply to test markets at API layer. Commit `9a3ade2f`.
+- **No other critical bugs** in PR #214 / #212 (IP geo, nav defaults) — reviewed caller chains for crashes, auth bypass, and cache poisoning.
+- **Next:** Merge PR + production deploy.
+
+## Active work — Location discovery engine (deployed PR #214)
 - **Persona:** Patron · public marketing homepage (`/`).
 - **Goal:** Replace static city card stack with IP-geo personalized discovery section — search bar, live weekend counts, responsive city grid, suburb ribbon.
 - **Shipped:**
