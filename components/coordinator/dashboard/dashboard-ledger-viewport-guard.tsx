@@ -38,7 +38,7 @@ function DashboardLedgerViewportGuardInner({ children }: { children: ReactNode }
         <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-400/10 text-amber-200">
           <Monitor className="h-6 w-6" aria-hidden />
         </div>
-        <h1 className="font-heading text-xl font-semibold tracking-tight sm:text-2xl">
+        <h1 className="font-heading text-xl font-semibold tracking-tight text-stone-50 sm:text-2xl">
           Booth matrix needs a larger screen
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-stone-300">

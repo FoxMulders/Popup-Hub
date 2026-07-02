@@ -10,9 +10,9 @@
   - Added `DashboardLedgerViewportGuard` and wrapped `/coordinator/studio/ledger` so Presenter / Wall Cast matrices show the designated warning below the 1024px x 550px desktop-size breaker instead of mounting the table.
   - Added `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` to the standalone spatial layout editor so resized desktop/tablet windows cannot mount `FloorPlanV2` below the same breaker.
   - Mirrored the guard pattern in included `src/qa_review` floor-plan/spatial files and the excluded recovery copy so repository-wide QA scans do not flag stale unguarded mounts.
-- **Validation:** `./node_modules/.bin/tsc --noEmit --pretty false` passed; targeted ESLint on touched files passed. Browser small/desktop viewport verification pending after commit/push.
+- **Validation:** `./node_modules/.bin/tsc --noEmit --pretty false` passed; targeted ESLint on touched files passed; targeted Next builds passed for `app/coordinator/studio/ledger/page.tsx` and `app/coordinator/events/[id]/layout/page.tsx`. Playwright/Chromium with a local Supabase auth/profile stub verified `/coordinator/studio/ledger?screen=presenter` at 390x844 shows the exact matrix warning and at 1280x800 shows the Presenter shell; `/coordinator/events/qa-event/layout` at 390x844 shows `DesktopScreenRequiredOverlay`.
 - **Blockers:** none known.
-- **Next actions:** Verify `/coordinator/studio/ledger?screen=presenter` at 390x844 shows the matrix warning and at 1280x800 shows the Presenter matrix shell; verify spatial layout small viewport shows `DesktopScreenRequiredOverlay` when an authenticated event is available.
+- **Next actions:** Optional full authenticated HubGrid smoke with real event data; local `next dev` remains blocked by the pre-existing mixed dynamic slug conflict (`eventId` vs `id`), so targeted webpack builds were used for browser verification.
 
 ## Active work — Compare page duplicate back buttons (branch `cursor/fix-duplicate-back-buttons-0a58`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
