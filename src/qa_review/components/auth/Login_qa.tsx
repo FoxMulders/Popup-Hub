@@ -29,6 +29,7 @@ import {
   formatOAuthAuthCallbackError,
 } from '@/lib/auth/auth-error-messages'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
+import { DEFAULT_START_PATH } from '@/lib/nav/site-home'
 import {
   clearNedryLockoutState,
   formatLockoutCountdown,
@@ -51,7 +52,7 @@ const MAGIC_WORD_GIF = '/assets/nedry.gif'
 export function LoginQa({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? searchParams.get('next') ?? '/discover'
+  const redirectTo = searchParams.get('redirectTo') ?? searchParams.get('next') ?? DEFAULT_START_PATH
   const authError = searchParams.get('error')
   const authErrorDetail = searchParams.get('detail')
   const supabase = createClient()

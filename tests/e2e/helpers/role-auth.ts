@@ -22,7 +22,7 @@ const REAL_CREDENTIALS: Record<DevMockRole, { email?: string; password?: string 
 const LANDING_PATH: Record<DevMockRole, string | RegExp> = {
   coordinator: /\/coordinator/,
   vendor: /\/vendor/,
-  shopper: /\/discover/,
+  shopper: /\/$/,
 }
 
 async function loginViaPassword(page: Page, role: DevMockRole) {
@@ -70,7 +70,7 @@ export async function loginAsPatron(page: Page) {
 
   const response = await page.goto('/api/dev/mock-login?role=shopper')
   expect(response?.ok() ?? true).toBeTruthy()
-  await expect(page).toHaveURL(/\/discover/)
+  await expect(page).toHaveURL(LANDING_PATH.shopper, { timeout: 20_000 })
 }
 
 export const test = base.extend({

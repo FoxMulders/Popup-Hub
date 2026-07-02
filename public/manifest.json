@@ -2,7 +2,7 @@
   "short_name": "Popup Hub",
   "name": "Popup Hub",
   "description": "Discover local popup markets, browse venue maps, and apply for booths in one tap.",
-  "start_url": "/discover",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

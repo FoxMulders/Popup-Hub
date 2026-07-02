@@ -1,4 +1,5 @@
 import type { Profile, Role } from '@/types/database'
+import { DEFAULT_START_PATH } from '@/lib/nav/site-home'
 
 export type AccessProfile =
   | { role?: Profile['role'] | null; is_admin?: boolean | null }
@@ -117,7 +118,7 @@ export function isShopperBlockedPath(pathname: string): boolean {
 }
 
 /** Redirect target when a user lacks the required role tier for a route. */
-export const SHOPPER_BLOCKED_REDIRECT = '/discover'
+export const SHOPPER_BLOCKED_REDIRECT = DEFAULT_START_PATH
 
 export function accessDeniedRedirect(userRole: string | null | undefined): string {
   if (hasAccess(userRole, 'coordinator')) return '/coordinator'

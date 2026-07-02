@@ -1,4 +1,5 @@
 import type { Profile, Role } from '@/types/database'
+import { DEFAULT_START_PATH } from '@/lib/nav/site-home'
 
 export type ActivePortal = 'patron' | 'vendor' | 'coordinator'
 
@@ -17,7 +18,7 @@ export function getPortalHome(portal: ActivePortal): string {
     case 'vendor':
       return '/vendor/events'
     case 'patron':
-      return '/discover'
+      return DEFAULT_START_PATH
   }
 }
 
@@ -136,8 +137,8 @@ export function getDefaultDashboard(
 ): string {
   const normalized = (role ?? 'shopper') as Role
 
-  // Everyone lands on the patron discover page unless they have an explicit
-  // active-portal cookie from a prior session switch.
+  // Everyone lands on the marketing home unless they have an explicit active-portal
+  // cookie from a prior session switch.
   if (activePortal && canAccessPortal(normalized, activePortal, options)) {
     return getPortalHome(activePortal)
   }

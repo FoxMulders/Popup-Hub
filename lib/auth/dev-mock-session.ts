@@ -1,3 +1,5 @@
+import { DEFAULT_START_PATH } from '@/lib/nav/site-home'
+
 export type DevMockRole = 'coordinator' | 'vendor' | 'shopper'
 
 export const DEV_MOCK_ROLE_PARAM = 'mock_role'
@@ -56,7 +58,7 @@ export function devMockRoleConfig(role: DevMockRole): DevMockRoleConfig {
     case 'shopper':
       return {
         label: 'Patron',
-        redirectTo: '/discover',
+        redirectTo: DEFAULT_START_PATH,
         email: process.env.DEV_MOCK_SHOPPER_EMAIL,
         password: process.env.DEV_MOCK_SHOPPER_PASSWORD,
         anonymous: !process.env.DEV_MOCK_SHOPPER_EMAIL,
