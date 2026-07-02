@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Location discovery engine (branch `cursor/location-discovery-engine-bdfe`)
+- **Persona:** Patron · public marketing homepage (`/`).
+- **Goal:** Replace static city card stack with IP-geo personalized discovery section — search bar, live weekend counts, responsive city grid, suburb ribbon.
+- **Shipped:**
+  - **`marketing-local-markets.tsx`** — dynamic hero title with `detectedCity`, `#FF6B35` search + map CTA, 4-col city grid with live weekend counts, "Also active in" ribbon.
+  - **`marketing-local-markets-section.tsx`** — server wrapper: `detectCityFromRequest()` + `getCachedDiscoverMarkets()` + per-city counts.
+  - **`location-discovery-search-bar.tsx`** — client search (postal/city) → discover or city weekend page.
+  - **`lib/marketing/ip-geo-target.ts`** — Vercel geo headers + Edmonton/Calgary simulated fallback.
+  - **`lib/marketing/city-market-counts.ts`** — weekend active counts within 50 km per hub city.
+  - **`marketing-hero.tsx`** — alternating pill colors (white / ghost / white).
+- **Verify:** Homepage shows personalized city headline, orange "Open Interactive Map" search, hoverable city cards with counts, suburb ribbon; hero CTAs alternate fill styles.
+- **Next:** Merge PR + production deploy.
+
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02)
 - **Baseline:** `master` @ `368a98ff` · web build `12` · iOS `iosBuild` **34** / v**1.191.0**
 - **Web (Vercel):** Git integration deploy **success** on `278b7b9b` — https://popuphub.ca (alias live). Includes PRs #208 (loader centering), #211 (hero shopper CTA first), #212 (start on `/`).
