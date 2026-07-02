@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint Studio small-screen matrix guard (branch `cursor/blueprint-layout-responsiveness-8a66`)
+- **Persona:** Coordinator - Blueprint Studio / HubGrid standalone Booth Matrix (`/coordinator/studio/ledger`).
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-8a66`; base `master`; starting HEAD `0019f8dc` (`chore(ios): record iosBuild 32 after TestFlight upload [skip ci]`). Production/build baseline not changed by this QA task.
+- **Goal:** QA-scan Blueprint Studio/dashboard layout views for defensive small-screen handling, and ensure matrix views either share the existing desktop-size viewport guard or render the designated regression warning.
+- **Shipped locally:**
+  - Added `DashboardLedgerViewportGuard` for standalone Presenter / Wall Cast Booth Matrix windows.
+  - Guard renders exact regression copy on pocket-sized viewports: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+  - Wrapped `app/coordinator/studio/ledger/page.tsx` so the live matrix only mounts after measured viewport dimensions satisfy the 1024px x 550px desktop breaker.
+- **Sync path:** Main HubGrid still uses `FloorPlanViewportLayoutProvider` / `DesktopScreenRequiredOverlay`; ledger rows continue deriving from live `floorPlanStore` through `useBoothEntities` / `useBoothMatrixRows` once desktop viewport allows matrix mount.
+- **Validation plan:** targeted static scan for guard coverage, TypeScript/build checks, and browser viewport walkthrough of `/coordinator/studio/ledger` at mobile and desktop sizes.
+- **Blockers:** None at implementation time.
+- **Next actions:** Complete validation, update this section with final smoke-test results, commit/push, and open PR.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
