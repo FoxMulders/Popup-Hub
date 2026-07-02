@@ -2,7 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Center loader logo and animation (branch `cursor/center-loader-logo-animation-7dcc`)
+## Active work — Hero shopper browse CTA (branch `cursor/hero-shopper-browse-button-7dcc`)
+- **Persona:** Patron · public marketing homepage (`/`).
+- **Goal:** "Browse markets as a shopper" should be a pill button like the other hero CTAs and listed first.
+- **Shipped:**
+  - **`components/public/marketing/marketing-hero.tsx`** — patron `/discover` CTA promoted to first `marketing-pill--secondary` button with MapPin icon; coordinator pills demoted to ghost style; removed duplicate inline text link.
+- **Verify:** Homepage hero shows three pill buttons — shopper browse first, then advertise, then run natively.
+- **Next:** Merge + deploy.
+
+## Active work — Center loader logo and animation (merged PR #208)
 - **Goal:** Center the wordmark and loader animation as a single vertically-centered group on the full-screen loader overlay.
 - **Persona:** All users · initial page-load loader and replay overlay.
 - **Root cause:** Centering fix from `cursor/loader-logo-below-animation-8703` never merged — inner column still used `h-full`, so the animation + wordmark group did not center as a compact unit on the viewport.
