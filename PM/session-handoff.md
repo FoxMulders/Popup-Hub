@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Location Discovery Engine (branch `cursor/location-discovery-engine-50c6`)
+- **Persona:** Patron · marketing homepage (`/`).
+- **Goal:** Replace static city card stack with dynamic geo-personalized discovery engine — search bar, live weekend market counts, responsive hub grid.
+- **Shipped:**
+  - **`lib/marketing/detect-visitor-city.ts`** — Vercel `x-vercel-ip-city` geo-targeting; Edmonton fallback in dev.
+  - **`lib/marketing/city-market-counts.ts`** — weekend + 50 km hub counts from `getCachedDiscoverMarkets()`.
+  - **`LocationSearchBar`** — native Tailwind postal/city input + `#FF6B35` “Open Interactive Map” CTA; geocode → discover routing.
+  - **`LocationDiscoveryEngine`** — hero, search, 4-column hub grid with emerald count badges, bullet suburb ribbon.
+  - **`MarketingLocalMarkets`** — async server wrapper; optional `detectedCity` prop override.
+- **Smoke-test:** `npm run build` passes. Homepage shows personalized hero, search bar above grid, hover lift on cards, live count badges.
+- **Next:** Visual QA on production after deploy; confirm Vercel geo headers personalize Calgary visitors.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
