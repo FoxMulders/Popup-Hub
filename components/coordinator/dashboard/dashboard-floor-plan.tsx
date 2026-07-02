@@ -6,7 +6,6 @@ import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
 import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
-import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import { buttonVariants } from '@/components/ui/button'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
@@ -114,13 +113,6 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       toast.message('Room deleted')
     },
     [layoutRooms, layoutActiveRoomId, selectedEventId, setLayoutRooms]
-  )
-
-  const handleSelectRoom = useCallback(
-    (roomId: string) => {
-      setLayoutRooms(layoutRooms, roomId)
-    },
-    [layoutRooms, setLayoutRooms]
   )
 
   const handleSelectionChange = useCallback(
