@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import Script from 'next/script'
 import { format } from 'date-fns'
+import { useRefreshPreservingScroll } from '@/lib/navigation/use-refresh-preserving-scroll'
 
 const DEPOSIT_AMOUNTS = [500, 1000, 2500, 5000] // cents
 
@@ -96,6 +97,7 @@ export function WalletView({
   userId,
   userEmail = '',
 }: WalletViewProps) {
+  const refreshPreservingScroll = useRefreshPreservingScroll()
   const [squareLoaded, setSquareLoaded] = useState(false)
   const [depositAmount, setDepositAmount] = useState(1000)
   const [depositing, setDepositing] = useState(false)
@@ -152,7 +154,7 @@ export function WalletView({
       } else {
         toast.success(`${formatCents(depositAmount)} added to your wallet!`)
         setShowCard(false)
-        window.location.reload()
+        refreshPreservingScroll()
       }
     } finally {
       setDepositing(false)

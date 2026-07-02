@@ -47,7 +47,6 @@ import { isEventOpenForApplications } from '@/lib/queries/events'
 import { VendorBookingProgressRail } from '@/components/vendor/vendor-booking-progress-rail'
 import { vendorBookingStepsActive } from '@/lib/vendor/vendor-booking-steps'
 import { vendorSetupMapUrl } from '@/lib/shopper/public-floorplan-modes'
-import { resetScrollToTop } from '@/lib/navigation/scroll-to-top'
 import type { Event } from '@/types/database'
 
 interface VendorApplicationsListProps {
@@ -134,7 +133,6 @@ export function VendorApplicationsList({
 
   function handleFilterChange(value: VendorApplicationFilter) {
     setFilter(value)
-    resetScrollToTop()
     const href =
       value === 'all' ? '/vendor/applications' : `/vendor/applications?filter=${value}`
     router.replace(href, { scroll: false })

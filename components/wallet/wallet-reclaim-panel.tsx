@@ -22,6 +22,7 @@ import {
   Send,
   Undo2,
 } from 'lucide-react'
+import { useRefreshPreservingScroll } from '@/lib/navigation/use-refresh-preserving-scroll'
 
 interface WalletReclaimPanelProps {
   userId: string
@@ -30,6 +31,7 @@ interface WalletReclaimPanelProps {
 }
 
 export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletReclaimPanelProps) {
+  const refreshPreservingScroll = useRefreshPreservingScroll()
   const [loading, setLoading] = useState(true)
   const [availableCents, setAvailableCents] = useState(balanceCents)
   const [cardReclaimCents, setCardReclaimCents] = useState(0)
@@ -93,7 +95,7 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
       }
       toast.success('E-transfer reclaim submitted — staff will send your funds')
       await loadReclaim()
-      window.location.reload()
+      refreshPreservingScroll()
     } finally {
       setSubmitting(null)
     }
@@ -113,7 +115,7 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
         return
       }
       toast.success('Refund sent to your card')
-      window.location.reload()
+      refreshPreservingScroll()
     } finally {
       setSubmitting(null)
     }
@@ -132,7 +134,7 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
       }
       toast.success('Reclaim cancelled — balance restored')
       await loadReclaim()
-      window.location.reload()
+      refreshPreservingScroll()
     } finally {
       setSubmitting(null)
     }

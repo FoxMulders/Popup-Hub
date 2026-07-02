@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { COORDINATOR_MARKETS_PATH } from '@/lib/coordinator/coordinator-routes'
+import { retryPreservingScroll } from '@/lib/navigation/scroll-position'
 import { cn } from '@/lib/utils'
 
 export default function CoordinatorError({
@@ -36,7 +37,7 @@ export default function CoordinatorError({
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button type="button" onClick={() => unstable_retry()}>
+        <Button type="button" onClick={() => retryPreservingScroll(unstable_retry)}>
           Reload
         </Button>
         <Link

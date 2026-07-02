@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { Bell, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { retryPreservingScroll } from '@/lib/navigation/scroll-position'
 
 /**
  * Segment-level error boundary for /notifications.
@@ -86,7 +87,7 @@ export default function NotificationsError({
     }
     const id = window.setTimeout(() => {
       try {
-        unstable_retry()
+        retryPreservingScroll(unstable_retry)
       } catch {
         // unstable_retry should never throw, but defensively swallow.
       }
@@ -121,7 +122,7 @@ export default function NotificationsError({
         <Button
           type="button"
           variant="default"
-          onClick={() => unstable_retry()}
+          onClick={() => retryPreservingScroll(unstable_retry)}
         >
           Try again
         </Button>
