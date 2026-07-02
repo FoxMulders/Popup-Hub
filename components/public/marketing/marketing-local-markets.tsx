@@ -1,66 +1,86 @@
 import Link from 'next/link'
-import { INDEXABLE_MARKET_CITY_SLUGS, getMarketCitySeoPage } from '@/lib/seo/market-city-pages'
+import {
+  FEATURED_CITY_SLUGS,
+  type FeaturedCityMarketCounts,
+} from '@/lib/marketing/city-market-counts'
+import { resolveDetectedCity } from '@/lib/marketing/ip-geo-target'
+import {
+  INDEXABLE_MARKET_CITY_SLUGS,
+  getMarketCitySeoPage,
+  getMarketCityShortName,
+} from '@/lib/seo/market-city-pages'
+import { LocationDiscoverySearchBar } from '@/components/public/marketing/location-discovery-search-bar'
 
-const FEATURED_CITY_SLUGS = ['edmonton', 'calgary', 'red-deer', 'lethbridge'] as const
+export interface MarketingLocalMarketsProps {
+  /** IP-detected or simulated city name (e.g. "Edmonton"). Falls back to Edmonton when null. */
+  detectedCity?: string | null
+  /** Live weekend market counts within 50 km of each featured hub city. */
+  cityCounts?: FeaturedCityMarketCounts
+}
 
-export function MarketingLocalMarkets() {
-  const cities = FEATURED_CITY_SLUGS.map((slug) => getMarketCitySeoPage(slug)).filter(
-    (city) => city != null,
+function formatActiveMarketCount(count: number): string {
+  if (count === 0) return 'Markets this weekend'
+  if (count === 1) return '1 Active Market'
+  return `${count} Active Markets`
+}
+
+export function MarketingLocalMarkets({
+  detectedCity = null,
+  cityCounts,
+}: MarketingLocalMarketsProps) {
+  const cityName = resolveDetectedCity(detectedCity)
+  const counts = cityCounts ?? Object.fromEntries(FEATURED_CITY_SLUGS.map((slug) => [slug, 0])) as FeaturedCityMarketCounts
+
+  const secondaryCities = INDEXABLE_MARKET_CITY_SLUGS.filter(
+    (slug) => !FEATURED_CITY_SLUGS.includes(slug as (typeof FEATURED_CITY_SLUGS)[number]),
   )
+    .map((slug) => getMarketCityShortName(slug))
+    .filter(Boolean)
 
   return (
     <section className="border-t border-stone-200/60 bg-linen px-4 py-14 sm:py-16">
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Popup Hub markets across Alberta
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+            🎪 Find Active Local Markets in {cityName} This Weekend
           </h2>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-            Explore markets published on Popup Hub — with confirmed vendor counts, weekend dates, and
-            vendor application pages. No account required to browse.
+          <p className="mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
+            Browse artisan markets, craft fairs, and community pop-ups happening right in your
+            neighborhood.
           </p>
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {cities.map((city) => (
-            <Link
-              key={city.slug}
-              href={`/markets/${city.slug}`}
-              className="rounded-2xl border border-stone-200 bg-white p-5 transition-colors hover:border-forest/30"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {city.label}
-              </p>
-              <p className="mt-2 text-base font-bold text-foreground">{city.headline}</p>
-              <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{city.intro}</p>
-            </Link>
-          ))}
+        <LocationDiscoverySearchBar detectedCity={cityName} />
+
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURED_CITY_SLUGS.map((slug) => {
+            const city = getMarketCitySeoPage(slug)
+            if (!city) return null
+            const shortName = getMarketCityShortName(slug)
+            const activeCount = counts[slug] ?? 0
+
+            return (
+              <Link
+                key={slug}
+                href={`/markets/${slug}/this-weekend`}
+                className="flex cursor-pointer flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+              >
+                <div>
+                  <p className="text-xl font-bold text-slate-900">{shortName}</p>
+                  <span className="mt-2 inline-flex w-max rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    {formatActiveMarketCount(activeCount)}
+                  </span>
+                </div>
+              </Link>
+            )
+          })}
         </div>
 
-        {INDEXABLE_MARKET_CITY_SLUGS.length > FEATURED_CITY_SLUGS.length ? (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Also on Popup Hub in{' '}
-            {INDEXABLE_MARKET_CITY_SLUGS.filter(
-              (slug) => !FEATURED_CITY_SLUGS.includes(slug as (typeof FEATURED_CITY_SLUGS)[number]),
-            )
-              .map((slug) => getMarketCitySeoPage(slug)?.label.split(',')[0])
-              .filter(Boolean)
-              .join(', ')}
-            .
+        {secondaryCities.length > 0 ? (
+          <p className="mt-8 border-t border-gray-100 pt-6 text-center text-sm tracking-wide text-slate-500">
+            Also active in: {secondaryCities.join(' • ')}.
           </p>
         ) : null}
-
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm">
-          <Link href="/discover" className="font-semibold text-forest hover:underline">
-            Open discover map →
-          </Link>
-          <Link href="/legal/guides" className="font-semibold text-forest hover:underline">
-            Read market guides →
-          </Link>
-          <Link href="/check" className="font-semibold text-forest hover:underline">
-            HubGuard organizer search →
-          </Link>
-        </div>
       </div>
     </section>
   )
