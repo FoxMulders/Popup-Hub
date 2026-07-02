@@ -2,11 +2,11 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Hero white pill buttons (PR pending)
+## Active work — Hero white pill buttons + vendor CTA (PR pending)
 - **Persona:** Patron · public marketing homepage (`/`).
-- **Goal:** All hero CTA pills should use solid white fill (no ghost/outline alternation).
-- **Shipped:** `marketing-pill--secondary` → solid `bg-white`; ghost hero CTAs on `/`, CTA band, for-organizers, for-vendors, and city landings switched to secondary pill.
-- **Verify:** Homepage hero shows three identical white pill buttons — shopper browse, advertise, run natively.
+- **Goal:** All hero CTA pills solid white; four pathways (patron, vendor, advertise, run natively).
+- **Shipped:** `marketing-pill--secondary` → solid `bg-white`; ghost hero CTAs switched to secondary pill; fourth hero pill **Apply as a vendor** → `/for-vendors` (Patrons→Vendors→Organizers order).
+- **Verify:** Homepage hero shows four white pill buttons — shopper browse, apply as vendor, advertise, run natively.
 - **Next:** Merge PR + production deploy.
 
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02 — PR #214 location discovery)
