@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-ca30`)
+- **Trigger:** Push `9b3dcd34` (iosBuild 30 bump) — substantive recent code is PR #181 portal funnel + conversion engine (#172).
+- **Bugs found & fixed (commit `84f6a07f`):**
+  1. **track-click RLS** — `createServiceClient()` inherits patron JWT; `ad_clicks_log` INSERT policy is `WITH CHECK (false)` → 500 for logged-in users. Fixed: `createAdminClient()`.
+  2. **upgrade-to-native** — same RLS pattern for migration write. Fixed: `createAdminClient()`.
+  3. **advertise fraud bypass (PR #181)** — `POST /api/coordinator/events/advertise` published without `coordinatorPublishBlockReason` → suspended coordinators could list on Discover. Fixed: gate before insert.
+  4. **is_test catalog leak** — `getCachedDiscoverMarkets` / vendor directory omitted `.eq('is_test', false)` → QA test markets visible publicly. Fixed.
+- **Validation:** `npx tsx lib/markets/ad-click-tracking.test.ts` passes.
+- **Next:** Merge PR; wire Discover patron cards to `track-click`; close duplicate draft PRs #177/#178/#183 if superseded.
+
 ## Active work — Portal-first conversion funnel (branch `cursor/portal-first-conversion-d6a9`)
 - **Persona:** Coordinator · portal home/markets/welcome (mobile-safe).
 - **Goal:** Conversion is not HubGrid-only — coordinators can advertise without native ops; post-login welcome gate + dual create paths.
