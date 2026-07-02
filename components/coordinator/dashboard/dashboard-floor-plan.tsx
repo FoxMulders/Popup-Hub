@@ -4,6 +4,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
+import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
@@ -48,6 +49,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     eventCategoryNames,
   } = useMarketManagement()
   const { setPlacedCount, registerSaveHandlers } = useHubGridHeader()
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
   const [saveDraftLoading, setSaveDraftLoading] = useState(false)
   const [saveMarketLoading, setSaveMarketLoading] = useState(false)
@@ -252,6 +254,15 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
           </Link>
         </div>
       </div>
+    )
+  }
+
+  if (showDesktopRequired) {
+    return (
+      <div
+        className="dashboard-floor-plan-viewport relative flex h-full min-h-[40vh] flex-1 items-center justify-center p-6"
+        aria-hidden
+      />
     )
   }
 
