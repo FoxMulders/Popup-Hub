@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Homepage four-ways heading + ad promo spacing (branch `cursor/homepage-four-ways-spacing-957f`)
+- **Persona:** Public marketing · homepage (`/`).
+- **Goal:** Pathways section heading reads “Four ways into Popup Hub”; ad listing promo gap matches other pathway cards (`gap-5`).
+- **Shipped:**
+  - **`marketing-path-cards.tsx`** — heading + subtitle updated; removed bottom padding so promo sits on same cream block.
+  - **`marketing-advertise-market-promo.tsx`** — `bg-cream`, `pt-5` top spacing (20px) to match card grid gaps.
+- **Verify:** `npm run build` passes. Mobile `/` — “Four ways into Popup Hub” visible after hero; organizer card → ad listing bubble spacing matches card-to-card gaps.
+- **Next:** Merge PR; deploy to production.
+
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
 - **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
