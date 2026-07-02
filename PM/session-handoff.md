@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active — Critical bug investigation (2026-07-02 @ `1adfdd4e` trigger)
+- **Trigger:** `master` push `1adfdd4e` (iosBuild 37 chore) — reviewed substantive commits since PR #214.
+- **Latest push:** No new bugs in iosBuild 37 bump; **6 pre-existing critical bugs** still on `master`.
+- **Branch:** `cursor/critical-bug-investigation-aef1` @ `dcad326e` — rebased on iosBuild 37.
+- **Bugs fixed (pending merge):**
+  1. **is_test catalog leak** — QA scenario markets in discover/homepage counts (amplified by PR #214).
+  2. **track-click RLS** — `createServiceClient()` + `WITH CHECK (false)` → 500 for logged-in patrons.
+  3. **publish-assist silent drop** — approve/reject under cookie-bound client.
+  4. **advertise fraud gate** — unverified coordinators could publish external listings.
+  5. **native OAuth** — `router.push` to callback drops Set-Cookie.
+  6. **vendor apply to test markets** — defense in depth.
+- **Validation:** `npx tsx` unit tests for catalog filters, ad-click client, scroll-position (no regressions).
+- **Next:** Merge PR; deploy prod; close superseded draft PR #220 (`1f4c` branch).
+
 ## Shipped this session (Web + TestFlight deploy, 2026-07-02 — PR #218 hero white pills)
 - **Baseline:** `master` @ `1f0b5dcb` · web build `14` · iOS `iosBuild` **36** / v**1.191.0**
 - **Web (Vercel):** Git integration production deploy **success** on `5efd7b7b` (merge PR #218) — https://popuphub.ca (alias live). Hero shows four solid white pill CTAs: Browse markets as a shopper, Apply as a vendor, Advertise on Discover, Run applications natively.
