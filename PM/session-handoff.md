@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-891f`)
+- **Persona:** Coordinator · conversion funnel + Patron · Discover ad click-through.
+- **Goal:** Fix four critical bugs from portal-first conversion funnel (PR #181) still on `master` after Jul 2 pushes.
+- **Shipped:**
+  - **track-click** — `createAdminClient()` so logged-in patrons are not blocked by `ad_clicks_log` RLS (`WITH CHECK (false)`).
+  - **upgrade-to-native** — `createAdminClient()` for external listing migration write.
+  - **advertise route** — `coordinatorPublishBlockReason` fraud gate before publishing ad listings.
+  - **public catalog** — `.eq('is_test', false)` on Discover/vendor directory queries.
+  - **Test** — `lib/markets/ad-click-tracking.test.ts`.
+- **Baseline:** `master` @ `513e7f6d` (iosBuild 31); fix commit `99e4b7dc`.
+- **Next:** Merge PR; smoke-test logged-in patron ad click-through + suspended coordinator advertise 403.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
