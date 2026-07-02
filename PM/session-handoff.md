@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-0371`)
+- **Trigger:** master @ `3470a60` (PR #188 advertise mobile scroll merge).
+- **Found:** Four critical bugs from PR #181 portal funnel still on master (PR #187 unmerged). PR #186 marketing CTAs increase blast radius.
+- **Fix:** `createAdminClient()` for track-click + upgrade-to-native; `coordinatorPublishBlockReason` on advertise route; `.eq('is_test', false)` on public catalog queries; ad-click unit test.
+- **Validation:** `npx tsx lib/markets/ad-click-tracking.test.ts` passes.
+- **Next:** Merge PR; smoke-test logged-in patron track-click + suspended coordinator advertise block.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
