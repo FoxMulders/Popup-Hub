@@ -2,7 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Hero shopper browse CTA (branch `cursor/hero-shopper-browse-button-7dcc`)
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-df10`)
+- **Trigger:** Push `4c92788d` (iosBuild 33 chore) — no critical bugs in that diff.
+- **Found (from PR #181 conversion engine still on master):**
+  - **track-click RLS:** `createServiceClient()` inherits patron JWT → `ad_clicks_log` INSERT denied (`WITH CHECK (false)`) → 500 for logged-in users clicking ad listings.
+  - **advertise fraud gate:** `/api/coordinator/events/advertise` skipped `coordinatorPublishBlockReason` — suspended/rejected coordinators could publish ad listings.
+  - **is_test catalog leak:** Discover/vendor directory queries omitted `.eq('is_test', false)` — QA scenario markets visible publicly.
+- **Fix:** `createAdminClient()` for track-click + upgrade-to-native; fraud gate on advertise; is_test filters; unit test.
+- **Next:** Merge PR + production deploy.
+
+## Active work — Hero shopper browse CTA (merged PR #211 @ `4f397736`)
 - **Persona:** Patron · public marketing homepage (`/`).
 - **Goal:** "Browse markets as a shopper" should be a pill button like the other hero CTAs and listed first.
 - **Shipped:**
