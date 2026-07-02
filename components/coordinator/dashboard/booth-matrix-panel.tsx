@@ -6,6 +6,7 @@ import {
   BOOTH_STATUS_THEME,
 } from '@/lib/coordinator/booth-placement-status'
 import { cn } from '@/lib/utils'
+import { FloorPlanMatrixSmallScreenWarning } from './dashboard-ledger-viewport-guard'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { useMarketManagement } from './market-management-context'
 import { useBoothMatrixRows } from './use-booth-matrix-rows'
@@ -53,6 +54,12 @@ export function BoothMatrixPanel({
   const [panelOpen, setPanelOpen] = useState(defaultOpen ?? !isDensePane)
   const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const captionId = useId()
+  const matrixSmallScreenWarning = isDensePane ? (
+    <FloorPlanMatrixSmallScreenWarning
+      className={cn(isDocked ? 'mb-2' : 'mb-3')}
+      compact={isDocked}
+    />
+  ) : null
 
   const selectedRow = rows.find((row) => row.id === selectedBoothId)
 
@@ -85,7 +92,8 @@ export function BoothMatrixPanel({
   if (rows.length === 0) {
     if (isLedger) {
       return (
-        <div className="dashboard-allocation-ledger__empty flex flex-1 items-center justify-center p-6 text-center">
+        <div className="dashboard-allocation-ledger__empty flex flex-1 flex-col items-center justify-center p-6 text-center">
+          <div className="w-full max-w-xl">{matrixSmallScreenWarning}</div>
           <p className="text-sm text-stone-600">
             No booths on the floor plan yet. Switch to HubGrid to place booths.
           </p>
@@ -94,9 +102,12 @@ export function BoothMatrixPanel({
     }
     if (isDocked) {
       return (
-        <p className="text-[11px] leading-snug text-stone-500">
-          No booths yet — place booths on the canvas to populate the ledger.
-        </p>
+        <>
+          {matrixSmallScreenWarning}
+          <p className="text-[11px] leading-snug text-stone-500">
+            No booths yet — place booths on the canvas to populate the ledger.
+          </p>
+        </>
       )
     }
     return null
@@ -112,6 +123,8 @@ export function BoothMatrixPanel({
       )}
       aria-labelledby={captionId}
     >
+      {matrixSmallScreenWarning}
+
       {!isSplit && !isDocked ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button

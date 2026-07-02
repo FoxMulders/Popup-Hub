@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint/HubGrid responsive matrix guard (branch `cursor/blueprint-layout-responsiveness-4579`)
+- **Persona:** Coordinator - HubGrid / Blueprint Studio, Allocation Ledger, standalone Booth Matrix, spatial layout editor.
+- **Goal:** QA scan and defensive UI coverage for layout/dashboard views so the floor plan matrix is not exposed on small screens without a regression warning.
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-4579` @ `e3f653ee` before this task.
+- **Shipped:**
+  - Added `dashboard-ledger-viewport-guard.tsx` with the exact warning: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+  - Wrapped `/coordinator/studio/ledger` with `DashboardLedgerViewportGuard`; dense Booth Matrix variants prefix the warning under the existing 1024 x 550 floor-plan breaker.
+  - Added the existing `FloorPlanViewportLayoutProvider` / `DesktopScreenRequiredOverlay` gate to standalone spatial layout editor and included QA review mirrors.
+- **Sync notes:** Canvas/doc state remains unchanged. Matrix rows still derive from `useBoothMatrixRows` / `useBoothEntities`; the new warning only controls rendering around dense matrix surfaces.
+- **Verify:** `npm ci`; `./node_modules/.bin/tsc --noEmit --pretty false` passes; `./node_modules/.bin/next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx` passes. Temporary public harness verified in Chromium: 800x600 shows the exact warning; 1280x800 shows desktop content. Artifacts saved: `matrix_small_screen_warning.png`, `matrix_desktop_allowed.png`, `matrix_viewport_guard_walkthrough.mp4`.
+- **Blockers:** Real coordinator route browser smoke requires an authenticated session and local Supabase env; temporary public harness was removed after validation. Existing `next dev` route slug conflict (`eventId` vs `id`) still prevents dev-server walkthroughs.
+- **Next:** If authenticated coordinator smoke credentials are available, re-check `/coordinator/studio/ledger?screen=presenter` and `/coordinator/events/[id]/layout` directly.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
