@@ -2,33 +2,35 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Always start on home page (branch `cursor/always-start-home-page-7dcc`)
-- **Goal:** App launch, PWA install, patron login, and default portal home should land on `/` (marketing home), not `/discover`.
-- **Shipped:**
-  - **`lib/nav/site-home.ts`** — `DEFAULT_START_PATH` alias.
-  - **`lib/portals/active-portal.ts`**, **`post-login-redirect.ts`**, **`rbac.ts`**, auth callback, login, dev mock — patron default `/`.
-  - **`public/manifest.json`** `start_url` → `/`; **`capacitor.config.ts`** + **`mobile/www/index.html`** launch URL → root.
-  - **`capacitor-init.tsx`** — removed native cold-launch redirect that sent vendors/coordinators away from home.
-  - **`public/sw.js`** — cache `v24`.
-- **Verify:** PWA/native cold open → `/`; patron sign-in without `next` → `/`; explicit `/discover` deep links unchanged.
-- **Next:** Merge + deploy.
+## Shipped this session (Web + TestFlight deploy, 2026-07-02)
+- **Baseline:** `master` @ `368a98ff` · web build `12` · iOS `iosBuild` **34** / v**1.191.0**
+- **Web (Vercel):** Git integration deploy **success** on `278b7b9b` — https://popuphub.ca (alias live). Includes PRs #208 (loader centering), #211 (hero shopper CTA first), #212 (start on `/`).
+- **TestFlight:** **Deploy to TestFlight** run https://github.com/FoxMulders/Popup-Hub/actions/runs/28567156881 — **SUCCESS**; uploaded build **34**; `master` records `iosBuild: 34` @ `368a98ff`.
+- **Smoke:** https://popuphub.ca — hero shows **Browse markets as a shopper** first pill; cold PWA/native should open `/` (manifest `start_url` + Capacitor root).
+- **Next:** App Store Connect → TestFlight → build **34** processing; answer Export Compliance if prompted.
 
-## Active work — Hero shopper browse CTA (merged PR #211)
+## Active work — Always start on home page (deployed PR #212)
+- **Goal:** App launch, PWA install, patron login, and default portal home land on `/`.
+- **Prod:** https://popuphub.ca — `master` @ `368a98ff`.
+- **Next:** none — monitor TestFlight build 34.
+
+## Active work — Hero shopper browse CTA (deployed PR #211)
 - **Persona:** Patron · public marketing homepage (`/`).
 - **Goal:** "Browse markets as a shopper" should be a pill button like the other hero CTAs and listed first.
 - **Shipped:**
   - **`components/public/marketing/marketing-hero.tsx`** — patron `/discover` CTA promoted to first `marketing-pill--secondary` button with MapPin icon; coordinator pills demoted to ghost style; removed duplicate inline text link.
 - **Verify:** Homepage hero shows three pill buttons — shopper browse first, then advertise, then run natively.
-- **Next:** Merge + deploy.
+- **Prod:** Deployed 2026-07-02 on https://popuphub.ca.
 
-## Active work — Center loader logo and animation (merged PR #208)
+## Active work — Center loader logo and animation (deployed PR #208)
 - **Goal:** Center the wordmark and loader animation as a single vertically-centered group on the full-screen loader overlay.
 - **Persona:** All users · initial page-load loader and replay overlay.
 - **Root cause:** Centering fix from `cursor/loader-logo-below-animation-8703` never merged — inner column still used `h-full`, so the animation + wordmark group did not center as a compact unit on the viewport.
 - **Shipped:**
   - **`components/brand/popup-loader-provider.tsx`** — removed `h-full` from inner column; animation wrapper `shrink-0` only (no `w-full`/`flex-1`); `gap-4`; `BrandWordmark` below animation.
   - **`app/globals.css`** — trimmed lottie height (`62vh/460px` desktop, `52vh/320px` mobile) so wordmark fits in centered group.
-  - **`public/sw.js`** — cache bump `v23`.
+  - **`public/sw.js`** — cache bump `v24` (home start) / `v23` (loader).
+- **Prod:** Deployed 2026-07-02 on https://popuphub.ca.
 - **Verify:** Hard refresh / clear `popup-hub-initial-loader-shown` — animation + centered wordmark grouped at viewport midline on desktop and mobile.
 - **Next:** Merge PR + production deploy.
 
