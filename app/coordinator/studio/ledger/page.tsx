@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { DashboardLedgerViewportGuard } from '@/components/coordinator/dashboard/dashboard-ledger-viewport-guard'
 import { DashboardLedgerWindowClient } from '@/components/coordinator/dashboard/dashboard-ledger-window-client'
 
 export const metadata = {
@@ -15,7 +16,9 @@ export default function CoordinatorStudioLedgerPage() {
       }
     >
       <div className="h-screen min-h-0 overflow-hidden">
-        <DashboardLedgerWindowClient />
+        <DashboardLedgerViewportGuard className="h-screen">
+          <DashboardLedgerWindowClient />
+        </DashboardLedgerViewportGuard>
       </div>
     </Suspense>
   )

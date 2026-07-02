@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint layout responsiveness guard (branch `cursor/blueprint-layout-responsiveness-6a6e`)
+- **Persona:** Coordinator · Blueprint Studio / Allocation Ledger / standalone layout editor.
+- **Goal:** QA scan and patch Blueprint/dashboard matrix surfaces so pocket-sized viewports either hit the existing desktop overlay or render the regression warning: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-6a6e` @ `d333bb4f`; no production deploy in this task.
+- **Shipped:**
+  - **`DashboardLedgerViewportGuard`** — shared client guard using the floor-plan 1024px x 550px pocket-size breaker and exact matrix regression copy.
+  - **`/coordinator/studio/ledger`** — wraps the dual-screen presenter / wall-cast matrix before the matrix window renders.
+  - **`BoothMatrixPanel`** — non-docked matrix variants self-render the warning if mounted outside the HubGrid iron-dome overlay; docked rail remains governed by the canvas overlay/CSS.
+  - **Standalone spatial layout editor** — wraps with `FloorPlanViewportLayoutProvider`, renders `DesktopScreenRequiredOverlay`, and suppresses `FloorPlanV2` while the viewport is below the desktop breaker.
+- **Verify:** `npm ci`; focused ESLint on edited files passes; `./node_modules/.bin/tsc --noEmit --pretty false` passes; Node static assertions confirm exact regression copy + ledger route / matrix / spatial guard wiring.
+- **Manual test note:** Browser walkthrough was blocked by existing dev/runtime conditions: Next dev logs repeatedly report the dynamic route slug conflict (`id` vs `eventId`), and coordinator routes also redirect unauthenticated sessions via `app/coordinator/layout.tsx`.
+- **Next:** Add authenticated Playwright coverage for `/coordinator/studio/ledger` at 800x500 and a desktop viewport after route slug names are standardized.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
