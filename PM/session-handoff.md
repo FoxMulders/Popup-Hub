@@ -11,9 +11,14 @@
   - Guard renders exact regression copy on pocket-sized viewports: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
   - Wrapped `app/coordinator/studio/ledger/page.tsx` so the live matrix only mounts after measured viewport dimensions satisfy the 1024px x 550px desktop breaker.
 - **Sync path:** Main HubGrid still uses `FloorPlanViewportLayoutProvider` / `DesktopScreenRequiredOverlay`; ledger rows continue deriving from live `floorPlanStore` through `useBoothEntities` / `useBoothMatrixRows` once desktop viewport allows matrix mount.
-- **Validation plan:** targeted static scan for guard coverage, TypeScript/build checks, and browser viewport walkthrough of `/coordinator/studio/ledger` at mobile and desktop sizes.
-- **Blockers:** None at implementation time.
-- **Next actions:** Complete validation, update this section with final smoke-test results, commit/push, and open PR.
+- **Validation completed:**
+  - `rg` static scan confirms only `DashboardLedgerViewportGuard` owns the regression copy and `app/coordinator/studio/ledger/page.tsx` wraps `DashboardLedgerWindowClient`.
+  - `npx eslint "app/coordinator/studio/ledger/page.tsx" "components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx"` passed.
+  - `./node_modules/.bin/tsc --noEmit --pretty false` passed after clearing stale `.next/types` from the temporary harness.
+  - `npx next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx` passed.
+  - Playwright viewport walkthrough against a temporary public harness for the actual guard passed: 390x520 shows the exact warning; 1280x800 hides it and renders the guarded child. Artifacts: `ledger_guard_small_screen_warning.png`, `ledger_guard_desktop_child.png`, `ledger_guard_responsive_walkthrough.webm`.
+- **Blockers / notes:** Direct GUI smoke of protected `/coordinator/studio/ledger` was blocked by auth/Supabase env in local production and the existing repo-wide `next dev` dynamic segment conflict (`eventId` vs `id`). The committed route still builds successfully.
+- **Next actions:** Open PR for review. No production deploy performed in this QA automation pass.
 
 ## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
 - **Persona:** Public marketing · event coordinators · `/compare`.
