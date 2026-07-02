@@ -67,7 +67,23 @@ struct WidgetBackground: View {
         case "morning":
             LinearGradient(colors: [Color(red: 0.95, green: 0.92, blue: 0.86), Color(red: 0.88, green: 0.94, blue: 0.98)], startPoint: .top, endPoint: .bottom)
         default:
-            LinearGradient(colors: [Color(red: 0.98, green: 0.96, blue: 0.92), Color(red: 0.92, green: 0.98, blue: 0.94)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: [Color(red: 0.98, green: 0.97, blue: 0.96), Color(red: 0.92, green: 0.98, blue: 0.94)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+    }
+}
+
+struct WidgetBrandHeader: View {
+    var compact: Bool = false
+
+    var body: some View {
+        HStack(spacing: compact ? 6 : 8) {
+            Image("BrandLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: compact ? 18 : 22, height: compact ? 18 : 22)
+            Text("Popup Hub")
+                .font(compact ? .caption.bold() : .headline)
+                .foregroundStyle(Color(red: 0.176, green: 0.353, blue: 0.153))
         }
     }
 }
@@ -96,9 +112,8 @@ struct PopupHubWidgetEntryView: View {
 
 struct SignedOutWidgetView: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Popup Hub")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 8) {
+            WidgetBrandHeader()
             Text("Sign in to see your markets and updates.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -110,12 +125,15 @@ struct SignedOutWidgetView: View {
 
 struct LoadingWidgetView: View {
     var body: some View {
-        VStack(alignment: .leading) {
-            Text("Popup Hub")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 8) {
+            WidgetBrandHeader()
+            Text("Couldn't load updates")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             ProgressView()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetURL(URL(string: "https://popuphub.ca/discover"))
     }
 }
 
@@ -125,8 +143,7 @@ struct SmallWidgetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Popup Hub")
-                    .font(.caption.bold())
+                WidgetBrandHeader(compact: true)
                 Spacer()
                 if (feed.unreadNotifications ?? feed.summary?.unread ?? 0) > 0 {
                     Text("\(feed.unreadNotifications ?? feed.summary?.unread ?? 0)")
@@ -170,8 +187,7 @@ struct MediumWidgetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Popup Hub")
-                    .font(.headline)
+                WidgetBrandHeader()
                 Spacer()
                 Text(feed.summary?.statusLine ?? "")
                     .font(.caption)
@@ -197,8 +213,7 @@ struct LargeWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Popup Hub")
-                .font(.headline)
+            WidgetBrandHeader()
             Text(feed.summary?.statusLine ?? "")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)

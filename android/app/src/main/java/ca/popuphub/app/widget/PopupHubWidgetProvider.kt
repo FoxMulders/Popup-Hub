@@ -29,20 +29,18 @@ class PopupHubWidgetProvider : AppWidgetProvider() {
 
     private fun updateWidget(context: Context, manager: AppWidgetManager, widgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.popup_hub_widget)
-        val feed = WidgetFeedClient.fetchFeedJson(context)
+        val session = WidgetFeedClient.loadSession(context)
+        val feed = if (session != null) WidgetFeedClient.fetchFeedJson(context) else null
 
-        if (feed == null) {
-            views.setTextViewText(R.id.widget_title, "Popup Hub")
-            views.setTextViewText(R.id.widget_status, "Sign in to see updates")
-            views.setTextViewText(R.id.widget_detail, "")
+        if (session == null) {
+            showSignedOut(views)
+        } else if (feed == null) {
+            showLoadError(views)
         } else {
-            val summary = feed.optJSONObject("summary")
-            views.setTextViewText(R.id.widget_title, "Popup Hub")
-            views.setTextViewText(R.id.widget_status, summary?.optString("statusLine") ?: "Ready")
-            views.setTextViewText(R.id.widget_detail, buildDetailLine(feed))
+            showFeed(views, feed)
         }
 
-        val deepLink = resolveDeepLink(feed)
+        val deepLink = resolveDeepLink(session, feed)
         val openIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink))
         openIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         val pending = android.app.PendingIntent.getActivity(
@@ -56,8 +54,34 @@ class PopupHubWidgetProvider : AppWidgetProvider() {
         manager.updateAppWidget(widgetId, views)
     }
 
-    private fun resolveDeepLink(feed: JSONObject?): String {
-        if (feed == null) return "https://popuphub.ca/login"
+    private fun showSignedOut(views: RemoteViews) {
+        views.setTextViewText(R.id.widget_title, "Popup Hub")
+        views.setTextViewText(R.id.widget_status, "Sign in to see your markets and updates.")
+        views.setTextViewText(R.id.widget_detail, "")
+    }
+
+    private fun showLoadError(views: RemoteViews) {
+        views.setTextViewText(R.id.widget_title, "Popup Hub")
+        views.setTextViewText(R.id.widget_status, "Couldn't load updates")
+        views.setTextViewText(R.id.widget_detail, "Tap to open Popup Hub")
+    }
+
+    private fun showFeed(views: RemoteViews, feed: JSONObject) {
+        val summary = feed.optJSONObject("summary")
+        views.setTextViewText(R.id.widget_title, "Popup Hub")
+        views.setTextViewText(R.id.widget_status, summary?.optString("statusLine") ?: "Ready")
+        views.setTextViewText(R.id.widget_detail, buildDetailLine(feed))
+    }
+
+    private fun resolveDeepLink(session: WidgetSession?, feed: JSONObject?): String {
+        if (session == null) return "https://popuphub.ca/login"
+        if (feed == null) {
+            return when (session.persona) {
+                "vendor" -> "https://popuphub.ca/vendor/dashboard"
+                "coordinator" -> "https://popuphub.ca/coordinator"
+                else -> "https://popuphub.ca/discover"
+            }
+        }
         return when (feed.optString("persona")) {
             "vendor" -> feed.optJSONObject("funds")?.optString("addFundsDeepLink")?.let { "https://popuphub.ca$it" }
                 ?: "https://popuphub.ca/vendor/dashboard"

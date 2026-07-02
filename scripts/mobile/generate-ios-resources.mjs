@@ -138,12 +138,41 @@ async function writeAndroidAssets() {
   const drawableDir = path.join(androidResDir, 'drawable')
   await mkdir(drawableDir, { recursive: true })
   await copyFile(path.join(resourcesDir, 'splash.png'), path.join(drawableDir, 'splash.png'))
+  await sharp(brandSource)
+    .resize(48, 48, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toFile(path.join(drawableDir, 'popup_hub_brand.png'))
 
   const drawableNightDir = path.join(androidResDir, 'drawable-night')
   await mkdir(drawableNightDir, { recursive: true })
   await copyFile(path.join(resourcesDir, 'splash.png'), path.join(drawableNightDir, 'splash.png'))
 
-  console.log('Updated Android launcher icons + splash drawable')
+  console.log('Updated Android launcher icons + splash drawable + widget brand mark')
+}
+
+async function writeWidgetAssets() {
+  const widgetAssetsDir = path.join(root, 'ios', 'PopupHubWidget', 'Assets.xcassets', 'BrandLogo.imageset')
+  await mkdir(widgetAssetsDir, { recursive: true })
+  await sharp(brandSource)
+    .resize(80, 80, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toFile(path.join(widgetAssetsDir, 'brand-logo.png'))
+  await writeFile(
+    path.join(widgetAssetsDir, 'Contents.json'),
+    `${JSON.stringify(
+      {
+        images: [{ filename: 'brand-logo.png', idiom: 'universal', scale: '1x' }],
+        info: { author: 'xcode', version: 1 },
+      },
+      null,
+      2,
+    )}\n`,
+  )
+  await writeFile(
+    path.join(root, 'ios', 'PopupHubWidget', 'Assets.xcassets', 'Contents.json'),
+    `${JSON.stringify({ info: { author: 'xcode', version: 1 } }, null, 2)}\n`,
+  )
+  console.log('Updated ios/PopupHubWidget brand logo asset catalog')
 }
 
 function parseVersionMeta() {
@@ -300,6 +329,7 @@ async function pathExists(target) {
 await ensureBrandAssets()
 await writeIosAppIcon()
 await writeAndroidAssets()
+await writeWidgetAssets()
 await patchInfoPlist()
 await ensureIosEntitlements()
 await syncNativeVersions()

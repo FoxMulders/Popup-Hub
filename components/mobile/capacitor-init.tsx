@@ -94,7 +94,6 @@ export function CapacitorInit() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { authenticated?: boolean; role?: string; activePortal?: string | null } | null) => {
         if (!data?.authenticated || !data.role) return
-        void syncNativeWidgetSession()
         const next = resolveNativeLaunchPath({
           role: data.role,
           activePortal: data.activePortal ?? null,
@@ -104,6 +103,46 @@ export function CapacitorInit() {
       })
       .catch(() => undefined)
   }, [pathname, router])
+
+  useEffect(() => {
+    if (!isNativeApp()) return
+
+    let cancelled = false
+
+    async function syncWidgetIfAuthenticated() {
+      try {
+        const res = await fetch('/api/mobile/session-bootstrap')
+        if (!res.ok || cancelled) return
+        const data = (await res.json()) as {
+          authenticated?: boolean
+          role?: string
+        } | null
+        if (!data?.authenticated || !data.role || cancelled) return
+        await syncNativeWidgetSession()
+      } catch {
+        /* non-fatal */
+      }
+    }
+
+    void syncWidgetIfAuthenticated()
+
+    let removeResumeListener: (() => void) | undefined
+    void import('@capacitor/app')
+      .then(({ App }) =>
+        App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) void syncWidgetIfAuthenticated()
+        }),
+      )
+      .then((handle) => {
+        removeResumeListener = () => void handle.remove()
+      })
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+      removeResumeListener?.()
+    }
+  }, [pathname])
 
   return <NativePushRegister />
 }
