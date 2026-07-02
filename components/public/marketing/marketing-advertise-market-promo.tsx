@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { ArrowRight, BarChart3, Megaphone, MousePointerClick } from 'lucide-react'
-import { COORDINATOR_ADVERTISE_SIGNUP_HREF } from '@/lib/marketing/home-hero'
+import {
+  COMPARE_INTENT_HREF,
+  COORDINATOR_ADVERTISE_SIGNUP_HREF,
+} from '@/lib/marketing/home-hero'
 import { cn } from '@/lib/utils'
 
 const MOCK_STATS = [
@@ -69,10 +72,10 @@ export function MarketingAdvertiseMarketPromo() {
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
                 <Link
-                  href="/for-organizers"
+                  href={COMPARE_INTENT_HREF}
                   className="text-sm font-semibold text-forest hover:underline"
                 >
-                  Compare ad listing vs native hosting →
+                  Why intent beats impressions →
                 </Link>
               </div>
             </div>

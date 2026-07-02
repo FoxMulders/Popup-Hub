@@ -12,3 +12,6 @@ export const COORDINATOR_SIGNUP_HREF =
 /** Ad listing tier — list on Discover without native booth ops. */
 export const COORDINATOR_ADVERTISE_SIGNUP_HREF =
   '/signup?role=coordinator&next=/coordinator/events/advertise'
+
+/** Intent vs impressions marketing comparison page. */
+export { COMPARE_INTENT_HREF } from '@/lib/marketing/compare-intent'
