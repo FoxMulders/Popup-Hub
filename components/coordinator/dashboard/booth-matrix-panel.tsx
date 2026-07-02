@@ -6,6 +6,8 @@ import {
   BOOTH_STATUS_THEME,
 } from '@/lib/coordinator/booth-placement-status'
 import { cn } from '@/lib/utils'
+import { useIsPocketSizedViewport } from '@/hooks/use-floor-plan-viewport-tier'
+import { DashboardLedgerSmallScreenWarning } from './dashboard-ledger-viewport-guard'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { useMarketManagement } from './market-management-context'
 import { useBoothMatrixRows } from './use-booth-matrix-rows'
@@ -45,26 +47,27 @@ export function BoothMatrixPanel({
   const isSplit = variant === 'split'
   const isDocked = variant === 'docked'
   const isDensePane = isLedger || isSplit || isDocked
+  const showMatrixSmallScreenWarning = useIsPocketSizedViewport() && !isDocked
 
   const handleFocusBooth = (boothId: string) => {
     if (isLedger) setView('blueprint')
     focusBooth(boothId)
   }
-  const [panelOpen, setPanelOpen] = useState(defaultOpen ?? !isDensePane)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
+  const [panelOpen, setPanelOpen] = useState(() => {
+    const fallbackOpen = defaultOpen ?? !isDensePane
+    if (isDensePane || typeof window === 'undefined') return fallbackOpen
+    try {
+      return window.localStorage.getItem(MATRIX_STORAGE_KEY) === '0' ? false : fallbackOpen
+    } catch {
+      return fallbackOpen
+    }
+  })
   const captionId = useId()
 
   const selectedRow = rows.find((row) => row.id === selectedBoothId)
-
-  useEffect(() => {
-    if (isDensePane) return
-    try {
-      const raw = window.localStorage.getItem(MATRIX_STORAGE_KEY)
-      if (raw === '0') setPanelOpen(false)
-    } catch {
-      // ignore
-    }
-  }, [isDensePane])
+  const selectionAnnouncement = selectedRow
+    ? `Selected booth ${selectedRow.label}, ${selectedRow.statusLabel}, vendor ${selectedRow.vendor}`
+    : ''
 
   useEffect(() => {
     if (isDensePane) return
@@ -75,12 +78,17 @@ export function BoothMatrixPanel({
     }
   }, [panelOpen, isDensePane])
 
-  useEffect(() => {
-    if (!selectedRow) return
-    setSelectionAnnouncement(
-      `Selected booth ${selectedRow.label}, ${selectedRow.statusLabel}, vendor ${selectedRow.vendor}`
+  if (showMatrixSmallScreenWarning) {
+    return (
+      <DashboardLedgerSmallScreenWarning
+        className={cn(
+          isLedger && 'dashboard-allocation-ledger__small-screen-warning',
+          isSplit && 'dashboard-booth-matrix-panel--split',
+          !isDensePane && 'rounded-xl'
+        )}
+      />
     )
-  }, [selectedRow])
+  }
 
   if (rows.length === 0) {
     if (isLedger) {
