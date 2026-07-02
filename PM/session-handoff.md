@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Intent vs impressions comparison page (merged PR #192 @ `155e0ac0`)
+- **Persona:** Public marketing · event coordinators · `/compare`.
+- **Goal:** Dedicated high-converting comparison page linked from homepage ad promo.
+- **Shipped:**
+  - **`/compare`** — `CompareLanding` + `MarketingIntentComparison` (pillar grid, objection accordion, final CTA).
+  - **Homepage promo** — `MarketingAdvertiseMarketPromo` → `/compare` (“Why intent beats impressions →”).
+  - **SEO** — metadata + sitemap entry.
+- **Hotfix (pending deploy):** `/compare` added to `lib/auth/public-paths.ts` — was redirecting guests to login.
+- **Prod:** Merged to `master` @ `155e0ac0`; Vercel git deploy triggered. Alias https://popuphub.ca once build completes.
+- **Smoke-test:** `/compare` loads for guests; homepage promo link works; advertise CTA → signup flow.
+
 ## Active work — Landing page advertise market promo (branch `cursor/landing-advertise-markets-d6a9`)
 - **Persona:** Public marketing · homepage (`/`) and `/for-organizers`.
 - **Goal:** Prominent ad listing promo on landing page — not only coordinator portal CTAs.
