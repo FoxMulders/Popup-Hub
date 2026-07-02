@@ -59,12 +59,11 @@ function installDomMocks(options: {
   const wizardScrolls = [...(options.wizardScrolls ?? [])]
 
   const siteMain = {
-    scrollTop: siteMainScroll,
-    set scrollTop(value: number) {
-      siteMainScroll = value
-    },
     get scrollTop() {
       return siteMainScroll
+    },
+    set scrollTop(value: number) {
+      siteMainScroll = value
     },
   }
 
