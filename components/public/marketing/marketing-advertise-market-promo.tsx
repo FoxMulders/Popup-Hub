@@ -15,7 +15,7 @@ const MOCK_STATS = [
 export function MarketingAdvertiseMarketPromo() {
   return (
     <section
-      className="px-4 py-10 sm:py-12"
+      className="bg-cream px-4 pb-16 pt-5 sm:pb-20"
       aria-labelledby="advertise-market-promo-heading"
     >
       <div className="mx-auto max-w-6xl">
