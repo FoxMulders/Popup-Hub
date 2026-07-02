@@ -5,8 +5,9 @@ import { parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-po
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import { findDuplicateProfilesByEmail } from '@/lib/auth/duplicate-account'
 import { createAdminClient } from '@/lib/supabase/server'
+import { DEFAULT_START_PATH } from '@/lib/nav/site-home'
 
-function safeRedirectPath(value: string | null, fallback = '/discover'): string {
+function safeRedirectPath(value: string | null, fallback = DEFAULT_START_PATH): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
     return fallback
   }

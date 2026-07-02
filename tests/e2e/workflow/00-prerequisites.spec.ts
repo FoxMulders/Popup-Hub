@@ -24,10 +24,10 @@ test.describe('Workflow prerequisites @workflow', () => {
     })
   })
 
-  test('patron mock-login lands on discover', async ({ patronPage: page }) => {
-    await expect(page).toHaveURL(/\/discover/)
+  test('patron mock-login lands on home', async ({ patronPage: page }) => {
+    await expect(page).toHaveURL(/\/$/)
     await expect(
-      page.getByRole('heading', { name: 'Community markets near you' })
+      page.getByRole('heading', { name: 'One hub for local makers markets' })
     ).toBeVisible({ timeout: 15_000 })
   })
 })

@@ -4,8 +4,9 @@ import {
   COORDINATOR_WELCOME_PATH,
 } from '@/lib/coordinator/coordinator-routes'
 import { isGenericCoordinatorLanding } from '@/lib/coordinator/conversion-listing'
+import { DEFAULT_START_PATH } from '@/lib/nav/site-home'
 
-function safeRedirectPath(value: string | null | undefined, fallback = '/discover'): string {
+function safeRedirectPath(value: string | null | undefined, fallback = DEFAULT_START_PATH): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
     return fallback
   }
@@ -51,7 +52,7 @@ export function resolvePostLoginPath(input: {
 
   if (role === 'vendor') {
     if (redirectTo.startsWith('/vendor')) return redirectTo
-    if (input.activePortal === 'patron') return '/discover'
+    if (input.activePortal === 'patron') return DEFAULT_START_PATH
     return '/vendor/events'
   }
 
