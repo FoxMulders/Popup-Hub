@@ -2,7 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Always start on home page (branch `cursor/always-start-home-page-7dcc`)
+## Active work — Critical bug investigation (Jul 2 2026 @ `278b7b9`)
+- **Scope:** Recent master commits — PR #212 (home page default), PR #211 (hero CTA), PR #208 (loader), `/compare` guest auth hotfix.
+- **Result:** No new critical bugs found in these diffs. Navigation/auth paths traced (`resolvePostLoginPath`, middleware OAuth `?code=` on `/`, CapacitorInit widget sync).
+- **Known open (pre-existing, not from recent commits):** Conversion engine issues on `cursor/critical-bug-investigation-109f` — track-click `createAdminClient`, `is_test` catalog filter, advertise fraud gate — still unmerged on master.
+- **Next:** Merge PR #197 fixes when ready; no action required for PR #212 stack.
+
+## Active work — Always start on home page (merged PR #212 @ `1ae75c68`)
 - **Goal:** App launch, PWA install, patron login, and default portal home should land on `/` (marketing home), not `/discover`.
 - **Shipped:**
   - **`lib/nav/site-home.ts`** — `DEFAULT_START_PATH` alias.
