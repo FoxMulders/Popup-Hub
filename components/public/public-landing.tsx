@@ -1,3 +1,4 @@
+import { MarketingAdvertiseMarketPromo } from '@/components/public/marketing/marketing-advertise-market-promo'
 import { MarketingCtaBand } from '@/components/public/marketing/marketing-cta-band'
 import { MarketingFeatures } from '@/components/public/marketing/marketing-features'
 import { MarketingHero } from '@/components/public/marketing/marketing-hero'
@@ -11,6 +12,7 @@ export function PublicLanding() {
     <main className="flex flex-1 flex-col">
       <MarketingHero />
       <MarketingPathCards />
+      <MarketingAdvertiseMarketPromo />
       <MarketingLocalMarkets />
       <MarketingFeatures />
       <MarketingSplitStory />
