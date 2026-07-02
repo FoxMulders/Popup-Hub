@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio booth matrix small-screen guard (branch `cursor/blueprint-layout-responsiveness-c153`)
+- **Persona:** Coordinator - Blueprint Studio / dual-screen Booth Matrix (`/coordinator/studio/ledger`).
+- **Goal:** QA scan/refactor for layout/dashboard surfaces so the floor plan matrix does not render on pocket-sized screens without the designated regression warning.
+- **Baseline:** `cursor/blueprint-layout-responsiveness-c153` @ `7ba9b811` (`fix: guard booth matrix on small screens`); production deploy not run for this QA branch.
+- **Shipped:**
+  - **`dashboard-ledger-viewport-guard.tsx`** - new client guard using the shared 1024px x 550px floor-plan breaker and exact warning copy: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size."
+  - **`app/coordinator/studio/ledger/page.tsx`** - standalone presenter/wall-cast Booth Matrix route now wraps `DashboardLedgerWindowClient` in the guard.
+  - **`tests/e2e/blueprint-ledger-viewport.spec.ts`** - regression coverage for mobile warning vs desktop presenter rendering.
+- **Verify:** `npx eslint app/coordinator/studio/ledger/page.tsx components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx tests/e2e/blueprint-ledger-viewport.spec.ts` PASS; `./node_modules/.bin/tsc --noEmit --pretty false` PASS; `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-anon npx next build --webpack --debug-build-paths app/coordinator/studio/ledger/page.tsx` PASS; live Chromium route check PASS using local auth stub/session cookie (mobile warning shown, desktop presenter matrix rendered); walkthrough video saved as `ledger_viewport_guard_walkthrough.mp4`.
+- **Blockers:** `npx playwright test ... --project=desktop-edge` could not run as configured because MS Edge is absent in the VM; default `next dev` is still blocked by the unrelated dynamic route slug mismatch (`eventId` vs `id`).
+- **Next:** Open/review PR for the guard branch; standardize conflicting dynamic route segment names separately so full dev-server Playwright projects can run again.
+
 ## Active work — Homepage four-ways heading + ad promo spacing (branch `cursor/homepage-four-ways-spacing-957f`)
 - **Persona:** Public marketing · homepage (`/`).
 - **Goal:** Pathways section heading reads “Four ways into Popup Hub”; ad listing promo gap matches other pathway cards (`gap-5`).
